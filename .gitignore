@@ -41,3 +41,6 @@ Thumbs.db
 dist/
 build/
 out/
+
+# --- typescript build info ---
+*.tsbuildinfo
