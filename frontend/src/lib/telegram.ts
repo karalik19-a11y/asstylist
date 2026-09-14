@@ -71,6 +71,17 @@ export function openExternal(url: string): void {
   if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+/** Opens a t.me link inside Telegram when we run there, in a new tab otherwise. */
+export function openTelegramLink(url: string): void {
+  if (!url) return
+  const app = getWebApp()
+  if (app?.openTelegramLink) {
+    app.openTelegramLink(url)
+    return
+  }
+  if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export function telegramUserId(): string | null {
   const app = getWebApp()
   const id = app?.initDataUnsafe?.user?.id

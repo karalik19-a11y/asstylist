@@ -1,4 +1,4 @@
-.PHONY: setup build run dev test test-backend test-frontend typecheck clean seed
+.PHONY: setup build run dev test test-backend test-frontend typecheck clean seed connect-tg
 
 VENV ?= .venv
 PY   := $(VENV)/bin/python
@@ -28,6 +28,11 @@ test-frontend:
 
 typecheck:
 	cd frontend && npx tsc --noEmit -p tsconfig.json
+
+connect-tg:  ## подключить бота: make connect-tg BOT_TOKEN=123:ABC WEB_APP_URL=https://your.app
+	@test -n "$(BOT_TOKEN)" || (echo "Нужен BOT_TOKEN от @BotFather" && exit 1)
+	@test -n "$(WEB_APP_URL)" || (echo "Нужен WEB_APP_URL (публичный https-адрес)" && exit 1)
+	$(PY) backend/scripts/connect_bot.py --token "$(BOT_TOKEN)" --url "$(WEB_APP_URL)"
 
 seed:  ## re-seed and re-verify the demo catalog
 	$(PY) -c "import sys; sys.path.insert(0,'backend'); from app.db import SessionLocal, init_db; from app.services.catalog_service import seed_catalog; init_db(); s=SessionLocal(); print(seed_catalog(s, force=True)); s.close()"

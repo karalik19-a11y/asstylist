@@ -1,4 +1,4 @@
-import type { HistoryEntry, Look, Meta, WizardState } from './types'
+import type { HistoryEntry, Look, Meta, SetupResponse, TelegramStatus, WizardState } from './types'
 import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -58,6 +58,21 @@ export const api = {
         }),
       },
     ),
+
+  telegramStatus: () => request<TelegramStatus>('/api/telegram/status'),
+
+  /** Connects a real bot: validates the token and sets the Mini App menu button. */
+  connectBot: (botToken: string, webAppUrl: string, keepDemoAccess = true) =>
+    request<SetupResponse>('/api/telegram/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bot_token: botToken,
+        web_app_url: webAppUrl,
+        keep_demo_access: keepDemoAccess,
+        persist: true,
+      }),
+    }),
 
   /** Multipart so the photo travels with the parameters in a single call. */
   generateLook: (state: WizardState) => {

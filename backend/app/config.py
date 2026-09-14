@@ -137,3 +137,37 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
+def persist_env(updates: dict[str, str | bool | None], env_file: str = ".env") -> list[str]:
+    """Write the given keys into `.env`, preserving every other line.
+
+    Used by the in-app "connect my bot" flow so the token survives a restart.
+    `.env` is git-ignored; values are never logged.
+    """
+    from pathlib import Path
+
+    normalised = {key.upper(): ("" if value is None else str(value)) for key, value in updates.items()}
+    path = Path(env_file)
+    lines: list[str] = []
+    written: set[str] = set()
+
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            stripped = raw.strip()
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                key = stripped.split("=", 1)[0].strip().upper()
+                if key in normalised:
+                    lines.append(f"{key}={normalised[key]}")
+                    written.add(key)
+                    continue
+            lines.append(raw)
+
+    for key, value in normalised.items():
+        if key not in written:
+            lines.append(f"{key}={value}")
+
+    if lines and lines[-1] != "":
+        lines.append("")
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return sorted(normalised)

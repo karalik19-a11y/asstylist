@@ -41,6 +41,11 @@ def meta() -> dict[str, Any]:
         "ranking_weights": settings.resolved_ranking_weights(),
         "sources": source_list(),
         "demo_mode": settings.demo_mode,
+        "telegram": {
+            "configured": bool(settings.telegram_bot_token),
+            "web_app_url": settings.telegram_web_app_url,
+            "bot_link": None,
+        },
         "ai_provider": settings.effective_ai_provider,
         "version": settings.version,
     }

@@ -174,6 +174,13 @@ export default function App() {
           meta={meta}
           history={history}
           userName={userName}
+          telegramConfigured={Boolean(meta?.telegram?.configured)}
+          onBotConnected={() => {
+            api
+              .meta()
+              .then(setMeta)
+              .catch(() => undefined)
+          }}
           onStart={startWizard}
           onOpenHistory={openHistory}
           onOpenVerification={() => void openVerification()}

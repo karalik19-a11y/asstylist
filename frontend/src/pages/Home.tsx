@@ -1,6 +1,7 @@
 import type { HistoryEntry, Meta } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
 import { Badge, SectionTitle } from '../components/ui'
+import { TelegramSetup } from '../components/TelegramSetup'
 
 const STEPS = [
   { emoji: '📷', title: 'Фото и параметры', text: 'Рост, вес и фото — для силуэта и палитры.' },
@@ -17,6 +18,8 @@ export function Home({
   onOpenVerification,
   onOpenLook,
   userName,
+  telegramConfigured,
+  onBotConnected,
 }: {
   meta: Meta | null
   history: HistoryEntry[]
@@ -25,6 +28,8 @@ export function Home({
   onOpenVerification: () => void
   onOpenLook: (id: number) => void
   userName: string | null
+  telegramConfigured: boolean
+  onBotConnected: () => void
 }) {
   return (
     <div className="stack">
@@ -54,6 +59,8 @@ export function Home({
           </button>
         </div>
       </section>
+
+      {!telegramConfigured ? <TelegramSetup onConnected={onBotConnected} /> : null}
 
       <section className="card stack" style={{ gap: 10 }}>
         <SectionTitle hint={meta ? `движок v${meta.version}` : undefined}>Как это работает</SectionTitle>

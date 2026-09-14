@@ -41,8 +41,29 @@ export interface Meta {
   ranking_weights: Record<string, number>
   sources: { id: string; label: string; kind: string; trust: number; note: string }[]
   demo_mode: boolean
+  telegram: { configured: boolean; web_app_url: string | null; bot_link: string | null }
   ai_provider: string
   version: string
+}
+
+export interface TelegramStatus {
+  configured: boolean
+  bot: { id: number; username: string; first_name: string } | null
+  bot_link: string | null
+  web_app_url: string | null
+  demo_mode: boolean
+  init_data_expected: boolean
+  error: string | null
+}
+
+export interface SetupResponse {
+  ok: boolean
+  bot: { id: number; username: string; first_name: string }
+  web_app_url: string
+  actions: string[]
+  persisted_keys: string[]
+  demo_mode: boolean
+  next_step: string
 }
 
 export interface Alternative {
