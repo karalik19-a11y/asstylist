@@ -342,6 +342,8 @@ class OutfitCandidate:
     critic_feedback: list[str] = field(default_factory=list)
     critic_score_adjustment: float = 0.0
     styling_logic: dict[str, Any] = field(default_factory=dict)
+    #: Отличие порта: тезис взят из формулировки пользователя, а не из пула.
+    thesis_from_query: bool = False
 
     def item_count(self) -> int:
         return len(self.items)

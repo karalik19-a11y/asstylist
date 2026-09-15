@@ -73,6 +73,14 @@ class FashionEngine:
             },
         )
 
+    def enrich(
+        self,
+        items: list,
+        raw_profile: UserStyleProfile | dict | None = None,
+    ) -> list:
+        """Обогатить вещи вне поисковых запросов (см. ``MultiPassSearch.enrich``)."""
+        return self.search.enrich(list(items), self._profile(raw_profile))
+
     # ─── PASS 4–6: сборка и оценка образа ─────────────────────────────
     def create_outfit(
         self,

@@ -245,7 +245,7 @@ export function Search({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <strong style={{ fontSize: 16 }}>{engine.styling_thesis_ru || engine.styling_thesis}</strong>
                 <div className="muted small" style={{ marginTop: 2 }}>
-                  {engine.styling_thesis} · эстетика: {engine.aesthetic}
+                  {engine.styling_thesis} · {engine.aesthetic_ru ?? engine.aesthetic}
                 </div>
               </div>
             </div>

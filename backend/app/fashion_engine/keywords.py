@@ -96,6 +96,15 @@ RECURRING_MATERIALS: tuple[str, ...] = (
 
 #: Тезисы, которые умеет предлагать TrendEngine (для перевода в UI).
 THESIS_LABELS_RU: dict[str, str] = {
+    # тезисы стилей asStylist (см. TrendEngine._THESIS_TRIGGERS)
+    "Quiet Luxury Tailoring": "Тихая роскошь и точный крой",
+    "Minimal Precision": "Точный минимализм",
+    "Technical Utility": "Техничный утилитаризм",
+    "Soft Romanticism": "Мягкая романтика",
+    "Craft Bohemia": "Ремесленное бохо",
+    "Sport Couture": "Спортивный кутюр",
+    "Sharp Tailoring": "Строгий городской крой",
+    # тезисы оригинала
     "Industrial Romanticism": "Индустриальная романтика",
     "Transparent Layering": "Прозрачные слои",
     "Deconstructed 90s Minimalism": "Деконструированный минимализм 90-х",

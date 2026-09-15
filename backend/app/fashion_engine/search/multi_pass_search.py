@@ -36,6 +36,31 @@ class MultiPassSearch:
         self.taste = TasteEngine()
         self.trend = TrendEngine()
 
+    def enrich(
+        self,
+        items: list[ProductItem],
+        profile: UserStyleProfile,
+    ) -> list[ProductItem]:
+        """Оценить вещи движком, даже если они не попали в пул запросов.
+
+        Отличие порта: приложение показывает слот целиком (например, при замене
+        вещи), поэтому вещь нужна с атрибутами, fashion score и taste-категорией,
+        даже когда расширенные запросы её не вернули. Уже обогащённые вещи
+        пропускаются — повторный прогон ничего не меняет (детерминизм).
+        """
+        for item in items:
+            if item.fashion_attributes is not None:
+                continue
+            item.fashion_attributes = self.intelligence.analyze(item)
+            self.trend.enrich(item)
+            taste = self.taste.evaluate(item, profile)
+            item.fashion_score = taste.fashion_score
+            item.taste_category = taste.taste_category
+            item.generic_score = taste.generic_score
+            item.taste_components = taste.components
+            item.item_type = "product"
+        return items
+
     def run(
         self,
         user_query: str,

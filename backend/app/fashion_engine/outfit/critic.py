@@ -37,7 +37,12 @@ class FashionCritic:
 
         fashion_scores = [float(item.fashion_score or 50) for item in items]
         max_score = max(fashion_scores) if fashion_scores else 0.0
-        if max_score < 72:
+        # Отличие порта: «герой» определяется ещё и относительно самого образа.
+        # В каталоге asStylist вещи масс-маркета дают fashion score ниже 72, и
+        # абсолютный порог оригинала ругался даже на образ с явным акцентом;
+        # теперь вещь-акцент (выше среднего на 8+) считается героем.
+        average_score = sum(fashion_scores) / len(fashion_scores) if fashion_scores else 0.0
+        if max_score < 72 and (max_score - average_score) < 8:
             feedback.append("No clear hero piece. The outfit lacks a strong focal point.")
             issues += 2
 

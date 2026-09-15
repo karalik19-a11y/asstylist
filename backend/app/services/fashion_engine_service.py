@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -534,6 +535,22 @@ def run_engine(
 # ─── сборка ответа ──────────────────────────────────────────────────────────
 
 
+def aesthetic_ru(run: EngineRun) -> str:
+    """Эстетика движка по-русски: тезис + доминирующий оттенок образа."""
+    thesis = engine_keywords.thesis_label_ru(run.outfit.styling_thesis)
+    items = list(run.outfit.items)
+    color_id = ""
+    for item in items:
+        attributes = item.fashion_attributes
+        if attributes and attributes.color not in (None, "", "unknown"):
+            color_id = str(attributes.color)
+            break
+    spec = COLORS.get(color_id)
+    if spec is None:
+        return thesis
+    return f"{thesis} · палитра: {spec.ru}"
+
+
 def _critic_ru(feedback: list[str]) -> list[str]:
     return [CRITIC_RU.get(line, line) for line in feedback]
 
@@ -657,6 +674,36 @@ def _blended_score(app_score: float, card: ProductItem | None, rank_index: int |
     return round(0.55 * engine_norm + 0.30 * app_score + 0.15 * rank_bonus, 4)
 
 
+#: Доля релевантности тексту запроса в позиции вещи внутри выдачи поиска.
+#: Без неё выдача определялась бы только fashion score вещи и не зависела бы
+#: от запроса (у провайдера поверх всего каталога пул одинаковый для всех
+#: расширенных запросов).
+SEARCH_RELEVANCE_WEIGHT = 0.15
+
+#: ``query_match`` провайдера — сумма попаданий по токенам запроса; за
+#: «полную» релевантность принимаем 60 баллов (примерно четыре точных
+#: попадания), дальше рост не даёт преимущества.
+SEARCH_RELEVANCE_FULL = 60.0
+
+
+def _query_relevance(card: ProductItem | None) -> float:
+    if card is None:
+        return 0.0
+    raw = float((card.meta or {}).get("query_match") or 0.0)
+    return max(0.0, min(1.0, raw / SEARCH_RELEVANCE_FULL))
+
+
+def _search_position(
+    app_score: float,
+    card: ProductItem | None,
+    rank_index: int | None,
+    total: int,
+) -> float:
+    """Позиция вещи в выдаче поиска: гибридная оценка + релевантность запросу."""
+    base = _blended_score(app_score, card, rank_index, total)
+    return round((1 - SEARCH_RELEVANCE_WEIGHT) * base + SEARCH_RELEVANCE_WEIGHT * _query_relevance(card), 4)
+
+
 def _engine_block(
     run: EngineRun,
     *,
@@ -673,6 +720,7 @@ def _engine_block(
         "styling_thesis": run.outfit.styling_thesis,
         "styling_thesis_ru": engine_keywords.thesis_label_ru(run.outfit.styling_thesis),
         "aesthetic": run.outfit.aesthetic,
+        "aesthetic_ru": aesthetic_ru(run),
         "outfit_score": round(float(run.outfit.outfit_score or 0), 1),
         "app_score": round(float(app_score), 1),
         "final_score": round(float(final_score), 1),
@@ -904,6 +952,24 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
     )
 
 
+def _engine_outfit_skus(look: Any) -> set[str]:
+    """SKU вещей, которые движок выбрал в образ (из сохранённого ``ranking_json``)."""
+    raw = getattr(look, "ranking_json", None)
+    if not raw:
+        return set()
+    try:
+        ranking = look.loads(raw, {}) if hasattr(look, "loads") else json.loads(raw)
+    except Exception:  # сохранённый образ мог быть записан прошлой версией
+        return set()
+    if not isinstance(ranking, dict):
+        return set()
+    engine = ranking.get("engine")
+    roles = engine.get("roles") if isinstance(engine, dict) else None
+    if isinstance(roles, dict):
+        return {str(sku) for sku in roles}
+    return set()
+
+
 def rerank_for_slot(
     ranked: list[ScoredItem],
     slot: str,
@@ -933,6 +999,14 @@ def rerank_for_slot(
         ),
     )
     discovery = engine.discover(query, profile)
+    # Слот показывается целиком: вещи вне пула запросов тоже должны получить
+    # атрибуты, fashion score и taste-категорию движка.
+    engine.enrich(cards, profile)
+    # Вещи, которые движок выбрал в образ при генерации: их видно в сохранённом
+    # образе, поэтому замена слота не должна предлагать им на замену случайную
+    # позицию из шортлиста. Пул одного слота целого образа не образует, поэтому
+    # роли берём из самого образа (ranking_json → engine.roles).
+    chosen = _engine_outfit_skus(look)
     order = {card.sku or card.id: index for index, card in enumerate(discovery.products)}
     total = max(1, len(discovery.products))
     cards_by_sku = {card.sku or card.id: card for card in cards}
@@ -944,14 +1018,15 @@ def rerank_for_slot(
         if card is not None and card.fashion_attributes is not None:
             breakdown["engine"] = round(float(card.fashion_score or 0) / 100, 3)
             breakdown["engineAttributes"] = _engine_item_meta(card, slot)
-        enriched.append(
-            ScoredItem(
-                item=scored.item,
-                score=_blended_score(scored.score, card, order.get(scored.sku), total),
-                breakdown=breakdown,
-            )
-        )
-    enriched.sort(key=lambda s: (-s.score, s.item.price_rub, s.item.sku))
+        blended = _blended_score(scored.score, card, order.get(scored.sku), total)
+        in_engine_outfit = scored.sku in chosen
+        if in_engine_outfit:
+            blended = min(1.0, round(blended + ENGINE_OUTFIT_BONUS, 4))
+        breakdown["engineOutfit"] = in_engine_outfit
+        enriched.append(ScoredItem(item=scored.item, score=blended, breakdown=breakdown))
+    # Вещь, которую движок выбрал в этот слот, идёт первой: пользователь видит
+    # её в образе, остальные — альтернативы в порядке движка.
+    enriched.sort(key=lambda s: (not s.breakdown.get("engineOutfit"), -s.score, s.item.price_rub, s.item.sku))
     return enriched
 
 
@@ -991,7 +1066,16 @@ def search(
     theses = engine_keywords.THESIS_LABELS_RU
     thesis = run.outfit.styling_thesis
     cards = run.cards
-    discovered = list(run.discovery.products)[: max(1, limit)]
+    # Сначала вещи, которые провайдер отметил как совпадение по запросу, затем
+    # остальной проверенный пул: иначе разные запросы давали бы одну выдачу.
+    discovered = sorted(
+        run.discovery.products,
+        key=lambda card: (
+            -_query_relevance(card),
+            -float(card.fashion_score or 0),
+            card.id,
+        ),
+    )[: max(1, limit)]
     by_sku = {scored.sku: scored for scored in prepared.ranked}
 
     items: list[dict[str, Any]] = []
@@ -1015,7 +1099,7 @@ def search(
                 "url": scored.item.url,
                 "colors": list(scored.item.colors),
                 "color_hexes": list(scored.item.color_hexes),
-                "score": _blended_score(
+                "score": _search_position(
                     app_scored.score, card, run.rank_index(sku), len(run.discovery.products)
                 ),
                 "engine": meta,
@@ -1077,6 +1161,7 @@ def search(
             "styling_thesis": thesis,
             "styling_thesis_ru": engine_keywords.thesis_label_ru(thesis),
             "aesthetic": run.outfit.aesthetic,
+        "aesthetic_ru": aesthetic_ru(run),
             "outfit_score": round(float(run.outfit.outfit_score or 0), 1),
             "styling_logic": run.outfit.styling_logic,
             "critic_decision": run.outfit.critic_decision,

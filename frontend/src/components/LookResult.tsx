@@ -109,7 +109,7 @@ export function LookResult({
                 <strong style={{ fontSize: 15 }}>{engine?.styling_thesis_ru || engine?.styling_thesis}</strong>
                 <div className="muted small" style={{ marginTop: 2 }}>
                   {engine?.score_formula}
-                  {engine?.aesthetic ? ` · эстетика: ${engine.aesthetic}` : ''}
+                  {engine?.aesthetic_ru || engine?.aesthetic ? ` · ${engine.aesthetic_ru ?? engine.aesthetic}` : ''}
                 </div>
               </div>
             </div>

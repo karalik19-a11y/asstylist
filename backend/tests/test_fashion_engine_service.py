@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.config import settings
@@ -166,10 +168,15 @@ def test_legacy_mode_skips_the_engine(items, monkeypatch):
     assert [item["sku"] for item in result.items] == [item["sku"] for item in legacy.items]
 
 
-def test_rerank_for_slot_orders_by_the_engine(items, session):
+def test_rerank_for_slot_puts_the_engine_pick_first(items, session):
+    """Замена вещи идёт по движку: его вещь слота — первая, остальное — альтернативы."""
     request = look_request(style="techwear", season="winter")
     prepared = __import__("app.engine.look_builder", fromlist=["prepare_pool"]).prepare_pool(items, request)
     run = fashion_engine_service.run_engine(prepared, request)
+
+    engine_skus = {card.sku for card in run.outfit.items}
+    engine_shoes = {sku for sku in engine_skus if sku and sku.startswith("SH-")}
+    assert engine_shoes, "движок должен выбрать обувь в образ"
 
     class FakeLook:
         style = request.style
@@ -180,17 +187,24 @@ def test_rerank_for_slot_orders_by_the_engine(items, session):
         height_cm = request.height_cm
         weight_kg = request.weight_kg
         budget_rub = request.budget_rub
-        ranking_json = "{}"
+        ranking_json = json.dumps({"engine": {"roles": {sku: "footwear" for sku in engine_skus}}})
 
     pool = prepared.candidates_by_slot["shoes"]
     reranked = fashion_engine_service.rerank_for_slot(pool, "shoes", look=FakeLook(), ctx=prepared.ctx)
-    assert [entry.sku for entry in reranked] == sorted(
-        [entry.sku for entry in reranked],
-        key=lambda sku: next(e for e in reranked if e.sku == sku).score,
-        reverse=True,
-    )
-    assert reranked[0].sku in {card.sku for card in run.outfit.items}
+
+    assert reranked[0].sku in engine_shoes
     assert reranked[0].breakdown.get("engine") is not None
+    assert reranked[0].breakdown.get("engineOutfit") is True
+    picked = [entry for entry in reranked if entry.breakdown.get("engineOutfit")]
+    assert [entry.sku for entry in picked] == [entry.sku for entry in sorted(picked, key=lambda e: -e.score)]
+
+    # Без сохранённого образа движка порядок остаётся по гибридной оценке.
+    class BareLook(FakeLook):
+        ranking_json = "{}"
+
+    fallback = fashion_engine_service.rerank_for_slot(pool, "shoes", look=BareLook(), ctx=prepared.ctx)
+    assert [entry.sku for entry in fallback] == [entry.sku for entry in sorted(fallback, key=lambda e: -e.score)]
+    assert all(entry.breakdown.get("engine") is not None for entry in fallback)
 
 
 def test_search_returns_engine_payload(items):

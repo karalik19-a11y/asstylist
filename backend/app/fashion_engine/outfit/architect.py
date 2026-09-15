@@ -60,10 +60,19 @@ class OutfitArchitect:
             profile = UserStyleProfile.from_dict(profile)
         max_outfits = int(options.get("max_outfits", 3))
 
-        theses = self.trend.suggest_theses(products, user_query)
+        # Отличие порта: если в запросе пользователя есть собственный словарь
+        # (стиль, настроение, свободная формулировка), образы строятся только
+        # вокруг этих тезисов. У провайдера поверх всего каталога тезисы из пула
+        # не связаны с запросом и побеждали бы по случайной вещи ассортимента.
+        query_theses = set(self.trend.theses_from_query(user_query))
+        theses = list(self.trend.suggest_theses(products, user_query))
+        if query_theses:
+            theses = [thesis for thesis in theses if thesis in query_theses]
         outfits: list[OutfitCandidate] = []
         for thesis in theses[: max_outfits + 1]:
             candidate = self._build_around_thesis(products, thesis, profile, user_query)
+            if candidate is not None and thesis in query_theses:
+                candidate.thesis_from_query = True
             if candidate and candidate.item_count() >= 3:
                 outfits.append(candidate)
 

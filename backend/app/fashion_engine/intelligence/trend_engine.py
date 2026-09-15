@@ -6,10 +6,23 @@
 from __future__ import annotations
 
 from .. import keywords as kw
+from .. import lexicon
 from ..types import ProductItem
 
 #: Слова, по которым тезис узнаётся в тексте (RU + EN).
+#:
+#: Первыми идут тезисы, которыми пользуются стили asStylist (тихая роскошь,
+#: минимализм, техно, романтика, бохо, спорт, деловой крой): каталог приложения
+#: русскоязычный, поэтому «кашемир» или «кружево» должны давать свой тезис, а не
+#: подбираться по названиям вещей из общего пула. Ниже — тезисы оригинала.
 _THESIS_TRIGGERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Quiet Luxury Tailoring", ("cashmere", "кашемир", "wool", "шерст", "quiet luxury", "тих", "tailoring", "прямые силуэт")),
+    ("Minimal Precision", ("minimal", "минимал", "clean lines", "лаконич", "monochrome", "монохром")),
+    ("Technical Utility", ("techwear", "техно", "nylon", "нейлон", "membrane", "мембран", "utility", "утилитар")),
+    ("Soft Romanticism", ("romantic", "романт", "lace", "кружев", "chiffon", "шифон", "floral", "цветоч")),
+    ("Craft Bohemia", ("boho", "бохо", "crochet", "fringe", "бахром", "этно", "лён", "льнян")),
+    ("Sport Couture", ("athleisure", "спортивн", "jersey", "джерси", "leggings", "леггинс")),
+    ("Sharp Tailoring", ("business", "делов", "suit", "костюм", "blazer", "пиджак", "office", "офис")),
     ("Industrial Romanticism", ("sheer", "прозрач", "сетк", "industrial", "индустриальн")),
     ("Transparent Layering", ("sheer", "прозрач", "сетк", "mesh")),
     ("Deconstructed 90s Minimalism", ("deconstructed", "деконстру", "асимметр", "raw", "90s")),
@@ -66,18 +79,37 @@ class TrendEngine:
         return item
 
     def suggest_theses(self, items: list[ProductItem], user_query: str) -> list[str]:
-        """Кандидаты в стилистические тезисы (порт + русские триггеры)."""
-        theses: list[str] = []
-        haystack = (
-            " ".join(f"{item.name} {item.brand} {' '.join(item.tags)}" for item in items)
-            + " "
-            + (user_query or "")
-        ).lower().replace("ё", "е")
+        """Кандидаты в стилистические тезисы (порт + русские триггеры).
 
+        Отличие порта: сначала идут тезисы, которые узнаются в самом запросе
+        пользователя, и только потом — тезисы, найденные по вещам пула. У
+        провайдера поверх всего каталога (``CatalogSearchProvider``) пул содержит
+        почти весь ассортимент, поэтому без этого шага тезис выбирался бы по
+        случайной вещи каталога, а не по запросу.
+        """
+        query_theses = set(self.theses_from_query(user_query))
+        pool_text = " ".join(f"{item.name} {item.brand} {' '.join(item.tags)}" for item in items)
+        pool_text = f"{pool_text} {(user_query or '')}".lower().replace("ё", "е")
+
+        from_query: list[str] = []
+        from_pool: list[str] = []
         for thesis, triggers in _THESIS_TRIGGERS:
-            if any(trigger in haystack for trigger in triggers):
-                theses.append(thesis)
+            if thesis in query_theses:
+                from_query.append(thesis)
+            elif any(trigger in pool_text for trigger in triggers):
+                from_pool.append(thesis)
 
+        theses = from_query + from_pool
         if not theses:
             theses = ["Contemporary Editorial", "Refined Utilitarian"]
         return list(dict.fromkeys(theses))
+
+    def theses_from_query(self, user_query: str) -> list[str]:
+        """Тезисы, которые узнаются в самом запросе пользователя (RU + EN)."""
+        query_text = (user_query or "").lower().replace("ё", "е")
+        tokens = lexicon.tokenize(query_text)
+        found: list[str] = []
+        for thesis, triggers in _THESIS_TRIGGERS:
+            if any(kw.keyword_hit(query_text, tokens, trigger) for trigger in triggers):
+                found.append(thesis)
+        return found

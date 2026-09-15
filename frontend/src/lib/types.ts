@@ -106,6 +106,8 @@ export interface LookEngine {
   styling_thesis?: string
   styling_thesis_ru?: string
   aesthetic?: string
+  /** Эстетика по-русски: тезис + доминирующий оттенок образа. */
+  aesthetic_ru?: string
   outfit_score?: number
   app_score?: number
   final_score?: number
