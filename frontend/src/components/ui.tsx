@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { formatRub } from '../lib/format'
 
-export type IconName = 'spark' | 'star' | 'heart' | 'shield' | 'camera'
+export type IconName = 'spark' | 'star' | 'heart' | 'shield' | 'camera' | 'bolt'
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const box = { width: size, height: size, viewBox: '0 0 24 24' }
@@ -38,6 +38,12 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
           <rect x="3.5" y="7.5" width="17" height="11.5" rx="3" />
           <circle cx="12" cy="13.2" r="3.2" />
           <path d="M9 7.5L10.3 5h3.4L15 7.5" />
+        </svg>
+      )
+    case 'bolt':
+      return (
+        <svg {...box} fill="currentColor" aria-hidden="true">
+          <path d="M13 2L4.5 13.5H11L9.5 22 19 10h-6.5L13 2z" />
         </svg>
       )
   }
@@ -213,8 +219,8 @@ export function ScoreRing({ score }: { score: number }) {
     <div
       className="score-ring"
       style={{
-        background: `conic-gradient(${color} ${clamped * 3.6}deg, #ffe0ee 0deg)`,
-        boxShadow: 'inset 0 0 0 8px #fffdf8, 3px 3px 0 var(--ink)',
+        background: `conic-gradient(${color} ${clamped * 3.6}deg, #dfe6ff 0deg)`,
+        boxShadow: 'inset 0 0 0 8px #fffdf5, 3px 3px 0 var(--ink)',
         color,
       }}
       aria-label={`Оценка образа ${Math.round(clamped)} из 100`}

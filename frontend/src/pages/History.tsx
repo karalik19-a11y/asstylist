@@ -24,10 +24,10 @@ export function History({
   if (!items.length) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '36px 20px' }}>
-        <div style={{ fontSize: 40, color: 'var(--pink)' }} aria-hidden="true">✦</div>
-        <h3 style={{ marginTop: 10 }}>Пока тихо…</h3>
+        <div style={{ fontSize: 40, color: 'var(--red)' }} aria-hidden="true">✦</div>
+        <h3 style={{ marginTop: 10 }}>Пока пусто</h3>
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          Собери первый образ — он поселится здесь.
+          Здесь появятся собранные образы.
         </p>
       </div>
     )

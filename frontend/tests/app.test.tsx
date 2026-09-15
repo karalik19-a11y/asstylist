@@ -178,19 +178,19 @@ async function walkToReview() {
 describe('App flow', () => {
   it('renders the magazine cover', async () => {
     render(<App />)
-    expect(await screen.findByText(/LOOKING/)).toBeInTheDocument()
-    expect(screen.getAllByText(/cover star/i).length).toBeGreaterThanOrEqual(1)
+    expect(await screen.findByText(/ТВОЙ НОВЫЙ/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Собрать образ' })).toBeInTheDocument()
     expect(screen.queryByText(/демо-режим/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/AI-стилист/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/движок/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/cover star|ass-approved|ballad|meh|wow!/i)).not.toBeInTheDocument()
   })
 
   it('walks the whole wizard and renders the generated look', async () => {
     render(<App />)
     await walkToReview()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать образ' }))
 
     expect(await screen.findByText('Образ уровня стилиста')).toBeInTheDocument()
     expect(screen.getByText('Футболка базовая плотная')).toBeInTheDocument()
@@ -204,7 +204,7 @@ describe('App flow', () => {
     const fetchMock = mockFetch()
     render(<App />)
     await walkToReview()
-    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать образ' }))
     await screen.findByText('Образ уровня стилиста')
 
     const generateCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/api/looks/generate'))
@@ -221,7 +221,7 @@ describe('App flow', () => {
     mockFetch({ '/api/looks/generate': () => jsonResponse({ detail: 'Недостаточно подходящих товаров' }, 422) })
     render(<App />)
     await walkToReview()
-    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать образ' }))
     expect(await screen.findByText('Недостаточно подходящих товаров')).toBeInTheDocument()
   })
 

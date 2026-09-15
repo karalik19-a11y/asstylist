@@ -39,13 +39,13 @@ export function LookResult({
 
   return (
     <div className="stack">
-      {/* ---------- cover story ---------- */}
+      {/* ---------- вердикт ---------- */}
       <Reveal delay={0}>
         <section className="card verdict-card stack" style={{ gap: 14 }}>
           <div className="kicker-rule">
-            <span className="kicker">cover story · {planLabel}</span>
+            <span className="kicker">Твой образ · {planLabel}</span>
           </div>
-          <div className="row" style={{ gap: 14, alignItems: 'center' }}>
+          <div className="row" style={{ gap: 14, alignItems: 'center', flexWrap: 'nowrap' }}>
             <ScoreRing score={look.score} />
             <div style={{ minWidth: 0, flex: 1 }}>
               <h2 style={{ fontSize: 24 }}>{look.verdict.title || 'Твой образ'}</h2>
@@ -54,7 +54,7 @@ export function LookResult({
           </div>
           <div className="row" style={{ gap: 8 }}>
             <span className="stamp" aria-hidden="true">
-              ✓ ass-approved · {look.verdict.grade}
+              оценка {look.verdict.grade}
             </span>
           </div>
 
@@ -71,11 +71,11 @@ export function LookResult({
 
           <BudgetBar total={look.total_rub} budget={look.budget_rub} />
 
-          <div className="row" style={{ gap: 10 }}>
-            <button type="button" className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={onNewLook}>
-              Ещё лук ✦
+          <div className="row" style={{ gap: 12 }}>
+            <button type="button" className="btn btn-primary btn-sm" style={{ flex: '1 1 160px' }} onClick={onNewLook}>
+              Новый образ
             </button>
-            <button type="button" className="btn btn-sm" onClick={onFavorite} disabled={look.id === null}>
+            <button type="button" className="btn btn-sm" style={{ flex: '1 1 160px' }} onClick={onFavorite} disabled={look.id === null}>
               {look.is_favorite ? '★ В избранном' : '☆ В избранное'}
             </button>
           </div>
@@ -146,7 +146,7 @@ export function LookResult({
 
       <Reveal delay={0.05}>
         <section className="card stack" style={{ gap: 8 }}>
-          <SectionTitle index="04">Горячие советы</SectionTitle>
+          <SectionTitle index="04">Советы стилиста</SectionTitle>
           <ul className="reasons">
             {look.tips.map((tip) => (
               <li key={tip}>{tip}</li>
@@ -161,11 +161,11 @@ export function LookResult({
         </button>
         {showDiagnostics ? (
           <div className="small muted stack" style={{ gap: 6 }}>
-            <div>Сборка: {look.engine_version}</div>
-            <div>Перебрали вещей: {diagnostics.candidates_total ?? 0}</div>
-            <div>Отсеяли: {diagnostics.rejected_total ?? 0}</div>
+            <div>Версия: {look.engine_version}</div>
+            <div>Товаров рассмотрено: {diagnostics.candidates_total ?? 0}</div>
+            <div>Отклонено: {diagnostics.rejected_total ?? 0}</div>
             <div>План образа: {diagnostics.plan_description ?? planLabel}</div>
-            {diagnostics.dropped_slots?.length ? <div>Убрали из-за бюджета: {diagnostics.dropped_slots.join(', ')}</div> : null}
+            {diagnostics.dropped_slots?.length ? <div>Убрано из-за бюджета: {diagnostics.dropped_slots.join(', ')}</div> : null}
             {diagnostics.warnings?.length ? (
               <ul className="reasons">
                 {diagnostics.warnings.map((warning) => (

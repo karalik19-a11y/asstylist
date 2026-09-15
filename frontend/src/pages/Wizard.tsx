@@ -6,12 +6,12 @@ import { Chip, Header, RangeField, Reveal, SectionTitle, Spinner, StepDots, Tile
 import { PhotoUploader } from '../components/PhotoUploader'
 
 const STEP_SUBTITLES: Record<WizardStep, string> = {
-  photo: 'Можно и без него — но с ним точнее',
-  body: 'Только для посадки, честно-честно',
-  style: 'Что сегодня по душе?',
-  mood: 'Какое настроение транслируем?',
-  tune: 'Пара штрихов — и на подиум',
-  review: 'Глянь, всё ли так',
+  photo: 'С фото палитра получится точнее',
+  body: 'Нужно для подбора силуэта',
+  style: 'Основа образа',
+  mood: 'Настроение образа',
+  tune: 'Последние штрихи',
+  review: 'Проверь данные перед сборкой',
 }
 
 export function Wizard({
@@ -62,7 +62,7 @@ export function Wizard({
           <div className="stack">
             <Reveal delay={0.05}>
               <p className="muted small" style={{ margin: 0 }}>
-                Фото не обязательно. Но с ним точнее угадаем палитру и силуэт. Ничего не храним — честно.
+                Фото не обязательно, но с ним точнее определятся палитра и силуэт. Загруженное фото не сохраняется.
               </p>
             </Reveal>
             <Reveal delay={0.1}>
@@ -70,7 +70,7 @@ export function Wizard({
             </Reveal>
             {state.photoDataUrl ? (
               <div className="card small" style={{ fontWeight: 700 }}>
-                ✦ Фото на месте — разберём его при сборке.
+                ✦ Фото добавлено.
               </div>
             ) : null}
           </div>
@@ -185,7 +185,7 @@ export function Wizard({
                   max={LIMITS.budget.max}
                   step={LIMITS.budget.step}
                   onChange={(value) => onPatch({ budget_rub: value })}
-                  hint={`Уложимся в ${formatRub(state.budget_rub)} — ни рублем больше`}
+                  hint={`Образ будет не дороже ${formatRub(state.budget_rub)}`}
                 />
               </div>
             </Reveal>
@@ -240,7 +240,7 @@ export function Wizard({
           <div className="stack">
             <Reveal delay={0.03}>
               <div className="card stack" style={{ gap: 4 }}>
-                <SectionTitle>Всё так?</SectionTitle>
+                <SectionTitle>Проверь данные</SectionTitle>
                 <ReviewRow label="Стиль" value={meta?.styles.find((s) => s.id === state.style)?.label ?? state.style} />
                 <ReviewRow label="Настроение" value={meta?.moods.find((m) => m.id === state.mood)?.label ?? state.mood} />
                 <ReviewRow label="Повод" value={meta?.occasions.find((o) => o.id === state.occasion)?.label ?? state.occasion} />
@@ -279,9 +279,9 @@ export function Wizard({
                 <div className="gen-stages">
                   <span className="gen-stage">мерки</span>
                   <span className="gen-stage">палитра</span>
-                  <span className="gen-stage">лук</span>
+                  <span className="gen-stage">образ</span>
                 </div>
-                <div className="muted small">Колдуем над луком…</div>
+                <div className="muted small">Собираем образ…</div>
               </div>
             ) : null}
             {error ? <div className="error-box">{error}</div> : null}
@@ -298,13 +298,13 @@ export function Wizard({
             </button>
           ) : null}
           {isLast ? (
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={onGenerate} disabled={generating} aria-label="Собрать лук">
+            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={onGenerate} disabled={generating} aria-label="Собрать образ">
               {generating ? (
                 <>
-                  <Spinner /> Колдуем…
+                  <Spinner /> Собираем…
                 </>
               ) : (
-                'Собрать лук ✦'
+                'Собрать образ'
               )}
             </button>
           ) : (

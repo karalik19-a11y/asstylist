@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import type { HistoryEntry, Look, Meta } from './lib/types'
 import { api, ApiError } from './lib/api'
-import { haptic, initTelegram, telegramUserName } from './lib/telegram'
+import { haptic, initTelegram } from './lib/telegram'
 import { initialModel, wizardReducer } from './state/wizard'
 import { Home } from './pages/Home'
 import { Wizard } from './pages/Wizard'
@@ -33,9 +33,9 @@ const SCREEN_TITLES: Record<Screen, string> = {
 }
 
 const SCREEN_SUBTITLES: Partial<Record<Screen, string>> = {
-  result: 'cover story подъехала',
-  history: 'твои выходы в свет',
-  verification: 'честность — лучшая политика',
+  result: 'Собран для тебя',
+  history: 'Все собранные образы',
+  verification: 'Статусы товаров каталога',
 }
 
 const TABS: { id: Screen; label: string; icon: IconName }[] = [
@@ -64,7 +64,6 @@ export default function App() {
   const [swappingSlot, setSwappingSlot] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadingList, setLoadingList] = useState(false)
-  const [userName, setUserName] = useState<string | null>(null)
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -77,17 +76,11 @@ export default function App() {
 
   useEffect(() => {
     initTelegram()
-    setUserName(telegramUserName())
     api
       .meta()
       .then(setMeta)
       .catch(() => setMeta(null))
-    api
-      .auth()
-      .then((response) => {
-        if (!response.demo) setUserName(response.user.first_name ?? null)
-      })
-      .catch(() => undefined)
+    api.auth().catch(() => undefined)
     void refreshHistory()
   }, [refreshHistory])
 
@@ -218,7 +211,6 @@ export default function App() {
           {screen === 'home' ? (
             <Home
               history={history}
-              userName={userName}
               onStart={startWizard}
               onOpenHistory={openHistory}
               onOpenVerification={() => void openVerification()}
@@ -277,7 +269,7 @@ export default function App() {
                   aria-current={screen === tab.id ? 'page' : undefined}
                 >
                   <span className="ico" aria-hidden="true"><Icon name={tab.icon} size={21} /></span>
-                  {tab.label}
+                  <span className="lbl">{tab.label}</span>
                 </button>
               ))}
             </div>

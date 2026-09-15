@@ -40,7 +40,7 @@ export function ItemCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="row-between">
             <span className="tiny">{item.slot_label}</span>
-            <strong style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--pink-deep)' }}>{formatRub(item.price_rub)}</strong>
+            <strong style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--blue-deep)' }}>{formatRub(item.price_rub)}</strong>
           </div>
           <div style={{ fontWeight: 700, marginTop: 3 }}>{item.name}</div>
           <div className="muted small">

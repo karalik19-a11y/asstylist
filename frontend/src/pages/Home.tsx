@@ -1,22 +1,22 @@
 import type { HistoryEntry } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
-import { Reveal, SectionTitle } from '../components/ui'
+import { Icon, Reveal, SectionTitle } from '../components/ui'
 
 const STEPS = [
-  { num: '01', title: 'Покажи себя', text: 'Фото и пара цифр — дальше мы сами.' },
-  { num: '02', title: 'Выбери вайб', text: 'Хоть дерзкий, хоть нежный.' },
-  { num: '03', title: 'Забери лук', text: 'Готовый образ со ссылками.' },
-  { num: '04', title: 'Блистай', text: 'Носи. Сияй. Повторяй.' },
+  { num: '01', title: 'Фото и мерки', text: 'Загрузи фото, укажи рост и вес.' },
+  { num: '02', title: 'Стиль и настроение', text: 'Выбери, что ближе сегодня.' },
+  { num: '03', title: 'Детали', text: 'Повод, сезон и бюджет.' },
+  { num: '04', title: 'Готовый образ', text: 'Вещи, палитра и советы.' },
 ]
 
 const COVER_LINES = [
-  'палитра, от которой мурчат',
-  'бюджет выжил и процветает',
-  'комплименты почти гарантированы',
-  'ass-approved · печать внизу',
+  'палитра под твой тип внешности',
+  'силуэт по твоим меркам',
+  'вещи с проверенными ссылками',
+  'строго в рамках бюджета',
 ]
 
-const TICKER_ITEMS = ['fresh looks', 'zero stress', "from 'meh' to 'wow'", 'ass & class', 'cover star: ты']
+const TICKER_ITEMS = ['новый образ за минуту', 'палитра', 'силуэт', 'проверенные вещи', 'твой стиль']
 
 function Ticker() {
   const sequence = (
@@ -45,17 +45,13 @@ export function Home({
   onOpenHistory,
   onOpenVerification,
   onOpenLook,
-  userName,
 }: {
   history: HistoryEntry[]
   onStart: () => void
   onOpenHistory: () => void
   onOpenVerification: () => void
   onOpenLook: (id: number) => void
-  userName: string | null
 }) {
-  const star = userName && userName !== 'Гость' ? userName : 'ты'
-
   return (
     <div className="stack">
       {/* ---------- обложка ---------- */}
@@ -63,34 +59,27 @@ export function Home({
         <section className="cover">
           <div className="issue-row">
             <span>выпуск № 001</span>
-            <b>ass &amp; class</b>
+            <b>asstylist</b>
             <span>2026</span>
           </div>
 
           <h1 className="masthead" aria-label="ASStylist">
-            <span className="m-ass">ASS</span><span className="m-sty">tylist</span>
+            ASStylist
           </h1>
           <div className="mast-sub">
-            звучит дерзко · <em>одевает дерзче</em>
-          </div>
-          <div className="star-line">
-            <span className="sp" aria-hidden="true">★</span>
-            cover star: <b>{star}</b>
-            <span className="sp" aria-hidden="true">★</span>
+            <Icon name="bolt" size={16} />
+            журнал твоих образов
+            <Icon name="bolt" size={16} />
           </div>
 
           <div className="checker" aria-hidden="true" />
 
           <div className="cover-head">
-            <div className="cover-over">— the ballad of —</div>
             <div className="cover-giant">
-              LOOKING <span className="hot">HOT</span>
+              ТВОЙ НОВЫЙ <span className="hl">ОБРАЗ</span>
             </div>
-            <div className="cover-stars">★&nbsp;&nbsp;from&nbsp;&nbsp;★</div>
-            <div className="cover-meh">
-              <span className="meh">'meh'</span>
-              <span className="arr" aria-hidden="true">→</span>
-              <span className="wow">'wow!'</span>
+            <div className="cover-sub">
+              Под фигуру, настроение и бюджет — за минуту.
             </div>
           </div>
 
@@ -105,18 +94,18 @@ export function Home({
 
           <div className="sticker-row">
             <span className="sticker st-sun">new!</span>
-            <span className="sticker st-black">ass-approved ✓</span>
             <span className="sticker st-white">лук за минуту</span>
+            <span className="sticker st-red">свежий номер</span>
           </div>
 
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onStart} aria-label="Собрать образ">
             Собрать образ →
           </button>
           <div className="ghost-row">
-            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenHistory}>
+            <button type="button" className="btn btn-sm btn-ghost light" onClick={onOpenHistory}>
               Мои образы
             </button>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenVerification}>
+            <button type="button" className="btn btn-sm btn-ghost light" onClick={onOpenVerification}>
               Проверка товаров
             </button>
           </div>
@@ -124,9 +113,9 @@ export function Home({
           <div className="barcode-row">
             <span className="barcode" aria-hidden="true" />
             <span className="price">
-              цена: твоя улыбка
+              asstylist · выпуск 001
               <br />
-              0% занудства
+              новый образ каждую неделю
             </span>
           </div>
         </section>
@@ -136,10 +125,10 @@ export function Home({
         <Ticker />
       </Reveal>
 
-      {/* ---------- в этом выпуске ---------- */}
+      {/* ---------- как это работает ---------- */}
       <Reveal delay={0.15}>
         <section className="card stack" style={{ gap: 14 }}>
-          <SectionTitle hint="inside">В этом выпуске</SectionTitle>
+          <SectionTitle hint="4 шага">Как это работает</SectionTitle>
           <div className="step-grid">
             {STEPS.map((step) => (
               <div key={step.num} className="step-card">
@@ -155,7 +144,7 @@ export function Home({
       {history.length ? (
         <Reveal delay={0.2}>
           <section className="stack" style={{ gap: 10 }}>
-            <SectionTitle hint="fresh">Недавние выходы</SectionTitle>
+            <SectionTitle hint="недавнее">Недавние образы</SectionTitle>
             <div className="card index-list">
               {history.slice(0, 3).map((entry, index) => (
                 <button
@@ -168,7 +157,7 @@ export function Home({
                   <span className="stack" style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <span className="row-between" style={{ gap: 8 }}>
                       <strong>{entry.style}</strong>
-                      <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums', flex: '0 0 auto' }}>
                         {formatRub(entry.total_rub)}
                       </span>
                     </span>
@@ -185,7 +174,7 @@ export function Home({
       ) : null}
 
       <hr className="rule-double" />
-      <div className="page-mark">ass &amp; class · made to slay</div>
+      <div className="page-mark">ASStylist · 2026</div>
     </div>
   )
 }
