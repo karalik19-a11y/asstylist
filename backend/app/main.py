@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="asStylist API",
     version=settings.version,
-    description="AI fashion director as a Telegram Mini App",
+    description="Personal stylist as a Telegram Mini App",
     lifespan=lifespan,
 )
 

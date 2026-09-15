@@ -174,7 +174,6 @@ export default function App() {
           meta={meta}
           history={history}
           userName={userName}
-          telegramConfigured={Boolean(meta?.telegram?.configured)}
           onBotConnected={() => {
             api
               .meta()

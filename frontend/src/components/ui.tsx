@@ -3,19 +3,23 @@ import { formatRub } from '../lib/format'
 
 export function Header({ title, subtitle, onBack, right }: { title: string; subtitle?: string; onBack?: () => void; right?: ReactNode }) {
   return (
-    <header className="row-between">
-      <div className="row" style={{ gap: 12, minWidth: 0 }}>
-        {onBack ? (
-          <button className="btn btn-sm btn-ghost" onClick={onBack} aria-label="Назад">
-            ←
-          </button>
-        ) : null}
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
-          {subtitle ? <div className="muted small">{subtitle}</div> : null}
+    <header className="stack" style={{ gap: 6 }}>
+      <div className="row-between" style={{ alignItems: 'center' }}>
+        <div className="row" style={{ gap: 12, minWidth: 0, flex: 1 }}>
+          {onBack ? (
+            <button className="btn btn-sm" onClick={onBack} aria-label="Назад" style={{ padding: '8px 11px' }}>
+              ←
+            </button>
+          ) : null}
+          <span className="kicker" style={{ flexShrink: 0 }}>
+            asStylist
+          </span>
         </div>
+        {right}
       </div>
-      {right}
+      <hr className="rule" />
+      <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
+      {subtitle ? <div className="muted small">{subtitle}</div> : null}
     </header>
   )
 }
@@ -159,11 +163,20 @@ export function BudgetBar({ total, budget }: { total: number; budget: number }) 
   )
 }
 
-export function SectionTitle({ children, hint }: { children: ReactNode; hint?: string }) {
+export function SectionTitle({ children, hint, index }: { children: ReactNode; hint?: string; index?: string }) {
   return (
-    <div className="row-between">
-      <h3>{children}</h3>
-      {hint ? <span className="muted small">{hint}</span> : null}
+    <div className="section-head">
+      <h3>
+        {index ? (
+          <>
+            <span className="sec-num">№ {index}</span>
+            {children}
+          </>
+        ) : (
+          children
+        )}
+      </h3>
+      {hint ? <span className="muted small" style={{ whiteSpace: 'nowrap' }}>{hint}</span> : null}
     </div>
   )
 }

@@ -39,23 +39,32 @@ export function LookResult({
 
   return (
     <div className="stack">
+      {/* ---------- обложка выпуска ---------- */}
       <section className="card stack" style={{ gap: 14 }}>
+        <div className="kicker-rule">
+          <span className="kicker">Ваш образ · {look.plan}</span>
+        </div>
         <div className="row" style={{ gap: 14, alignItems: 'center' }}>
           <ScoreRing score={look.score} />
-          <div style={{ minWidth: 0 }}>
-            <h2>{look.verdict.title || 'Ваш образ'}</h2>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h2 style={{ fontSize: 26 }}>{look.verdict.title || 'Ваш образ'}</h2>
             <div className="muted small">{look.verdict.note}</div>
-            <div className="wrap" style={{ marginTop: 8 }}>
-              <Badge>оценка {look.verdict.grade}</Badge>
-              <Badge>{itemsWord(look.items.length)}</Badge>
-              {look.is_favorite ? <Badge tone="ok">в избранном</Badge> : null}
-            </div>
           </div>
+          <span className="stamp" aria-hidden="true">
+            оценка {look.verdict.grade}
+          </span>
         </div>
 
-        <p className="small" style={{ margin: 0, color: '#dedbd5' }}>
+        <p className="small" style={{ margin: 0, color: 'var(--ink)' }}>
           {look.summary}
         </p>
+
+        <div className="wrap" style={{ gap: 6 }}>
+          <Badge>
+            {itemsWord(look.items.length)} · {formatRub(look.total_rub)}
+          </Badge>
+          {look.is_favorite ? <Badge tone="ok">в избранном</Badge> : null}
+        </div>
 
         <BudgetBar total={look.total_rub} budget={look.budget_rub} />
 
@@ -70,7 +79,9 @@ export function LookResult({
       </section>
 
       <section className="card stack" style={{ gap: 10 }}>
-        <SectionTitle hint={`уверенность ${Math.round(look.body.confidence * 100)}%`}>Силуэт</SectionTitle>
+        <SectionTitle index="01" hint={`уверенность ${Math.round(look.body.confidence * 100)}%`}>
+          Силуэт
+        </SectionTitle>
         <div className="row-between">
           <div>
             <strong>{look.body.silhouette_ru}</strong>
@@ -89,7 +100,7 @@ export function LookResult({
       </section>
 
       <section className="card stack" style={{ gap: 10 }}>
-        <SectionTitle hint={`уверенность ${Math.round(look.palette.confidence * 100)}%`}>
+        <SectionTitle index="02" hint={`уверенность ${Math.round(look.palette.confidence * 100)}%`}>
           Палитра · {look.palette.season_label}
         </SectionTitle>
         <div className="palette-dots">
@@ -111,14 +122,16 @@ export function LookResult({
       </section>
 
       <section className="stack" style={{ gap: 10 }}>
-        <SectionTitle hint={`план: ${look.plan}`}>Образ</SectionTitle>
+        <SectionTitle index="03" hint={`план: ${look.plan}`}>
+          Образ
+        </SectionTitle>
         {look.items.map((item) => (
           <ItemCard key={`${item.slot}-${item.sku}`} item={item} onSwap={onSwap} swapping={swappingSlot === item.slot} />
         ))}
       </section>
 
       <section className="card stack" style={{ gap: 8 }}>
-        <SectionTitle>Советы стилиста</SectionTitle>
+        <SectionTitle index="04">Советы стилиста</SectionTitle>
         <ul className="reasons">
           {look.tips.map((tip) => (
             <li key={tip}>{tip}</li>
@@ -136,7 +149,6 @@ export function LookResult({
             <div>Проанализировано товаров: {diagnostics.candidates_total ?? 0}</div>
             <div>Отклонено фильтром: {diagnostics.rejected_total ?? 0}</div>
             <div>План образа: {diagnostics.plan_description ?? look.plan}</div>
-            <div>AI-провайдер: {look.ai_provider}</div>
             {diagnostics.dropped_slots?.length ? <div>Убрано из-за бюджета: {diagnostics.dropped_slots.join(', ')}</div> : null}
             {diagnostics.warnings?.length ? (
               <ul className="reasons">
