@@ -9,6 +9,8 @@ import { History } from './pages/History'
 import { Verification } from './pages/Verification'
 import { LookResult } from './components/LookResult'
 import { Header } from './components/ui'
+import { playClick, playSuccess } from './lib/sound'
+import { LeopardPatternDef } from './lib/graphics'
 
 type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification'
 
@@ -25,17 +27,17 @@ type VerificationReport = {
 }
 
 const SCREEN_TITLES: Record<Screen, string> = {
-  home: 'asStylist',
-  wizard: 'Новый образ',
-  result: 'Ваш образ',
-  history: 'Мои образы',
-  verification: 'Проверка товаров',
+  home: 'ASSTYLIST // ATELIER',
+  wizard: 'Новый гардероб',
+  result: 'Персональная селекция',
+  history: 'Архив гардеробов',
+  verification: 'Верификация каталога',
 }
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message
   if (error instanceof Error) return error.message
-  return 'Что-то пошло не так. Попробуйте ещё раз.'
+  return 'Произошла ошибка при формировании гардероба. Повторите попытку.'
 }
 
 export default function App() {
@@ -50,6 +52,16 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [loadingList, setLoadingList] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
+  const [theme, setTheme] = useState<'noir' | 'parchment'>('noir')
+
+  const toggleTheme = useCallback(() => {
+    playClick()
+    setTheme((prev) => {
+      const next = prev === 'noir' ? 'parchment' : 'noir'
+      document.documentElement.setAttribute('data-theme', next)
+      return next
+    })
+  }, [])
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -94,6 +106,7 @@ export default function App() {
       setLook(result)
       setScreen('result')
       haptic('success')
+      playSuccess()
       void refreshHistory()
     } catch (caught) {
       setError(errorMessage(caught))
@@ -165,8 +178,25 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* SVG Global Definitions for Leopard Rosettes */}
+      <LeopardPatternDef />
+
       {screen !== 'home' ? (
-        <Header title={SCREEN_TITLES[screen]} onBack={screen === 'result' ? goHome : () => setScreen('home')} />
+        <Header
+          title={SCREEN_TITLES[screen]}
+          onBack={screen === 'result' ? goHome : () => setScreen('home')}
+          right={
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={toggleTheme}
+              style={{ padding: '6px 10px', minHeight: 34, fontSize: 10 }}
+              title="Переключить тему оформления"
+            >
+              {theme === 'noir' ? 'PARCHMENT' : 'NOIR'}
+            </button>
+          }
+        />
       ) : null}
 
       {screen === 'home' ? (
@@ -174,12 +204,6 @@ export default function App() {
           meta={meta}
           history={history}
           userName={userName}
-          onBotConnected={() => {
-            api
-              .meta()
-              .then(setMeta)
-              .catch(() => undefined)
-          }}
           onStart={startWizard}
           onOpenHistory={openHistory}
           onOpenVerification={() => void openVerification()}
@@ -225,7 +249,7 @@ export default function App() {
 
       {screen === 'home' && !isTelegram() ? (
         <footer className="muted tiny" style={{ textAlign: 'center', paddingTop: 8 }}>
-          Работает в браузере в демо-режиме · в Telegram Mini App доступна авторизация по аккаунту
+          ASSTYLIST ATELIER · Автономный режим в браузере · Синхронизация профиля в Telegram Mini App
         </footer>
       ) : null}
     </div>
