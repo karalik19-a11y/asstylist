@@ -126,7 +126,7 @@ def thesis_label_ru(thesis: str | None) -> str:
 
 def keyword_hit(text: str, tokens: list[str], keyword: str) -> bool:
     """Проверка одного ключевого слова: подстрока для EN, основы — для RU."""
-    lowered = keyword.lower()
+    lowered = keyword.lower().replace("ё", "е")
     if lowered and lowered in text:
         return True
     if any("а" <= char <= "я" for char in lowered):

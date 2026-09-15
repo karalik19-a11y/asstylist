@@ -16,13 +16,13 @@ from ..types import ProductItem
 #: русскоязычный, поэтому «кашемир» или «кружево» должны давать свой тезис, а не
 #: подбираться по названиям вещей из общего пула. Ниже — тезисы оригинала.
 _THESIS_TRIGGERS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Quiet Luxury Tailoring", ("cashmere", "кашемир", "wool", "шерст", "quiet luxury", "тих", "tailoring", "прямые силуэт")),
+    ("Quiet Luxury Tailoring", ("cashmere", "кашемир", "quiet luxury", "тих", "camel")),
     ("Minimal Precision", ("minimal", "минимал", "clean lines", "лаконич", "monochrome", "монохром")),
     ("Technical Utility", ("techwear", "техно", "nylon", "нейлон", "membrane", "мембран", "utility", "утилитар")),
     ("Soft Romanticism", ("romantic", "романт", "lace", "кружев", "chiffon", "шифон", "floral", "цветоч")),
-    ("Craft Bohemia", ("boho", "бохо", "crochet", "fringe", "бахром", "этно", "лён", "льнян")),
+    ("Craft Bohemia", ("boho", "бохо", "linen", "лен", "льнян", "crochet", "fringe", "бахром", "этно")),
     ("Sport Couture", ("athleisure", "спортивн", "jersey", "джерси", "leggings", "леггинс")),
-    ("Sharp Tailoring", ("business", "делов", "suit", "костюм", "blazer", "пиджак", "office", "офис")),
+    ("Sharp Tailoring", ("business", "делов", "suit", "костюм", "blazer", "пиджак", "office", "офис", "tailored", "tailoring", "строг")),
     ("Industrial Romanticism", ("sheer", "прозрач", "сетк", "industrial", "индустриальн")),
     ("Transparent Layering", ("sheer", "прозрач", "сетк", "mesh")),
     ("Deconstructed 90s Minimalism", ("deconstructed", "деконстру", "асимметр", "raw", "90s")),
