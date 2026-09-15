@@ -58,13 +58,13 @@ export function ItemCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="row-between">
             <span className="tiny">{item.slot_label}</span>
-            <strong style={{ fontVariantNumeric: 'tabular-nums', fontSize: 15 }}>{formatRub(item.price_rub)}</strong>
+            <strong style={{ fontVariantNumeric: 'tabular-nums', fontSize: 17 }}>{formatRub(item.price_rub)}</strong>
           </div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2, lineHeight: 1.25 }}>{item.name}</div>
-          <div className="muted small" style={{ marginTop: 2 }}>
+          <div style={{ fontWeight: 600, fontSize: 17, marginTop: 4, lineHeight: 1.3 }}>{item.name}</div>
+          <div className="muted small" style={{ marginTop: 3 }}>
             {item.brand} · {item.fit}
           </div>
-          <div className="wrap" style={{ marginTop: 8, gap: 6 }}>
+          <div className="wrap" style={{ marginTop: 12, gap: 8 }}>
             <Badge tone={verificationTone(item.verification_status)}>
               {verificationLabel(item.verification_status)} · {Math.round(item.verification_score * 100)}%
             </Badge>
@@ -140,7 +140,7 @@ export function ItemCard({
           ))}
           {item.engine?.engine_category ? (
             <div className="muted small">
-              Движок: {item.engine.engine_category}
+              Категория: {item.engine.engine_category}
               {item.engine.material && item.engine.material !== 'unknown' ? ` · фактура: ${item.engine.material}` : ''}
               {item.engine.silhouette?.length ? ` · силуэт: ${item.engine.silhouette.join(', ')}` : ''}
             </div>

@@ -126,7 +126,7 @@ export function Search({
           value={query}
           rows={3}
           placeholder="Например: грязный индустриальный образ с прозрачным верхом и кожаной курткой"
-          aria-label="Запрос к движку"
+          aria-label="Поисковый запрос"
           onChange={(event) => setQuery(event.target.value)}
         />
 
@@ -190,19 +190,19 @@ export function Search({
           step={1_000}
           suffix="₽"
           onChange={setBudget}
-          hint="Бюджет удерживает приложение: движок подбирает, оптимизатор доводит до лимита."
+          hint="Подберём вещи строго в пределах лимита."
         />
 
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack" style={{ gap: 10 }}>
           <RangeField
-            label="Уровень ниши (движок)"
+            label="Уровень ниши"
             value={niche ?? 60}
             min={0}
             max={100}
             step={2}
             suffix="/100"
             onChange={setNiche}
-            hint="Выше — больше редких и нишевых вещей, ниже — больше базовых."
+            hint="Выше — редкие вещи, ниже — базовые."
           />
           <button type="button" className="link-btn" onClick={() => setNiche(null)}>
             {niche === null ? 'Сейчас: ниша выводится из стиля' : 'Сбросить и выводить из стиля'}
@@ -220,7 +220,7 @@ export function Search({
         >
           {busy ? (
             <>
-              <Spinner /> Движок ищет
+              <Spinner /> Ищем вещи
             </>
           ) : (
             'Найти вещи'
@@ -233,7 +233,7 @@ export function Search({
       {result && engine ? (
         <>
           <section className="card stack" style={{ gap: 10 }}>
-            <SectionTitle index="02" hint={`движок v${engine.engine_version ?? '1.0.0'}`}>
+            <SectionTitle index="02" hint={`v${engine.engine_version ?? '1.0.0'}`}>
               Тезис образа
             </SectionTitle>
 
@@ -289,7 +289,7 @@ export function Search({
 
           <section className="card stack" style={{ gap: 10 }}>
             <SectionTitle index="03" hint={`${result.items.length} позиций`}>
-              Подбор движка
+              Подбор вещей
             </SectionTitle>
             {result.items.map((item) => (
               <ItemRow key={item.sku} item={item} />

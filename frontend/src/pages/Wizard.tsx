@@ -5,6 +5,7 @@ import { formatRub } from '../lib/format'
 import { Chip, Header, ProgressBar, RangeField, SectionTitle, Spinner, Tile } from '../components/ui'
 import { PhotoUploader } from '../components/PhotoUploader'
 import { MOOD_BADGES, STYLE_BADGES } from '../lib/graphics'
+import { isTelegram } from '../lib/telegram'
 import { playClick } from '../lib/sound'
 
 export function Wizard({
@@ -43,29 +44,28 @@ export function Wizard({
     <div className="stack page-transition" style={{ gap: 16 }}>
       <Header
         title={STEP_TITLES[step]}
-        subtitle={`Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length} · Студия подбора`}
-        onBack={step === 'photo' ? onExit : onBack}
+        subtitle={`Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length}`}
+        onBack={isTelegram() ? undefined : step === 'photo' ? onExit : onBack}
       />
       <ProgressBar value={(STEP_ORDER.indexOf(step) + 1) / STEP_ORDER.length} />
 
       {step === 'photo' ? (
-        <div className="stack" style={{ gap: 14 }}>
-          <p className="muted small" style={{ margin: 0 }}>
-            Фотоснимок позволяет точно рассчитать пропорции силуэта и определить колорит внешности. Изображение
-            обрабатывается локально и не сохраняется в постоянную базу.
+        <div className="stack" style={{ gap: 16 }}>
+          <p className="muted" style={{ margin: 0, fontSize: 15.5 }}>
+            Фото помогает точнее определить пропорции и оттенки. Снимок обрабатывается локально и не сохраняется.
           </p>
           <PhotoUploader dataUrl={state.photoDataUrl} onSelect={onPhoto} onClear={onClearPhoto} />
           {state.photoDataUrl ? (
-            <div className="card small muted" style={{ borderLeft: '3px solid var(--accent-leopard)' }}>
-              Снимок прикреплён — расчёт цветотипа и силуэта запустится при формировании гардероба.
+            <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
+              Снимок прикреплён — анализ запустится при формировании гардероба.
             </div>
           ) : null}
         </div>
       ) : null}
 
       {step === 'body' ? (
-        <div className="stack" style={{ gap: 14 }}>
-          <div className="card stack">
+        <div className="stack" style={{ gap: 16 }}>
+          <div className="card stack" style={{ gap: 22 }}>
             <RangeField
               label="Рост"
               suffix="см"
@@ -85,7 +85,7 @@ export function Wizard({
             />
           </div>
 
-          <div className="card stack" style={{ gap: 10 }}>
+          <div className="card stack" style={{ gap: 14 }}>
             <SectionTitle>Линия посадки</SectionTitle>
             <div className="wrap">
               {(meta?.presentations ?? [{ id: 'unisex', label: 'Унисекс' }]).map((option) => (
@@ -94,9 +94,7 @@ export function Wizard({
                 </Chip>
               ))}
             </div>
-            <div className="muted small">
-              Метрики необходимы исключительно для корректного подбора пропорций и лекал.
-            </div>
+            <div className="muted small">Нужно только для подбора пропорций и лекал.</div>
           </div>
         </div>
       ) : null}
@@ -140,8 +138,8 @@ export function Wizard({
       ) : null}
 
       {step === 'tune' ? (
-        <div className="stack" style={{ gap: 14 }}>
-          <div className="card stack" style={{ gap: 10 }}>
+        <div className="stack" style={{ gap: 16 }}>
+          <div className="card stack" style={{ gap: 14 }}>
             <SectionTitle>Контекст и повод</SectionTitle>
             <div className="wrap">
               {(meta?.occasions ?? []).map((option) => (
@@ -152,7 +150,7 @@ export function Wizard({
             </div>
           </div>
 
-          <div className="card stack" style={{ gap: 10 }}>
+          <div className="card stack" style={{ gap: 14 }}>
             <SectionTitle>Сезонность</SectionTitle>
             <div className="wrap">
               {(meta?.seasons ?? []).map((option) => (
@@ -177,8 +175,8 @@ export function Wizard({
           </div>
 
           {meta?.colors?.length ? (
-            <div className="card stack" style={{ gap: 10 }}>
-              <SectionTitle hint="до 5 оттенков">Предпочтительные оттенки</SectionTitle>
+            <div className="card stack" style={{ gap: 16 }}>
+              <SectionTitle hint="до 5">Предпочтительные оттенки</SectionTitle>
               <div className="wrap">
                 {meta.colors.map((color) => (
                   <Chip
@@ -191,7 +189,7 @@ export function Wizard({
                 ))}
               </div>
 
-              <SectionTitle hint="до 5 оттенков">Исключить из подбора</SectionTitle>
+              <SectionTitle hint="до 5">Исключить из подбора</SectionTitle>
               <div className="wrap">
                 {meta.colors.map((color) => (
                   <Chip
@@ -209,11 +207,11 @@ export function Wizard({
       ) : null}
 
       {step === 'review' ? (
-        <div className="stack" style={{ gap: 14 }}>
-          <div className="stamp-card stack" style={{ gap: 10 }}>
+        <div className="stack" style={{ gap: 16 }}>
+          <div className="stamp-card stack" style={{ gap: 12 }}>
             <div className="stamp-strip">
-              <span className="stamp-strip-title">СПЕЦИФИКАЦИЯ ЗАКАЗА</span>
-              <span className="stamp-strip-num">CHECK № 01</span>
+              <span className="stamp-strip-title">Ваш запрос</span>
+              <span className="stamp-strip-num">проверьте детали</span>
             </div>
             <ReviewRow label="Направление стиля" value={meta?.styles.find((s) => s.id === state.style)?.label ?? state.style} />
             <ReviewRow label="Тональность настроения" value={meta?.moods.find((m) => m.id === state.mood)?.label ?? state.mood} />
@@ -223,7 +221,7 @@ export function Wizard({
             <ReviewRow label="Предел бюджета" value={formatRub(state.budget_rub)} />
             <ReviewRow label="Снимок" value={state.photoDataUrl ? 'прикреплён' : 'без фото'} />
             <ReviewRow
-              label="Запрос к движку"
+              label="Свободный запрос"
               value={state.query.trim() ? state.query.trim() : 'собирается из стиля и настроения'}
             />
             <ReviewRow
@@ -244,14 +242,13 @@ export function Wizard({
             />
           </div>
 
-          <div className="stamp-card stack" style={{ gap: 8 }}>
+          <div className="stamp-card stack" style={{ gap: 12 }}>
             <div className="stamp-strip">
-              <span className="stamp-strip-title">СВОЯ ФОРМУЛИРОВКА</span>
-              <span className="stamp-strip-num">ДВИЖОК</span>
+              <span className="stamp-strip-title">Своя формулировка</span>
+              <span className="stamp-strip-num">необязательно</span>
             </div>
             <p className="muted small" style={{ margin: 0 }}>
-              Опишите образ словами — движок ASSTYLIST Fashion Engine расширит запрос, отберёт вещи и соберёт
-              стилистический тезис. Если оставить поле пустым, запрос соберётся из стиля и настроения.
+              Опишите образ словами — соберём вещи под ваш текст. Оставьте пустым — возьмём стиль и настроение.
             </p>
             <textarea
               className="engine-query"

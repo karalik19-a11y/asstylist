@@ -123,7 +123,7 @@ def build_look_result(items: list[Any], request: LookRequest) -> LookResult:
             "fallback_reason": str(exc),
         }
         result.diagnostics.setdefault("warnings", []).append(
-            f"Движок не собрал образ, сработал резервный ранжировщик: {exc}"
+            f"Образ собран резервным ранжировщиком: {exc}"
         )
         return result
 
@@ -374,7 +374,7 @@ def swap_slot(session: Session, look: Look, slot: str, extra_exclusions: list[st
     engine_meta = chosen.breakdown.get("engineAttributes") if isinstance(chosen.breakdown, dict) else None
     if isinstance(engine_meta, dict) and engine_meta:
         reasons = [
-            f"Движок: {engine_meta.get('role_label', 'вещь образа')} · "
+            f"Разбор: {engine_meta.get('role_label', 'вещь образа')} · "
             f"{engine_meta.get('taste_label', '')} ({engine_meta.get('fashion_score', 0)}/100)"
         ] + reasons
     target.reasons_json = json.dumps(reasons, ensure_ascii=False)

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../src/App'
 import type { EngineSearchResult, Look, Meta } from '../src/lib/types'
 
@@ -67,7 +67,7 @@ const engineSearch: EngineSearchResult = {
         material: 'silk',
         engine_category: 'top',
       },
-      reasons: ['Движок: ключевая вещь · дизайнерская вещь (71/100)'],
+      reasons: ['Разбор: ключевая вещь · дизайнерская вещь (71/100)'],
       verification_status: 'verified',
       verification_score: 0.99,
     },
@@ -103,7 +103,7 @@ const look: Look = {
   score: 81.9,
   verdict: { grade: 'B', title: 'Сильный образ', note: 'Почти идеально' },
   cohesion: { overall: 0.85 },
-  summary: 'Тезис движка — «Индустриальная романтика» (72/100). Гранж: 4 вещи на 47 870 ₽ из 60 000 ₽.',
+  summary: '«Индустриальная романтика» · оценка 72/100. Гранж: 4 вещи на 47 870 ₽ из 60 000 ₽.',
   tips: ['Один акцент на образ.'],
   body: {
     height_cm: 172,
@@ -180,7 +180,7 @@ const look: Look = {
         engine_category: 'top',
         material: 'silk',
       },
-      reasons: ['Движок: слой · дизайнерская вещь (71/100)'],
+      reasons: ['Разбор: слой · дизайнерская вещь (71/100)'],
       verification_status: 'verified',
       verification_score: 0.99,
       source: 'lamoda',
@@ -230,7 +230,7 @@ afterEach(() => {
 
 async function openEngineSearch() {
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Поиск по движку' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Найти вещи словами' }))
   expect(await screen.findByRole('heading', { name: /Что ищем/ })).toBeInTheDocument()
 }
 
@@ -239,7 +239,7 @@ describe('Fashion Engine search screen', () => {
     const fetchMock = mockFetch()
     await openEngineSearch()
 
-    fireEvent.change(screen.getByLabelText('Запрос к движку'), {
+    fireEvent.change(screen.getByLabelText('Поисковый запрос'), {
       target: { value: 'индустриальный образ с прозрачным верхом' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Гранж' }))
@@ -268,7 +268,7 @@ describe('Fashion Engine search screen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Собрать образ по этому запросу' }))
 
-    expect(await screen.findByText('ТЕЗИС ДВИЖКА')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Тезис образа')).toBeInTheDocument())
     expect(screen.getByText('Индустриальная романтика')).toBeInTheDocument()
     expect(screen.getByText(/fit score/)).toBeInTheDocument()
 
@@ -300,14 +300,14 @@ describe('Fashion Engine search screen', () => {
     expect(await screen.findByText('Сильный образ')).toBeInTheDocument()
     expect(screen.getByText('слой')).toBeInTheDocument()
     expect(screen.getByText('fashion 71/100')).toBeInTheDocument()
-    expect(screen.getByText(/Движок: слой · дизайнерская вещь/)).toBeInTheDocument()
+    expect(screen.getByText(/Разбор: слой · дизайнерская вещь/)).toBeInTheDocument()
   })
 
   it('shows the engine error when search fails', async () => {
     mockFetch({ '/api/engine/search': () => jsonResponse({ detail: 'Нужен текстовый запрос длиной от 2 символов' }, 422) })
     await openEngineSearch()
 
-    fireEvent.change(screen.getByLabelText('Запрос к движку'), { target: { value: 'образ' } })
+    fireEvent.change(screen.getByLabelText('Поисковый запрос'), { target: { value: 'образ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Найти вещи' }))
 
     expect(await screen.findByText('Нужен текстовый запрос длиной от 2 символов')).toBeInTheDocument()

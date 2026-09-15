@@ -60,7 +60,7 @@ def test_look_is_built_by_the_fashion_engine(items, style):
         assert meta["taste_category"]
         assert 0 <= meta["fashion_score"] <= 100
         assert item["breakdown"]["engine"] == round(meta["fashion_score"] / 100, 3)
-        assert item["reasons"][0].startswith("Движок:")
+        assert item["reasons"][0].startswith("Разбор:")
 
 
 @pytest.mark.parametrize("budget", [15_000, 25_000, 50_000, 100_000])
@@ -143,7 +143,7 @@ def test_look_service_falls_back_when_the_engine_breaks(items, monkeypatch):
     assert engine["pipeline"] == "legacy-ranker"
     assert engine["fallback"] == "fashion-engine-error"
     assert "движок недоступен" in engine["fallback_reason"]
-    assert any("резервный ранжировщик" in warning for warning in result.diagnostics["warnings"])
+    assert any("резервным ранжировщиком" in warning for warning in result.diagnostics["warnings"])
     assert len(result.items) >= 3
 
 

@@ -50,75 +50,71 @@ export function LookResult({
 
   return (
     <div className="stack page-transition" style={{ gap: 16 }}>
-      {/* ---------- Обложка выпуска (Postage Stamp Aesthetic) ---------- */}
-      <section className="stamp-card stack" style={{ gap: 14 }}>
+      {/* ---------- Итог селекции ---------- */}
+      <section className="stamp-card stack" style={{ gap: 18 }}>
         <div className="stamp-strip">
           <div className="stamp-strip-title">
-            <span>ATELIER ARCHIVE</span>
-            <span className="tiny" style={{ color: 'var(--stamp-ink-muted)' }}>
-              · {look.plan.toUpperCase()}
-            </span>
+            <span>Готовый образ</span>
+            <span className="tiny">· {look.plan}</span>
           </div>
-          <div className="stamp-strip-num">EDITION № {look.id ?? '01'}</div>
+          <div className="stamp-strip-num">№ {look.id ?? '01'}</div>
         </div>
 
-        <div className="row-between" style={{ alignItems: 'center', gap: 12 }}>
+        <div className="row-between" style={{ alignItems: 'center', gap: 18 }}>
           <ScoreRing score={look.score} />
 
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h2 style={{ fontSize: 24, color: 'var(--stamp-ink)' }}>{look.verdict.title || 'Персональный образ'}</h2>
-            <div className="small" style={{ color: 'var(--stamp-ink-muted)', marginTop: 2 }}>
+            <h2>{look.verdict.title || 'Персональный образ'}</h2>
+            <div className="small muted" style={{ marginTop: 4 }}>
               {look.verdict.note}
             </div>
           </div>
 
           <PostalCancellationStamp
-            text="ATELIER · VERIFIED 2026"
-            sub="TOKYO / LONDON SPEC"
+            text="ASSTYLIST · 2026"
+            sub="VERIFIED SELECTION"
             active={stampActive}
             onClick={handleSealStamp}
           />
         </div>
 
-        <p className="small" style={{ margin: 0, color: 'var(--stamp-ink)', lineHeight: 1.45 }}>
-          {look.summary}
-        </p>
+        <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.55 }}>{look.summary}</p>
 
-        <div className="wrap" style={{ gap: 6 }}>
+        <div className="wrap" style={{ gap: 8 }}>
           <Badge>
             {itemsWord(look.items.length)} · {formatRub(look.total_rub)}
           </Badge>
           {look.is_favorite ? <Badge tone="ok">в избранном</Badge> : null}
-          <span className="stamp-badge">СТУДИЙНЫЙ СЕРТИФИКАТ {look.verdict.grade}</span>
+          <span className="stamp-badge">Сертификат · {look.verdict.grade}</span>
         </div>
 
         <BudgetBar total={look.total_rub} budget={look.budget_rub} />
 
         {engineActive ? (
-          <div className="engine-thesis stack" style={{ gap: 8 }}>
+          <div className="engine-thesis stack" style={{ gap: 12 }}>
             <div className="row-between" style={{ gap: 10, alignItems: 'center' }}>
-              <span className="tiny">ТЕЗИС ДВИЖКА</span>
+              <span className="tiny">Тезис образа</span>
               <span className="tiny">{engine?.styling_thesis}</span>
             </div>
-            <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <div className="row" style={{ gap: 14, alignItems: 'center' }}>
               <div className="engine-score">
                 <strong>{Math.round(engine?.outfit_score ?? 0)}</strong>
                 <span className="tiny">fit score</span>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <strong style={{ fontSize: 15 }}>{engine?.styling_thesis_ru || engine?.styling_thesis}</strong>
-                <div className="muted small" style={{ marginTop: 2 }}>
+                <strong style={{ fontSize: 16 }}>{engine?.styling_thesis_ru || engine?.styling_thesis}</strong>
+                <div className="muted small" style={{ marginTop: 3 }}>
                   {engine?.score_formula}
                   {engine?.aesthetic_ru || engine?.aesthetic ? ` · ${engine.aesthetic_ru ?? engine.aesthetic}` : ''}
                 </div>
               </div>
             </div>
-            <div className="wrap" style={{ gap: 6 }}>
+            <div className="wrap" style={{ gap: 8 }}>
               <Badge tone={engine?.critic_decision === 'APPROVE' ? 'ok' : 'warn'}>
                 критик: {engine?.critic_decision === 'APPROVE' ? 'одобрено' : 'нужно усилить'}
               </Badge>
               {engine?.niche_level !== undefined ? <Badge>ниша {engine.niche_level}/100</Badge> : null}
-              {engine?.queries_total ? <Badge>запросов движка: {engine.queries_total}</Badge> : null}
+              {engine?.queries_total ? <Badge>запросов: {engine.queries_total}</Badge> : null}
               {engine?.candidates?.validated ? <Badge>прошли отбор: {engine.candidates.validated}</Badge> : null}
               {engine?.repair ? <Badge tone="warn">бюджетный баланс</Badge> : null}
             </div>
@@ -132,8 +128,8 @@ export function LookResult({
           </div>
         ) : null}
 
-        {/* Action Buttons: 2-column grid guaranteed NEVER to overlap */}
-        <div className="home-actions-grid" style={{ marginTop: 4 }}>
+        {/* Действия — сетка с широкими промежутками */}
+        <div className="home-actions-grid">
           <button
             type="button"
             className="btn btn-primary"
@@ -160,14 +156,14 @@ export function LookResult({
         </div>
       </section>
 
-      {/* ---------- Силуэт и пропорции (Ref 2 Doberman stamp motif) ---------- */}
-      <section className="card stack" style={{ gap: 12 }}>
+      {/* ---------- Силуэт и пропорции ---------- */}
+      <section className="card stack" style={{ gap: 14 }}>
         <SectionTitle index="01" hint={`точность ${Math.round(look.body.confidence * 100)}%`}>
           Силуэт и посадка
         </SectionTitle>
 
-        <div className="row" style={{ gap: 14, alignItems: 'center' }}>
-          <div style={{ width: 72, flexShrink: 0 }}>
+        <div className="row" style={{ gap: 18, alignItems: 'center' }}>
+          <div style={{ width: 60, flexShrink: 0 }}>
             <DobermanStamp />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -176,7 +172,7 @@ export function LookResult({
               ИМТ {look.body.bmi} ({look.body.bmi_label}) · рост {look.body.height_cm} см · вес {look.body.weight_kg} кг
             </div>
             {look.body.recommended_fits.length ? (
-              <div className="wrap" style={{ marginTop: 6, gap: 4 }}>
+              <div className="wrap" style={{ marginTop: 10, gap: 8 }}>
                 {look.body.recommended_fits.map((fit) => (
                   <Badge key={fit}>посадка: {fit}</Badge>
                 ))}
@@ -243,7 +239,7 @@ export function LookResult({
 
       {/* ---------- Советы стилиста ---------- */}
       <section className="card stack" style={{ gap: 8 }}>
-        <SectionTitle index="04">Студийные рекомендации</SectionTitle>
+        <SectionTitle index="04">Советы стилиста</SectionTitle>
         <ul className="reasons">
           {look.tips.map((tip) => (
             <li key={tip}>{tip}</li>
@@ -266,13 +262,13 @@ export function LookResult({
 
         {showDiagnostics ? (
           <div className="small muted stack" style={{ gap: 6, paddingTop: 6 }}>
-            <div>Студийный движок: v{look.engine_version}</div>
+            <div>Версия платформы: v{look.engine_version}</div>
             {engineActive ? (
               <>
-                <div>Движок подбора: {engine?.pipeline} v{engine?.engine_version}</div>
+                <div>Метод подбора: {engine?.pipeline} v{engine?.engine_version}</div>
                 <div>Тезис: {engine?.styling_thesis_ru} ({engine?.styling_thesis})</div>
                 <div>
-                  Оценка движка: {Math.round(engine?.outfit_score ?? 0)}/100 · оценка приложения:{' '}
+                  Оценка образа: {Math.round(engine?.outfit_score ?? 0)}/100 · оценка приложения:{' '}
                   {Math.round(engine?.app_score ?? 0)}/100
                 </div>
                 <div>Критик: {engine?.critic_decision === 'APPROVE' ? 'одобрено' : 'рекомендованы правки'}</div>

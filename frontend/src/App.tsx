@@ -1,7 +1,18 @@
-import { useCallback, useEffect, useReducer, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { HistoryEntry, Look, Meta, WizardState } from './lib/types'
 import { api, ApiError } from './lib/api'
-import { haptic, initTelegram, isTelegram, telegramUserName } from './lib/telegram'
+import {
+  haptic,
+  initTelegram,
+  isTelegram,
+  onBackButton,
+  onTelegramEvent,
+  setBackButtonVisible,
+  setClosingConfirmation,
+  syncTelegramChrome,
+  telegramColorScheme,
+  telegramUserName,
+} from './lib/telegram'
 import { initialModel, wizardReducer } from './state/wizard'
 import { Home } from './pages/Home'
 import { Wizard } from './pages/Wizard'
@@ -9,7 +20,7 @@ import { History } from './pages/History'
 import { Verification } from './pages/Verification'
 import { Search } from './pages/Search'
 import { LookResult } from './components/LookResult'
-import { Header } from './components/ui'
+import { Header, ThemeToggle } from './components/ui'
 import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
 
@@ -28,12 +39,12 @@ type VerificationReport = {
 }
 
 const SCREEN_TITLES: Record<Screen, string> = {
-  home: 'ASSTYLIST // ATELIER',
+  home: 'ASSTYLIST',
   wizard: 'Новый гардероб',
   result: 'Персональная селекция',
-  history: 'Архив гардеробов',
+  history: 'Архив образов',
   verification: 'Верификация каталога',
-  search: 'Поиск по движку',
+  search: 'Поиск вещей',
 }
 
 function errorMessage(error: unknown): string {
@@ -54,16 +65,23 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [loadingList, setLoadingList] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
-  const [theme, setTheme] = useState<'noir' | 'parchment'>('noir')
+  // По умолчанию — системная тема клиента Telegram, в браузере — светлая.
+  const [theme, setTheme] = useState<'noir' | 'parchment'>(() =>
+    telegramColorScheme() === 'dark' ? 'noir' : 'parchment',
+  )
+
+  // Атрибут data-theme и цвет хедера Telegram всегда следуют за состоянием.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    syncTelegramChrome(theme)
+  }, [theme])
+
+  const applyTheme = useCallback((next: 'noir' | 'parchment') => setTheme(next), [])
 
   const toggleTheme = useCallback(() => {
     playClick()
-    setTheme((prev) => {
-      const next = prev === 'noir' ? 'parchment' : 'noir'
-      document.documentElement.setAttribute('data-theme', next)
-      return next
-    })
-  }, [])
+    applyTheme(theme === 'noir' ? 'parchment' : 'noir')
+  }, [applyTheme, theme])
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -73,6 +91,14 @@ export default function App() {
       setHistory([])
     }
   }, [])
+
+  // Реакция на смену темы в самом Telegram (клиент может переключать на лету).
+  useEffect(() => {
+    const offTheme = onTelegramEvent('themeChanged', () => {
+      applyTheme(telegramColorScheme() === 'dark' ? 'noir' : 'parchment')
+    })
+    return offTheme
+  }, [applyTheme])
 
   useEffect(() => {
     initTelegram()
@@ -86,6 +112,7 @@ export default function App() {
       .then((response) => setUserName(response.user.first_name ?? response.user.telegram_id))
       .catch(() => undefined)
     void refreshHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshHistory])
 
   const goHome = useCallback(() => {
@@ -93,6 +120,35 @@ export default function App() {
     setError(null)
     void refreshHistory()
   }, [refreshHistory])
+
+  /** Единое действие «назад»: используется и шапкой, и нативной BackButton. */
+  const backAction = useCallback(() => {
+    if (screen === 'wizard') {
+      if (model.step === 'photo') goHome()
+      else dispatch({ type: 'back' })
+      return
+    }
+    goHome()
+  }, [screen, model.step, goHome])
+
+  const backActionRef = useRef(backAction)
+  useEffect(() => {
+    backActionRef.current = backAction
+  }, [backAction])
+
+  // Нативная BackButton клиента (Bot API): показываем вне главного экрана.
+  useEffect(() => {
+    return onBackButton(() => {
+      haptic('light')
+      backActionRef.current()
+    })
+  }, [])
+
+  useEffect(() => {
+    setBackButtonVisible(screen !== 'home')
+    // Диалог «закрыть?» — только когда посреди сценария есть что терять.
+    setClosingConfirmation(screen !== 'home')
+  }, [screen])
 
   const startWizard = useCallback(() => {
     dispatch({ type: 'reset' })
@@ -212,24 +268,21 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Плавающие световые пятна фона (летняя лазурь) */}
+      <div className="ambient" aria-hidden="true">
+        <span className="blob blob-a" />
+        <span className="blob blob-b" />
+        <span className="blob blob-c" />
+      </div>
+
       {/* SVG Global Definitions for Leopard Rosettes */}
       <LeopardPatternDef />
 
-      {screen !== 'home' ? (
+      {screen !== 'home' && screen !== 'wizard' ? (
         <Header
           title={SCREEN_TITLES[screen]}
-          onBack={screen === 'result' ? goHome : () => setScreen('home')}
-          right={
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={toggleTheme}
-              style={{ padding: '6px 10px', minHeight: 34, fontSize: 10 }}
-              title="Переключить тему оформления"
-            >
-              {theme === 'noir' ? 'PARCHMENT' : 'NOIR'}
-            </button>
-          }
+          onBack={isTelegram() ? undefined : backAction}
+          right={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
       ) : null}
 
@@ -238,6 +291,8 @@ export default function App() {
           meta={meta}
           history={history}
           userName={userName}
+          theme={theme}
+          onToggleTheme={toggleTheme}
           onStart={startWizard}
           onOpenHistory={openHistory}
           onOpenVerification={() => void openVerification()}
@@ -292,9 +347,7 @@ export default function App() {
       ) : null}
 
       {screen === 'home' && !isTelegram() ? (
-        <footer className="muted tiny" style={{ textAlign: 'center', paddingTop: 8 }}>
-          ASSTYLIST ATELIER · Автономный режим в браузере · Синхронизация профиля в Telegram Mini App
-        </footer>
+        <footer className="page-mark">Asstylist · автономный режим браузера</footer>
       ) : null}
     </div>
   )
