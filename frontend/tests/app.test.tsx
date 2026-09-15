@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import App from '../src/App'
 import type { Look, Meta } from '../src/lib/types'
 
@@ -176,18 +176,21 @@ async function walkToReview() {
 }
 
 describe('App flow', () => {
-  it('renders the home screen with catalog metadata', async () => {
+  it('renders the magazine cover', async () => {
     render(<App />)
-    expect(await screen.findByText(/соберём образ/i)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('2 стилей')).toBeInTheDocument())
-    expect(screen.getByText('демо-режим')).toBeInTheDocument()
+    expect(await screen.findByText(/LOOKING/)).toBeInTheDocument()
+    expect(screen.getAllByText(/cover star/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: 'Собрать образ' })).toBeInTheDocument()
+    expect(screen.queryByText(/демо-режим/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/AI-стилист/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/движок/i)).not.toBeInTheDocument()
   })
 
   it('walks the whole wizard and renders the generated look', async () => {
     render(<App />)
     await walkToReview()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Сгенерировать' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
 
     expect(await screen.findByText('Образ уровня стилиста')).toBeInTheDocument()
     expect(screen.getByText('Футболка базовая плотная')).toBeInTheDocument()
@@ -201,7 +204,7 @@ describe('App flow', () => {
     const fetchMock = mockFetch()
     render(<App />)
     await walkToReview()
-    fireEvent.click(screen.getByRole('button', { name: 'Сгенерировать' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
     await screen.findByText('Образ уровня стилиста')
 
     const generateCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/api/looks/generate'))
@@ -218,7 +221,7 @@ describe('App flow', () => {
     mockFetch({ '/api/looks/generate': () => jsonResponse({ detail: 'Недостаточно подходящих товаров' }, 422) })
     render(<App />)
     await walkToReview()
-    fireEvent.click(screen.getByRole('button', { name: 'Сгенерировать' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать лук' }))
     expect(await screen.findByText('Недостаточно подходящих товаров')).toBeInTheDocument()
   })
 
@@ -256,43 +259,5 @@ describe('App flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Проверка товаров' }))
     expect(await screen.findByText('103')).toBeInTheDocument()
     expect(screen.getByText('Футболка с подозрительного сайта')).toBeInTheDocument()
-  })
-})
-
-
-describe('Telegram bot wiring', () => {
-  it('offers the self-service setup while no bot is connected', async () => {
-    render(<App />)
-    expect(await screen.findByText(/Подключить своего Telegram-бота/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Токен бота')).toBeInTheDocument()
-    expect(screen.getByLabelText('Web App URL')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Подключить' })).toBeDisabled()
-  })
-
-  it('connects the bot and confirms it', async () => {
-    const fetchMock = mockFetch({
-      '/api/telegram/setup': () =>
-        jsonResponse({
-          ok: true,
-          bot: { id: 42, username: 'asstylist_bot', first_name: 'asStylist' },
-          web_app_url: 'https://asstylist.example.com',
-          actions: ['кнопка меню → https://asstylist.example.com', 'команды /start /looks /help'],
-          persisted_keys: ['TELEGRAM_BOT_TOKEN'],
-          demo_mode: true,
-          next_step: 'Откройте https://t.me/asstylist_bot в Telegram.',
-        }),
-    })
-    render(<App />)
-    fireEvent.change(await screen.findByLabelText('Токен бота'), { target: { value: '42:TESTTOKEN' } })
-    fireEvent.change(screen.getByLabelText('Web App URL'), { target: { value: 'https://asstylist.example.com' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Подключить' }))
-
-    expect(await screen.findByText('Бот подключён')).toBeInTheDocument()
-    expect(screen.getByText('@asstylist_bot')).toBeInTheDocument()
-
-    const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/api/telegram/setup'))
-    const body = JSON.parse(String((call?.[1] as RequestInit).body))
-    expect(body.bot_token).toBe('42:TESTTOKEN')
-    expect(body.web_app_url).toBe('https://asstylist.example.com')
   })
 })

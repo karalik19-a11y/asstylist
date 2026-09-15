@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import type { HistoryEntry, Look, Meta } from './lib/types'
 import { api, ApiError } from './lib/api'
-import { haptic, initTelegram, isTelegram, telegramUserName } from './lib/telegram'
+import { haptic, initTelegram, telegramUserName } from './lib/telegram'
 import { initialModel, wizardReducer } from './state/wizard'
 import { Home } from './pages/Home'
 import { Wizard } from './pages/Wizard'
 import { History } from './pages/History'
 import { Verification } from './pages/Verification'
 import { LookResult } from './components/LookResult'
-import { Header } from './components/ui'
+import { Header, Icon, type IconName } from './components/ui'
 
 type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification'
 
@@ -25,12 +25,27 @@ type VerificationReport = {
 }
 
 const SCREEN_TITLES: Record<Screen, string> = {
-  home: 'asStylist',
+  home: 'ASStylist',
   wizard: 'Новый образ',
-  result: 'Ваш образ',
+  result: 'Твой образ',
   history: 'Мои образы',
   verification: 'Проверка товаров',
 }
+
+const SCREEN_SUBTITLES: Partial<Record<Screen, string>> = {
+  result: 'cover story подъехала',
+  history: 'твои выходы в свет',
+  verification: 'честность — лучшая политика',
+}
+
+const TABS: { id: Screen; label: string; icon: IconName }[] = [
+  { id: 'home', label: 'Главная', icon: 'spark' },
+  { id: 'wizard', label: 'Образ', icon: 'star' },
+  { id: 'history', label: 'Мои луки', icon: 'heart' },
+  { id: 'verification', label: 'Проверка', icon: 'shield' },
+]
+
+const TAB_SCREENS: Screen[] = ['home', 'history', 'verification']
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message
@@ -69,10 +84,16 @@ export default function App() {
       .catch(() => setMeta(null))
     api
       .auth()
-      .then((response) => setUserName(response.user.first_name ?? response.user.telegram_id))
+      .then((response) => {
+        if (!response.demo) setUserName(response.user.first_name ?? null)
+      })
       .catch(() => undefined)
     void refreshHistory()
   }, [refreshHistory])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [screen])
 
   const goHome = useCallback(() => {
     setScreen('home')
@@ -84,6 +105,7 @@ export default function App() {
     dispatch({ type: 'reset' })
     setError(null)
     setScreen('wizard')
+    haptic('light')
   }, [])
 
   const handleGenerate = useCallback(async () => {
@@ -163,71 +185,105 @@ export default function App() {
     }
   }, [])
 
+  const goTab = useCallback(
+    (tab: Screen) => {
+      haptic('light')
+      if (tab === 'home') return goHome()
+      if (tab === 'wizard') return startWizard()
+      if (tab === 'history') return openHistory()
+      if (tab === 'verification') return void openVerification()
+    },
+    [goHome, startWizard, openHistory, openVerification],
+  )
+
+  const showTabs = TAB_SCREENS.includes(screen)
+  const showDock = screen === 'wizard'
+
   return (
-    <div className="app">
-      {screen !== 'home' ? (
-        <Header title={SCREEN_TITLES[screen]} onBack={screen === 'result' ? goHome : () => setScreen('home')} />
-      ) : null}
+    <>
+      <div className="bg-scene" aria-hidden="true">
+        <span className="orb" />
+      </div>
+      <div className="bg-grain" aria-hidden="true" />
+      <div className={`app${showTabs ? ' has-tabs' : ''}${showDock ? ' has-dock' : ''}`}>
+        <div className="screen" key={screen}>
+          {screen !== 'home' && screen !== 'wizard' ? (
+            <Header
+              title={SCREEN_TITLES[screen]}
+              subtitle={SCREEN_SUBTITLES[screen]}
+              onBack={goHome}
+            />
+          ) : null}
 
-      {screen === 'home' ? (
-        <Home
-          meta={meta}
-          history={history}
-          userName={userName}
-          onBotConnected={() => {
-            api
-              .meta()
-              .then(setMeta)
-              .catch(() => undefined)
-          }}
-          onStart={startWizard}
-          onOpenHistory={openHistory}
-          onOpenVerification={() => void openVerification()}
-          onOpenLook={(id) => void openLook(id)}
-        />
-      ) : null}
+          {screen === 'home' ? (
+            <Home
+              history={history}
+              userName={userName}
+              onStart={startWizard}
+              onOpenHistory={openHistory}
+              onOpenVerification={() => void openVerification()}
+              onOpenLook={(id) => void openLook(id)}
+            />
+          ) : null}
 
-      {screen === 'wizard' ? (
-        <Wizard
-          model={model}
-          meta={meta}
-          generating={generating}
-          error={error}
-          onPatch={(patch) => dispatch({ type: 'patch', patch })}
-          onToggleColor={(id, field) => dispatch({ type: 'toggleColor', id, field })}
-          onPhoto={(dataUrl, file) => dispatch({ type: 'setPhoto', dataUrl, file })}
-          onClearPhoto={() => dispatch({ type: 'setPhoto', dataUrl: null, file: null })}
-          onBack={() => dispatch({ type: 'back' })}
-          onNext={() => dispatch({ type: 'next' })}
-          onGenerate={() => void handleGenerate()}
-          onExit={goHome}
-        />
-      ) : null}
+          {screen === 'wizard' ? (
+            <Wizard
+              model={model}
+              meta={meta}
+              generating={generating}
+              error={error}
+              onPatch={(patch) => dispatch({ type: 'patch', patch })}
+              onToggleColor={(id, field) => dispatch({ type: 'toggleColor', id, field })}
+              onPhoto={(dataUrl, file) => dispatch({ type: 'setPhoto', dataUrl, file })}
+              onClearPhoto={() => dispatch({ type: 'setPhoto', dataUrl: null, file: null })}
+              onBack={() => dispatch({ type: 'back' })}
+              onNext={() => dispatch({ type: 'next' })}
+              onGenerate={() => void handleGenerate()}
+              onExit={goHome}
+            />
+          ) : null}
 
-      {screen === 'result' && look ? (
-        <LookResult
-          look={look}
-          colors={meta?.colors ?? []}
-          swappingSlot={swappingSlot}
-          onSwap={(slot) => void handleSwap(slot)}
-          onNewLook={startWizard}
-          onFavorite={() => void handleFavorite()}
-        />
-      ) : null}
+          {screen === 'result' && look ? (
+            <LookResult
+              look={look}
+              colors={meta?.colors ?? []}
+              plans={meta?.plans ?? []}
+              swappingSlot={swappingSlot}
+              onSwap={(slot) => void handleSwap(slot)}
+              onNewLook={startWizard}
+              onFavorite={() => void handleFavorite()}
+            />
+          ) : null}
 
-      {screen === 'history' ? (
-        <History items={history} loading={loadingList} onOpen={(id) => void openLook(id)} />
-      ) : null}
+          {screen === 'history' ? (
+            <History items={history} loading={loadingList} onOpen={(id) => void openLook(id)} />
+          ) : null}
 
-      {screen === 'verification' ? (
-        <Verification report={report} loading={loadingList && !report} error={error} />
-      ) : null}
+          {screen === 'verification' ? (
+            <Verification report={report} loading={loadingList && !report} error={error} />
+          ) : null}
+        </div>
 
-      {screen === 'home' && !isTelegram() ? (
-        <footer className="muted tiny" style={{ textAlign: 'center', paddingTop: 8 }}>
-          Работает в браузере в демо-режиме · в Telegram Mini App доступна авторизация по аккаунту
-        </footer>
-      ) : null}
-    </div>
+        {showTabs ? (
+          <nav className="tabbar" aria-label="Навигация">
+            <div className="tabbar-inner">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className="tab"
+                  data-active={screen === tab.id}
+                  onClick={() => goTab(tab.id)}
+                  aria-current={screen === tab.id ? 'page' : undefined}
+                >
+                  <span className="ico" aria-hidden="true"><Icon name={tab.icon} size={21} /></span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        ) : null}
+      </div>
+    </>
   )
 }

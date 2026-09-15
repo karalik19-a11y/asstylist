@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { Icon } from './ui'
 
 const MAX_BYTES = 10 * 1024 * 1024
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp']
@@ -49,18 +50,20 @@ export function PhotoUploader({
         </div>
       ) : (
         <button type="button" className="photo-drop" onClick={() => inputRef.current?.click()}>
-          <div style={{ fontSize: 30 }}>📷</div>
-          <strong>Загрузить фото</strong>
-          <div className="muted small" style={{ marginTop: 6 }}>
-            Портрет в полный рост или по пояс. Фото анализируется локально и не хранится.
-          </div>
+          <span className="cam-badge" aria-hidden="true">
+            <Icon name="camera" size={30} />
+          </span>
+          <strong style={{ fontSize: 16 }}>Добавить фото</strong>
+          <span className="muted small">
+            Анфас или в полный рост. Ничего не храним — честно.
+          </span>
         </button>
       )}
       {error ? <div className="error-box">{error}</div> : null}
       <div className="row" style={{ gap: 10 }}>
         {dataUrl ? (
           <>
-            <button type="button" className="btn btn-sm" onClick={() => inputRef.current?.click()}>
+            <button type="button" className="btn btn-sm" style={{ flex: 1 }} onClick={() => inputRef.current?.click()}>
               Заменить
             </button>
             <button type="button" className="btn btn-sm btn-ghost" onClick={onClear}>
@@ -68,7 +71,7 @@ export function PhotoUploader({
             </button>
           </>
         ) : (
-          <button type="button" className="btn btn-sm" onClick={() => inputRef.current?.click()}>
+          <button type="button" className="btn btn-sm btn-block" onClick={() => inputRef.current?.click()}>
             Выбрать файл
           </button>
         )}

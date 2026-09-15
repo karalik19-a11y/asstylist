@@ -17,7 +17,7 @@ class Source:
 SOURCES: dict[str, Source] = {
     s.id: s
     for s in [
-        Source("demo", "Демо-каталог asStylist", "demo", 0.85, "Локальный каталог для демо-режима, без внешних запросов"),
+        Source("demo", "asStylist Select", "demo", 0.85, "Фирменная подборка asStylist"),
         Source("ozon", "Ozon", "marketplace", 0.9, "Маркетплейс"),
         Source("wildberries", "Wildberries", "marketplace", 0.9, "Маркетплейс"),
         Source("lamoda", "Lamoda", "marketplace", 0.9, "Fashion-маркетплейс"),

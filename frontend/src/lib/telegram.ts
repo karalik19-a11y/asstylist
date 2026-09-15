@@ -1,7 +1,7 @@
 /**
  * Thin wrapper around window.Telegram.WebApp.
  *
- * The app must work in a normal browser too (demo/local mode), so every call
+ * The app must work in a normal browser too, so every call
  * degrades gracefully when the Telegram SDK is absent.
  */
 
@@ -49,8 +49,8 @@ export function initTelegram(): void {
   if (!app) return
   app.ready?.()
   app.expand?.()
-  app.setHeaderColor?.('#f2ede2')
-  app.setBackgroundColor?.('#f2ede2')
+  app.setHeaderColor?.('#ffd3e6')
+  app.setBackgroundColor?.('#ffd3e6')
 }
 
 export function haptic(style: HapticStyle = 'light'): void {

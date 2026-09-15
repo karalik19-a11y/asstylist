@@ -1,16 +1,22 @@
-import type { HistoryEntry, Meta } from '../lib/types'
+import type { HistoryEntry } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
-import { Badge, SectionTitle } from '../components/ui'
-import { TelegramSetup } from '../components/TelegramSetup'
+import { Reveal, SectionTitle } from '../components/ui'
 
 const STEPS = [
-  { num: '01', title: 'Фото и параметры', text: 'Рост, вес и фото — для силуэта и палитры.' },
-  { num: '02', title: 'Стиль и настроение', text: '10 стилей и 8 настроений на выбор.' },
-  { num: '03', title: 'Бюджет до 100 000 ₽', text: 'Движок собирает образ строго в рамках суммы.' },
-  { num: '04', title: 'Проверенные товары', text: 'Каждая позиция проходит верификацию цены и ссылки.' },
+  { num: '01', title: 'Покажи себя', text: 'Фото и пара цифр — дальше мы сами.' },
+  { num: '02', title: 'Выбери вайб', text: 'Хоть дерзкий, хоть нежный.' },
+  { num: '03', title: 'Забери лук', text: 'Готовый образ со ссылками.' },
+  { num: '04', title: 'Блистай', text: 'Носи. Сияй. Повторяй.' },
 ]
 
-const TICKER_ITEMS = ['стиль', 'палитра', 'силуэт', 'бюджет', 'проверенные товары', 'личный стилист', 'выпуск 0 ₽']
+const COVER_LINES = [
+  'палитра, от которой мурчат',
+  'бюджет выжил и процветает',
+  'комплименты почти гарантированы',
+  'ass-approved · печать внизу',
+]
+
+const TICKER_ITEMS = ['fresh looks', 'zero stress', "from 'meh' to 'wow'", 'ass & class', 'cover star: ты']
 
 function Ticker() {
   const sequence = (
@@ -34,134 +40,152 @@ function Ticker() {
 }
 
 export function Home({
-  meta,
   history,
   onStart,
   onOpenHistory,
   onOpenVerification,
   onOpenLook,
   userName,
-  onBotConnected,
 }: {
-  meta: Meta | null
   history: HistoryEntry[]
   onStart: () => void
   onOpenHistory: () => void
   onOpenVerification: () => void
   onOpenLook: (id: number) => void
   userName: string | null
-  onBotConnected: () => void
 }) {
+  const star = userName && userName !== 'Гость' ? userName : 'ты'
+
   return (
     <div className="stack">
       {/* ---------- обложка ---------- */}
-      <header className="masthead">
-        <div className="masthead-top">
-          <span className="tiny">Журнал образов</span>
-          <span className="tiny">N° 01 · 2026</span>
-        </div>
-        <div className="masthead-word">
-          as<span>Stylist</span>
-        </div>
-        <div className="masthead-sub">личный стилист · каждый день новый выпуск</div>
-      </header>
-
-      <Ticker />
-
-      <section className="stack" style={{ gap: 14, paddingTop: 6 }}>
-        <div className="row-between">
-          <span className="kicker">Свежий номер</span>
-          {meta?.demo_mode ? <Badge tone="warn">демо-режим</Badge> : <Badge tone="ok">telegram</Badge>}
-        </div>
-        <div className="kicker-rule" />
-        <h1 className="hero-title">
-          {userName ? `${userName}, ` : ''}
-          соберём образ, <em>который вам идёт</em>
-        </h1>
-        <p className="muted" style={{ margin: 0 }}>
-          Личный стилист: по фото, росту, весу, стилю, настроению и бюджету собирает персональный лук из проверенных
-          товаров. Некоммерческий проект — стоимость 0 ₽.
-        </p>
-        <button type="button" className="btn btn-primary btn-block" onClick={onStart} style={{ marginTop: 4, padding: '16px 18px' }}>
-          Собрать образ
-        </button>
-        <div className="row" style={{ gap: 18 }}>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenHistory}>
-            Мои образы
-          </button>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenVerification}>
-            Проверка товаров
-          </button>
-        </div>
-      </section>
-
-      <TelegramSetup status={meta?.telegram} onConnected={onBotConnected} />
-
-      {/* ---------- содержание ---------- */}
-      <section className="card stack" style={{ gap: 12 }}>
-        <SectionTitle hint={meta ? `движок v${meta.version}` : undefined}>Содержание</SectionTitle>
-        <div className="grid-2" style={{ gap: 0 }}>
-          {STEPS.map((step) => (
-            <div key={step.num} className="stack" style={{ gap: 4, padding: '10px 12px', borderLeft: '1px solid var(--line-soft)' }}>
-              <div className="index-num" style={{ fontSize: 22 }}>
-                {step.num}
-              </div>
-              <strong style={{ fontSize: 13.5 }}>{step.title}</strong>
-              <div className="muted small" style={{ lineHeight: 1.35 }}>
-                {step.text}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {meta ? (
-        <section className="card stack" style={{ gap: 10 }}>
-          <SectionTitle hint="до 100 000 ₽">Что умеет движок</SectionTitle>
-          <div className="wrap">
-            <Badge>{meta.styles.length} стилей</Badge>
-            <Badge>{meta.moods.length} настроений</Badge>
-            <Badge>{meta.colors.length} оттенков в палитре</Badge>
-            <Badge>бюджет {formatRub(meta.budget.max_rub)}</Badge>
+      <Reveal delay={0}>
+        <section className="cover">
+          <div className="issue-row">
+            <span>выпуск № 001</span>
+            <b>ass &amp; class</b>
+            <span>2026</span>
           </div>
-          <div className="muted small">
-            Каждый товар в образе получает оценку по 8 параметрам: стиль, настроение, силуэт, цвет, формальность,
-            сезон, цена/качество и статус проверки.
+
+          <h1 className="masthead" aria-label="ASStylist">
+            <span className="m-ass">ASS</span><span className="m-sty">tylist</span>
+          </h1>
+          <div className="mast-sub">
+            звучит дерзко · <em>одевает дерзче</em>
+          </div>
+          <div className="star-line">
+            <span className="sp" aria-hidden="true">★</span>
+            cover star: <b>{star}</b>
+            <span className="sp" aria-hidden="true">★</span>
+          </div>
+
+          <div className="checker" aria-hidden="true" />
+
+          <div className="cover-head">
+            <div className="cover-over">— the ballad of —</div>
+            <div className="cover-giant">
+              LOOKING <span className="hot">HOT</span>
+            </div>
+            <div className="cover-stars">★&nbsp;&nbsp;from&nbsp;&nbsp;★</div>
+            <div className="cover-meh">
+              <span className="meh">'meh'</span>
+              <span className="arr" aria-hidden="true">→</span>
+              <span className="wow">'wow!'</span>
+            </div>
+          </div>
+
+          <div className="cover-lines">
+            {COVER_LINES.map((line) => (
+              <div key={line} className="cover-line">
+                <i aria-hidden="true">✦</i>
+                {line}
+              </div>
+            ))}
+          </div>
+
+          <div className="sticker-row">
+            <span className="sticker st-sun">new!</span>
+            <span className="sticker st-black">ass-approved ✓</span>
+            <span className="sticker st-white">лук за минуту</span>
+          </div>
+
+          <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onStart} aria-label="Собрать образ">
+            Собрать образ →
+          </button>
+          <div className="ghost-row">
+            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenHistory}>
+              Мои образы
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenVerification}>
+              Проверка товаров
+            </button>
+          </div>
+
+          <div className="barcode-row">
+            <span className="barcode" aria-hidden="true" />
+            <span className="price">
+              цена: твоя улыбка
+              <br />
+              0% занудства
+            </span>
           </div>
         </section>
-      ) : null}
+      </Reveal>
 
-      {history.length ? (
-        <section className="stack" style={{ gap: 10 }}>
-          <SectionTitle hint={`${history.length} ${history.length === 1 ? 'образ' : 'образов'}`}>Последние выпуски</SectionTitle>
-          <div className="card index-list">
-            {history.slice(0, 3).map((entry, index) => (
-              <button
-                key={entry.id}
-                type="button"
-                className="index-row"
-                onClick={() => onOpenLook(entry.id)}
-              >
-                <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
-                <span className="stack" style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <span className="row-between" style={{ gap: 8 }}>
-                    <strong>{entry.style}</strong>
-                    <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {formatRub(entry.total_rub)}
-                    </span>
-                  </span>
-                  <span className="muted small">
-                    {itemsWord(entry.items_count)} · оценка {Math.round(entry.score)} · {relativeTime(entry.created_at)}
-                  </span>
-                </span>
-              </button>
+      <Reveal delay={0.1}>
+        <Ticker />
+      </Reveal>
+
+      {/* ---------- в этом выпуске ---------- */}
+      <Reveal delay={0.15}>
+        <section className="card stack" style={{ gap: 14 }}>
+          <SectionTitle hint="inside">В этом выпуске</SectionTitle>
+          <div className="step-grid">
+            {STEPS.map((step) => (
+              <div key={step.num} className="step-card">
+                <div className="num">{step.num}</div>
+                <strong>{step.title}</strong>
+                <p>{step.text}</p>
+              </div>
             ))}
           </div>
         </section>
+      </Reveal>
+
+      {history.length ? (
+        <Reveal delay={0.2}>
+          <section className="stack" style={{ gap: 10 }}>
+            <SectionTitle hint="fresh">Недавние выходы</SectionTitle>
+            <div className="card index-list">
+              {history.slice(0, 3).map((entry, index) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="index-row"
+                  onClick={() => onOpenLook(entry.id)}
+                >
+                  <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="stack" style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <span className="row-between" style={{ gap: 8 }}>
+                      <strong>{entry.style}</strong>
+                      <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatRub(entry.total_rub)}
+                      </span>
+                    </span>
+                    <span className="muted small">
+                      {itemsWord(entry.items_count)} · оценка {Math.round(entry.score)} · {relativeTime(entry.created_at)}
+                    </span>
+                  </span>
+                  <span className="index-arrow" aria-hidden="true">→</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </Reveal>
       ) : null}
 
       <hr className="rule-double" />
-      <div className="page-mark">— 01 —</div>
+      <div className="page-mark">ass &amp; class · made to slay</div>
     </div>
   )
 }
