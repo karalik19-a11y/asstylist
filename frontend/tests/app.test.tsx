@@ -178,7 +178,7 @@ async function walkToReview() {
 describe('App flow', () => {
   it('renders the magazine cover', async () => {
     render(<App />)
-    expect(await screen.findByText(/ТВОЙ НОВЫЙ/)).toBeInTheDocument()
+    expect(await screen.findByText(/твой новый/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Собрать образ' })).toBeInTheDocument()
     expect(screen.queryByText(/демо-режим/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/AI-стилист/i)).not.toBeInTheDocument()

@@ -1,6 +1,7 @@
+import type { CSSProperties } from 'react'
 import type { HistoryEntry } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
-import { Icon, Reveal, SectionTitle } from '../components/ui'
+import { Postmark, Reveal, SectionTitle } from '../components/ui'
 
 const STEPS = [
   { num: '01', title: 'Фото и мерки', text: 'Загрузи фото, укажи рост и вес.' },
@@ -39,6 +40,23 @@ function Ticker() {
   )
 }
 
+function Masthead() {
+  return (
+    <h1 className="masthead" aria-label="ASStylist">
+      {'ASStylist'.split('').map((ch, i) => (
+        <span
+          key={`${ch}-${i}`}
+          aria-hidden="true"
+          className={i < 3 ? 'm-letter red' : 'm-letter'}
+          style={{ '--i': i } as CSSProperties}
+        >
+          {ch}
+        </span>
+      ))}
+    </h1>
+  )
+}
+
 export function Home({
   history,
   onStart,
@@ -54,34 +72,34 @@ export function Home({
 }) {
   return (
     <div className="stack">
-      {/* ---------- обложка ---------- */}
+      {/* ---------- марка ---------- */}
       <Reveal delay={0}>
         <section className="cover">
           <div className="issue-row">
-            <span>выпуск № 001</span>
-            <b>asstylist</b>
-            <span>2026</span>
+            <span>est. 2026</span>
+            <b>asstylist post</b>
+            <span>№ 001</span>
           </div>
 
-          <h1 className="masthead" aria-label="ASStylist">
-            ASStylist
-          </h1>
-          <div className="mast-sub">
-            <Icon name="bolt" size={16} />
-            журнал твоих образов
-            <Icon name="bolt" size={16} />
+          <Masthead />
+
+          <div className="first-class">
+            <Postmark size={78} />
+            <span className="fc-label">first class · par avion</span>
           </div>
 
-          <div className="checker" aria-hidden="true" />
+          <div className="perfo" aria-hidden="true" />
 
           <div className="cover-head">
-            <div className="cover-giant">
-              ТВОЙ НОВЫЙ <span className="hl">ОБРАЗ</span>
+            <div className="cover-title">
+              Твой новый <em>образ</em>
             </div>
             <div className="cover-sub">
               Под фигуру, настроение и бюджет — за минуту.
             </div>
           </div>
+
+          <div className="wild-strip" aria-hidden="true" />
 
           <div className="cover-lines">
             {COVER_LINES.map((line) => (
@@ -92,23 +110,21 @@ export function Home({
             ))}
           </div>
 
-          <div className="sticker-row">
-            <span className="sticker st-sun">new!</span>
-            <span className="sticker st-white">лук за минуту</span>
-            <span className="sticker st-red">свежий номер</span>
-          </div>
+          <div className="airmail" aria-hidden="true" />
 
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={onStart} aria-label="Собрать образ">
             Собрать образ →
           </button>
           <div className="ghost-row">
-            <button type="button" className="btn btn-sm btn-ghost light" onClick={onOpenHistory}>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenHistory}>
               Мои образы
             </button>
-            <button type="button" className="btn btn-sm btn-ghost light" onClick={onOpenVerification}>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenVerification}>
               Проверка товаров
             </button>
           </div>
+
+          <div className="perfo" aria-hidden="true" />
 
           <div className="barcode-row">
             <span className="barcode" aria-hidden="true" />

@@ -1,3 +1,4 @@
+import { useEffect, useId, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { formatRub } from '../lib/format'
 
@@ -49,6 +50,43 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   }
 }
 
+/** Круговой почтовый штемпель с медленно вращающейся надписью (декор). */
+export function Postmark({ size = 84, text = 'ASSTYLIST • FIRST CLASS • ' }: { size?: number; text?: string }) {
+  const id = useId()
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" className="postmark-spin" aria-hidden="true">
+      <defs>
+        <path id={id} d="M50,50 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0" />
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+      <text fontSize="11" letterSpacing="2.2" fill="currentColor" fontFamily="'Special Elite', monospace">
+        <textPath href={`#${id}`}>{text}</textPath>
+      </text>
+      <text x="50" y="56" textAnchor="middle" fontSize="17" fill="currentColor">
+        ★
+      </text>
+    </svg>
+  )
+}
+
+function useCountUp(target: number, duration = 900): number {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    let raf = 0
+    const started = performance.now()
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / duration)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setValue(Math.round(target * eased))
+      if (progress < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return value
+}
+
 export function Reveal({
   children,
   delay = 0,
@@ -83,7 +121,7 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
         <div style={{ marginLeft: 'auto' }}>{right}</div>
       </div>
       <div className="stack" style={{ gap: 4, paddingTop: 2 }}>
-        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
+        <h2>{title}</h2>
         {subtitle ? <div className="muted small">{subtitle}</div> : null}
       </div>
     </header>
@@ -170,7 +208,7 @@ export function RangeField({
       <div className="row-between">
         <span className="tiny">{label}</span>
         <span className="range-value">
-          {value} <span style={{ fontSize: 15, color: 'var(--muted)' }}>{suffix}</span>
+          {value} <span style={{ fontSize: 16, color: 'var(--muted)' }}>{suffix}</span>
         </span>
       </div>
       <input
@@ -206,26 +244,13 @@ export function verificationLabel(status: string): string {
   return status
 }
 
-function scoreColor(score: number): string {
-  if (score >= 88) return '#cf1177'
-  if (score >= 70) return '#e8382a'
-  return '#d97e06'
-}
-
 export function ScoreRing({ score }: { score: number }) {
   const clamped = Math.max(0, Math.min(100, score))
-  const color = scoreColor(clamped)
+  const shown = useCountUp(clamped)
   return (
-    <div
-      className="score-ring"
-      style={{
-        background: `conic-gradient(${color} ${clamped * 3.6}deg, #dfe6ff 0deg)`,
-        boxShadow: 'inset 0 0 0 8px #fffdf5, 3px 3px 0 var(--ink)',
-        color,
-      }}
-      aria-label={`Оценка образа ${Math.round(clamped)} из 100`}
-    >
-      {Math.round(clamped)}
+    <div className="score-ring" aria-label={`Оценка образа ${Math.round(clamped)} из 100`}>
+      <b>{shown}</b>
+      <span>из 100</span>
     </div>
   )
 }
@@ -242,7 +267,7 @@ export function BudgetBar({ total, budget }: { total: number; budget: number }) 
         <span>
           {formatRub(total)} из {formatRub(budget)}
         </span>
-        <span>{left > 0 ? `остаток ${formatRub(left)}` : 'гуляем на все'}</span>
+        <span>{left > 0 ? `остаток ${formatRub(left)}` : 'бюджет выбран полностью'}</span>
       </div>
     </div>
   )
