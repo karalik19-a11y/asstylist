@@ -1,6 +1,6 @@
 import type { HistoryEntry } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
-import { Badge, SectionTitle } from '../components/ui'
+import { Badge } from '../components/ui'
 
 export function History({
   items,
@@ -24,8 +24,8 @@ export function History({
   if (!items.length) {
     return (
       <div className="card">
-        <SectionTitle>Пока пусто</SectionTitle>
-        <p className="muted small" style={{ margin: 0 }}>
+        <h3>Пока пусто</h3>
+        <p className="muted small" style={{ margin: '8px 0 0' }}>
           Соберите первый образ — он появится здесь.
         </p>
       </div>
@@ -33,22 +33,32 @@ export function History({
   }
 
   return (
-    <div className="stack">
-      {items.map((entry) => (
-        <button key={entry.id} type="button" className="card stack" style={{ gap: 6, textAlign: 'left' }} onClick={() => onOpen(entry.id)}>
-          <div className="row-between">
-            <strong>
-              {entry.style} · {entry.mood}
-            </strong>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatRub(entry.total_rub)}</span>
-          </div>
-          <div className="muted small">
-            {itemsWord(entry.items_count)} · {relativeTime(entry.created_at)} · бюджет {formatRub(entry.budget_rub)}
-          </div>
-          <div className="wrap">
-            <Badge tone={entry.score >= 80 ? 'ok' : 'warn'}>оценка {Math.round(entry.score)}</Badge>
-            {entry.is_favorite ? <Badge tone="ok">★ избранное</Badge> : null}
-          </div>
+    <div className="card index-list">
+      {items.map((entry, index) => (
+        <button
+          key={entry.id}
+          type="button"
+          className="index-row"
+          onClick={() => onOpen(entry.id)}
+        >
+          <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
+          <span className="stack" style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <span className="row-between" style={{ gap: 8 }}>
+              <strong style={{ fontSize: 14.5 }}>
+                {entry.style} · {entry.mood}
+              </strong>
+              <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatRub(entry.total_rub)}
+              </span>
+            </span>
+            <span className="muted small">
+              {itemsWord(entry.items_count)} · {relativeTime(entry.created_at)} · бюджет {formatRub(entry.budget_rub)}
+            </span>
+            <span className="wrap" style={{ gap: 6 }}>
+              <Badge tone={entry.score >= 80 ? 'ok' : 'warn'}>оценка {Math.round(entry.score)}</Badge>
+              {entry.is_favorite ? <Badge tone="ok">★ избранное</Badge> : null}
+            </span>
+          </span>
         </button>
       ))}
     </div>

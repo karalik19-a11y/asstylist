@@ -49,8 +49,8 @@ export function initTelegram(): void {
   if (!app) return
   app.ready?.()
   app.expand?.()
-  app.setHeaderColor?.('#0e0e11')
-  app.setBackgroundColor?.('#0e0e11')
+  app.setHeaderColor?.('#f2ede2')
+  app.setBackgroundColor?.('#f2ede2')
 }
 
 export function haptic(style: HapticStyle = 'light'): void {

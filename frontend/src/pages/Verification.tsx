@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SectionTitle } from '../components/ui'
 
 interface VerificationItem {
   sku: string
@@ -65,7 +66,7 @@ export function Verification({
       </section>
 
       <section className="card stack" style={{ gap: 8 }}>
-        <strong>Что проверяется</strong>
+        <SectionTitle index="01">Что проверяется</SectionTitle>
         <ul className="reasons">
           {CHECKS.map((check) => (
             <li key={check.id}>{check.label}</li>
@@ -78,16 +79,23 @@ export function Verification({
 
       <section className="stack" style={{ gap: 10 }}>
         <div className="row-between">
-          <strong>Отчёт по каталогу</strong>
+          <strong style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>Отчёт по каталогу</strong>
           <button type="button" className="link-btn" onClick={() => setOnlyBad((value) => !value)}>
             {onlyBad ? 'показать все' : 'только проблемные'}
           </button>
         </div>
-        {items.slice(0, 60).map((item) => (
+        {items.slice(0, 60).map((item, index) => (
           <div key={`${item.sku}-${item.source}`} className="card stack" style={{ gap: 4 }}>
-            <div className="row-between">
-              <strong style={{ fontSize: 14 }}>{item.name}</strong>
-              <span className="muted small">{Math.round(item.score * 100)}%</span>
+            <div className="row-between" style={{ gap: 8 }}>
+              <strong style={{ fontSize: 14 }}>
+                <span className="sec-num" style={{ display: 'inline', marginRight: 6, fontFamily: 'var(--font-label)', fontSize: 10, letterSpacing: '0.18em', color: 'var(--accent)' }}>
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                {item.name}
+              </strong>
+              <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round(item.score * 100)}%
+              </span>
             </div>
             <div className="row" style={{ gap: 8 }}>
               <span className="tiny">
@@ -111,8 +119,20 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: 'ok'
   const color = tone === 'ok' ? 'var(--ok)' : tone === 'warn' ? 'var(--warn)' : 'var(--bad)'
   return (
     <div className="card" style={{ background: 'var(--surface-2)', padding: 12, textAlign: 'center' }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
-      <div className="muted tiny">{label}</div>
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 700,
+          color,
+          fontFamily: 'var(--font-display)',
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+      <div className="muted tiny" style={{ marginTop: 2 }}>
+        {label}
+      </div>
     </div>
   )
 }
