@@ -22,49 +22,48 @@ export function Header({
   }
 
   return (
-    <header className="stack" style={{ gap: 8 }}>
+    <header className="stack app-header" style={{ gap: 14 }}>
       <div className="row-between" style={{ alignItems: 'center' }}>
         <div className="row" style={{ gap: 10, minWidth: 0, flex: 1 }}>
           {onBack ? (
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn btn-sm btn-outline"
               onClick={() => {
                 playClick()
                 onBack()
               }}
               aria-label="Назад"
-              style={{ minHeight: 36, padding: '6px 12px', minWidth: 44 }}
+              style={{ minHeight: 42, minWidth: 46, padding: '8px 14px', fontSize: 16 }}
             >
               ←
             </button>
           ) : null}
           <div className="kicker" style={{ flexShrink: 0 }}>
-            ASSTYLIST // ATELIER
+            ASSTYLIST
           </div>
         </div>
 
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row" style={{ gap: 10 }}>
           <button
             type="button"
             className="btn btn-sm btn-ghost"
             onClick={handleSoundToggle}
             aria-label={soundOn ? 'Выключить звук' : 'Включить звук'}
             title={soundOn ? 'Звук: включён' : 'Звук: выключен'}
-            style={{ padding: '6px 8px', minHeight: 34 }}
+            style={{ padding: '8px 10px', minHeight: 42, minWidth: 44 }}
           >
-            <SoundIcon enabled={soundOn} size={16} />
+            <SoundIcon enabled={soundOn} size={18} />
           </button>
           {right}
         </div>
       </div>
 
-      <hr className="rule-strong" />
-
-      <div>
-        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
-        {subtitle ? <div className="muted small" style={{ marginTop: 2 }}>{subtitle}</div> : null}
+      <div style={{ paddingBottom: 2 }}>
+        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 28 }}>{title}</h2>
+        {subtitle ? <div className="muted small" style={{ marginTop: 4 }}>{subtitle}</div> : null}
       </div>
+      <hr className="rule" />
     </header>
   )
 }
@@ -253,4 +252,18 @@ export function SectionTitle({ children, hint, index }: { children: ReactNode; h
 
 export function Spinner() {
   return <span className="spinner" aria-hidden="true" />
+}
+
+export function ThemeToggle({ theme, onToggle }: { theme: 'noir' | 'parchment'; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className="btn btn-sm btn-ghost"
+      onClick={onToggle}
+      style={{ padding: '8px 14px', minHeight: 42, fontSize: 13 }}
+      title="Переключить тему оформления"
+    >
+      {theme === 'noir' ? 'Светлая' : 'Тёмная'}
+    </button>
+  )
 }

@@ -628,7 +628,7 @@ def _engine_reasons(
         return []
     resolved_role = role or card.role
     reasons = [
-        f"Движок: {lexicon.role_label_ru(resolved_role)} · {lexicon.taste_label_ru(card.taste_category)} "
+        f"Разбор: {lexicon.role_label_ru(resolved_role)} · {lexicon.taste_label_ru(card.taste_category)} "
         f"({int(card.fashion_score or 0)}/100)"
     ]
     attributes = card.fashion_attributes
@@ -653,15 +653,15 @@ def _engine_tips(run: EngineRun) -> list[str]:
     logic = run.outfit.styling_logic or {}
     tips: list[str] = []
     if logic.get("silhouette") and logic["silhouette"] != "balanced":
-        tips.append(f"Силуэтная формула движка: {logic['silhouette'].replace('+', '·')}.")
+        tips.append(f"Силуэтная формула: {logic['silhouette'].replace('+', '·')}.")
     if logic.get("color") and logic["color"] != "monochrome":
-        tips.append(f"Цветовая ось движка: {logic['color'].replace('/', '·')}.")
+        tips.append(f"Цветовая ось: {logic['color'].replace('/', '·')}.")
     if logic.get("focalPoint"):
-        tips.append(f"Фокусная вещь, по версии движка, — {logic['focalPoint']}.")
+        tips.append(f"Фокусная вещь — {logic['focalPoint']}.")
     if run.outfit.critic_decision == "APPROVE":
-        tips.append("Критик движка: образ одобрен без правок.")
+        tips.append("Образ одобрен критиком без правок.")
     elif run.outfit.critic_feedback:
-        tips.append(f"Критик движка: {_critic_ru(run.outfit.critic_feedback)[0]}")
+        tips.append(f"Критик: {_critic_ru(run.outfit.critic_feedback)[0]}")
     return tips
 
 
@@ -792,8 +792,8 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
     prepared = prepare_pool(products, request)
     run = run_engine(prepared, request)
     if not run.outfit.items:
-        reason = (run.outfit.critic_feedback or ["движок не нашёл достаточно вещей"])[0]
-        raise LookGenerationError(f"Движок не собрал образ: {reason}")
+        reason = (run.outfit.critic_feedback or ["не нашлось достаточно вещей"])[0]
+        raise LookGenerationError(f"Образ не удалось собрать: {reason}")
 
     plan_slots = prepared.plan["slots"]
     roles = {card.sku or card.id: card.role for card in run.outfit.items}
@@ -822,7 +822,7 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
     draft = build_look(slot_candidates, plan_slots, request.budget_rub)
     if len(draft.picked) < 3:
         raise LookGenerationError(
-            "Движок не собрал образ: после бюджетной страховки осталось меньше трёх вещей"
+            "Образ не удалось собрать: после бюджетной страховки осталось меньше трёх вещей"
         )
 
     chosen: dict[str, tuple[ScoredItem, ProductItem | None]] = {
@@ -918,7 +918,7 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
         final_score,
     )
     if thesis_ru:
-        summary = f"Тезис движка — «{thesis_ru}» ({engine_score:.0f}/100). {summary}"
+        summary = f"«{thesis_ru}» · оценка {engine_score:.0f}/100. {summary}"
 
     engine_block = _engine_block(run, app_score=app_score, final_score=final_score, repair=repair)
 

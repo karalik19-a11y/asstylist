@@ -74,7 +74,7 @@ export function PhotoUploader({
 
       {error ? <div className="error-box">{error}</div> : null}
 
-      <div className="grid-2" style={{ gap: 10 }}>
+      <div className="grid-2" style={{ gap: 14 }}>
         {dataUrl ? (
           <>
             <button

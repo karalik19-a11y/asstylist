@@ -14,7 +14,7 @@ interface VerificationItem {
 const CHECKS = [
   { id: 'schema', label: 'Обязательные поля карточки заполнены' },
   { id: 'price', label: 'Цена актуальна, в рублях и в диапазоне' },
-  { id: 'category', label: 'Категория валидирована движком' },
+  { id: 'category', label: 'Категория валидирована автоматически' },
   { id: 'url', label: 'Ссылка ведёт на доверенный онлайн-магазин' },
   { id: 'source', label: 'Источник проверен и авторизован' },
   { id: 'sizes', label: 'Размерная сетка подтверждена' },
@@ -58,11 +58,9 @@ export function Verification({
           <Stat label="отклонено" value={report.failed} tone="bad" />
         </div>
         <div className="muted small">
-          В каталоге {report.total} позиций, в формировании гардероба участвуют {report.eligible}. Верификация
-          повторяется каждые {report.ttl_days} дней, минимальный порог соответствия — {Math.round(report.min_score * 100)}%.
-        </div>
-        <div className="muted small">
-          Сетевой контроль ссылок: {report.network_enabled ? 'активен' : 'локальный режим (безопасно для превью)'}.
+          В каталоге {report.total} позиций, в подборе участвуют {report.eligible}. Порог соответствия —{' '}
+          {Math.round(report.min_score * 100)}%, повторная проверка каждые {report.ttl_days} дн. Контроль ссылок:{' '}
+          {report.network_enabled ? 'онлайн' : 'локально'}.
         </div>
       </section>
 
@@ -73,9 +71,7 @@ export function Verification({
             <li key={check.id}>{check.label}</li>
           ))}
         </ul>
-        <div className="muted small">
-          При критическом отклонении (недостоверная цена, нерабочая ссылка, несоответствие кроя) позиция не допускается в гардероб.
-        </div>
+        <div className="muted small">Позиции с критическими отклонениями в гардероб не допускаются.</div>
       </section>
 
       <section className="stack" style={{ gap: 10 }}>
@@ -137,10 +133,10 @@ export function Verification({
 function Stat({ label, value, tone }: { label: string; value: number; tone: 'ok' | 'warn' | 'bad' }) {
   const color = tone === 'ok' ? 'var(--ok)' : tone === 'warn' ? 'var(--warn)' : 'var(--bad)'
   return (
-    <div className="card" style={{ background: 'var(--surface-2)', padding: 12, textAlign: 'center' }}>
+    <div className="card" style={{ background: 'var(--surface-2)', padding: 16, textAlign: 'center' }}>
       <div
         style={{
-          fontSize: 28,
+          fontSize: 30,
           fontWeight: 800,
           color,
           fontFamily: 'var(--font-display)',

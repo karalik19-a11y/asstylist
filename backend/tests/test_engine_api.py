@@ -129,14 +129,14 @@ def test_generated_look_is_driven_by_the_engine_and_persisted(client):
     assert engine["pipeline"] == PIPELINE
     assert engine["styling_thesis"] == look["diagnostics"]["engine"]["styling_thesis"]
     assert engine["niche_level"] == 78
-    assert look["summary"].startswith("Тезис движка")
+    assert "· оценка" in look["summary"]
     assert look["score"] == engine["final_score"]
     assert look["total_rub"] <= look["budget_rub"]
 
     assert len(look["items"]) >= 3
     assert all(item["engine"]["role"] for item in look["items"])
     assert any(item["engine"]["in_engine_outfit"] for item in look["items"])
-    assert all(item["reasons"][0].startswith("Движок:") for item in look["items"])
+    assert all(item["reasons"][0].startswith("Разбор:") for item in look["items"])
     assert look["diagnostics"]["engine"]["candidates"]["validated"] > 0
 
     # Образ читается из истории вместе с блоком движка (он лежит в ranking_json).
@@ -160,7 +160,7 @@ def test_swap_keeps_engine_metadata(client):
     replaced = next(item for item in swapped["items"] if item["slot"] == slot)
     assert replaced["sku"] != look["items"][0]["sku"]
     assert replaced["engine"]["role"]
-    assert replaced["reasons"][0].startswith("Движок:")
+    assert replaced["reasons"][0].startswith("Разбор:")
     assert swapped["total_rub"] <= swapped["budget_rub"]
 
 
