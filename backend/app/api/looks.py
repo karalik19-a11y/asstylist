@@ -57,6 +57,8 @@ def _form_to_payload(form: Any) -> dict[str, Any]:
         "avoid_colors": _as_color_list(value("avoid_colors")),
         "size": value("size"),
         "plan": value("plan"),
+        "query": value("query"),
+        "niche_level": value("niche_level"),
         "telegram_id": value("telegram_id"),
         "init_data": value("init_data"),
         "demo_user_id": value("demo_user_id"),

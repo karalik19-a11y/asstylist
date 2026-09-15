@@ -223,6 +223,10 @@ export function Wizard({
             <ReviewRow label="Предел бюджета" value={formatRub(state.budget_rub)} />
             <ReviewRow label="Снимок" value={state.photoDataUrl ? 'прикреплён' : 'без фото'} />
             <ReviewRow
+              label="Запрос к движку"
+              value={state.query.trim() ? state.query.trim() : 'собирается из стиля и настроения'}
+            />
+            <ReviewRow
               label="Выбранные оттенки"
               value={
                 state.preferred_colors.length
@@ -237,6 +241,25 @@ export function Wizard({
                   ? state.avoid_colors.map((id) => meta?.colors.find((c) => c.id === id)?.label ?? id).join(', ')
                   : 'нет ограничений'
               }
+            />
+          </div>
+
+          <div className="stamp-card stack" style={{ gap: 8 }}>
+            <div className="stamp-strip">
+              <span className="stamp-strip-title">СВОЯ ФОРМУЛИРОВКА</span>
+              <span className="stamp-strip-num">ДВИЖОК</span>
+            </div>
+            <p className="muted small" style={{ margin: 0 }}>
+              Опишите образ словами — движок ASSTYLIST Fashion Engine расширит запрос, отберёт вещи и соберёт
+              стилистический тезис. Если оставить поле пустым, запрос соберётся из стиля и настроения.
+            </p>
+            <textarea
+              className="engine-query"
+              rows={3}
+              value={state.query}
+              placeholder="Например: грязный индустриальный образ с прозрачным верхом"
+              aria-label="Своя формулировка образа"
+              onChange={(event) => onPatch({ query: event.target.value })}
             />
           </div>
 

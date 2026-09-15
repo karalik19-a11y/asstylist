@@ -31,6 +31,8 @@ export const initialState: WizardState = {
   preferred_colors: [],
   avoid_colors: [],
   size: null,
+  query: '',
+  niche_level: null,
   photoDataUrl: null,
   photoFile: null,
 }

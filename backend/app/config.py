@@ -98,6 +98,33 @@ class Settings(BaseSettings):
     #: When false, products that failed verification never reach a look.
     allow_unverified_products: bool = False
 
+    # --- ASSTYLIST Fashion Engine (поиск и подбор вещей) ---------------
+    #: Движок из github.com/karalik19-a11y/- управляет поиском и подбором:
+    #: расширение запроса → Fashion Intelligence → Taste/anti-generic →
+    #: архитектура образа → оценка → критик.
+    fashion_engine_enabled: bool = True
+    #: ``hybrid`` — движок собирает образ, приложение страхует бюджет/слоты;
+    #: ``engine`` — только движок (без отката на прежний ранжировщик);
+    #: ``legacy`` — прежний ранжировщик приложения.
+    fashion_engine_mode: str = "hybrid"
+    #: Разрешить откат на прежний ранжировщик, если движок не собрал образ.
+    fashion_engine_allow_fallback: bool = True
+    #: Потолки пайплайна движка. Для каталога asStylist (~100 позиций) они не
+    #: срабатывают — как и в оригинале, где mock-каталог был меньше лимитов.
+    fashion_engine_max_products: int = 120
+    #: Сколько позиций локального каталога забирать на один расширенный
+    #: запрос. Каталог asStylist небольшой, поэтому провайдер отдаёт весь
+    #: ассортимент (сначала совпадения, затем остальное) — отбор делает
+    #: интеллектуальный слой движка, как в оригинале с mock-каталогом.
+    fashion_engine_limit_per_query: int = 130
+    #: Предохранитель по размеру пула, который уходит в движок.
+    fashion_engine_max_cards: int = 160
+    fashion_engine_min_confidence: float = 0.6
+    #: Подключать справочный mock-каталог дизайнерских архетипов из оригинала.
+    fashion_engine_enable_mock: bool = False
+    #: Вес оценки образа движка в итоговом индексе (0…1).
+    fashion_engine_score_weight: float = 0.3
+
     # --- ranking -------------------------------------------------------
     ranking_weights: dict[str, float] = Field(default_factory=lambda: dict(DEFAULT_RANKING_WEIGHTS))
     ranking_weights_json: str | None = None

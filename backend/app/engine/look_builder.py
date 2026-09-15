@@ -45,6 +45,11 @@ class LookRequest:
     weights: dict[str, float] | None = None
     vision: dict[str, Any] | None = None
     exclude_skus: list[str] = field(default_factory=list)
+    #: Свободный текстовый запрос («грязный индустриальный образ с прозрачным
+    #: верхом») — уходит в движок ASSTYLIST Fashion Engine как основа запроса.
+    query: str | None = None
+    #: Явный уровень ниши 0…100 (иначе выводится из стиля).
+    niche_level: int | None = None
 
 
 @dataclass
@@ -128,7 +133,31 @@ def _items_by_slot(products: list[CatalogItem]) -> dict[str, list[CatalogItem]]:
     return by_slot
 
 
-def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResult:
+@dataclass
+class PreparedPool:
+    """Общая подготовка для обоих пайплайнов (ранжировщик приложения / движок).
+
+    ``look_builder.generate_look`` (legacy-путь) и
+    ``fashion_engine_service.generate_look`` (движок) работают на одном и том
+    же пуле: проверенные товары → жёсткие исключения → скоринг → слоты → план.
+    """
+
+    body: BodyProfile
+    palette: PaletteProfile
+    ctx: RankingContext
+    ranked: list[ScoredItem]
+    rejected: list[dict[str, Any]]
+    candidates_by_slot: dict[str, list[ScoredItem]]
+    catalog_by_slot: dict[str, list[CatalogItem]]
+    plan_id: str
+    plan: dict[str, Any]
+
+    def scored_by_sku(self) -> dict[str, ScoredItem]:
+        return {scored.sku: scored for scored in self.ranked}
+
+
+def prepare_pool(products: list[CatalogItem], request: LookRequest) -> PreparedPool:
+    """Отобрать пул, посчитать контекст, разложить кандидатов по слотам."""
     if not products:
         raise LookGenerationError("Каталог пуст — не из чего собрать образ")
 
@@ -170,6 +199,30 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
     catalog_by_slot = _items_by_slot(pool)
     plan_id = _resolve_plan(request, {k: v for k, v in catalog_by_slot.items() if v})
     plan = SLOT_PLANS[plan_id]
+
+    return PreparedPool(
+        body=body,
+        palette=palette,
+        ctx=ctx,
+        ranked=ranked,
+        rejected=rejected,
+        candidates_by_slot=candidates_by_slot,
+        catalog_by_slot=catalog_by_slot,
+        plan_id=plan_id,
+        plan=plan,
+    )
+
+
+def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResult:
+    prepared = prepare_pool(products, request)
+    body = prepared.body
+    palette = prepared.palette
+    ctx = prepared.ctx
+    ranked = prepared.ranked
+    rejected = prepared.rejected
+    candidates_by_slot = prepared.candidates_by_slot
+    plan_id = prepared.plan_id
+    plan = prepared.plan
 
     draft: LookDraft = build_look(candidates_by_slot, plan["slots"], request.budget_rub)
 

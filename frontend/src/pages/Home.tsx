@@ -51,6 +51,7 @@ export function Home({
   onStart,
   onOpenHistory,
   onOpenVerification,
+  onOpenSearch,
   onOpenLook,
   userName,
 }: {
@@ -59,6 +60,7 @@ export function Home({
   onStart: () => void
   onOpenHistory: () => void
   onOpenVerification: () => void
+  onOpenSearch: () => void
   onOpenLook: (id: number) => void
   userName: string | null
 }) {
@@ -118,7 +120,8 @@ export function Home({
             </h1>
             <p className="small" style={{ margin: '8px 0 0', color: 'var(--stamp-ink-muted)' }}>
               Персональный гардеробный директор: по пропорциям, росту, весу, эстетике и бюджету составляет выверенный лук
-              из проверенных каталогов. Стоимость сервиса — 0 ₽.
+              из проверенных каталогов. Подбор вещей выполняет движок ASSTYLIST Fashion Engine —
+              он же отвечает на свободный поиск. Стоимость сервиса — 0 ₽.
             </p>
           </div>
 
@@ -162,6 +165,17 @@ export function Home({
             }}
           >
             Мои образы
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              playClick()
+              onOpenSearch()
+            }}
+          >
+            Поиск по движку
           </button>
 
           <button

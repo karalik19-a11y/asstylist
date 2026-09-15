@@ -58,7 +58,7 @@ Telegram Mini App → Home → Upload photo → Height → Weight → Style → 
 
 | Возможность | Где |
 | --- | --- |
-| Fashion Ranking Engine (8 факторов, детерминированный, объяснимый) | `backend/app/engine/ranking.py` |
+| **ASSTYLIST Fashion Engine** — свободный поиск и сборка образа (расширение запроса, Fashion Intelligence, Taste/anti-generic, архитектура образа, критик) | `backend/app/fashion_engine/`, `POST /api/engine/search`, `POST /api/engine/outfit` |
 | Бюджетный оптимизатор (ремонт вниз → апгрейды вверх, никогда не превышает бюджет) | `backend/app/engine/budget.py` |
 | Анализ силуэта по росту/весу + фото, с честной величиной уверенности | `backend/app/engine/body.py` |
 | Цветовой тип и палитра по фото (локально, Pillow) | `backend/app/vision/analyzer.py` |
@@ -66,6 +66,7 @@ Telegram Mini App → Home → Upload photo → Height → Weight → Style → 
 | Замена вещи в образе, избранное, история образов | `backend/app/services/look_service.py` |
 | Демо/локальный режим: без токена бота, без сети, без ключей | `backend/app/config.py` |
 | Каталог из 107 товаров (103 проходят верификацию, 4 намеренно битых) | `backend/app/catalog/products.py` |
+| Экран «Поиск по движку»: свободный запрос, пресеты, тезис образа, вещи движка, генерация образа по запросу | `frontend/src/pages/Search.tsx` |
 
 ---
 
@@ -75,8 +76,10 @@ Telegram Mini App → Home → Upload photo → Height → Weight → Style → 
 Telegram Mini App (React + TS + Vite)
         │  fetch /api/*  (один origin, без CORS-боли)
         ▼
-FastAPI  ──►  Fashion Ranking Engine  ──►  Budget Optimiser  ──►  Look
-   │                    ▲
+FastAPI  ──►  Fashion Engine (поиск + подбор)  ──►  Budget Optimiser  ──►  Look
+   │                    ▲                            ▲
+   │                    │ каталог как провайдер      │ Fashion Ranking Engine
+   │                    │                            │ (страховка бюджета и слотов)
    │                    │ только eligible-товары
    ├──► Verification Layer (schema / price / url / source / checksum / TTL)
    ├──► Vision (локальный Pillow-анализ, опционально OpenAI/Gemini)
@@ -97,6 +100,10 @@ FastAPI  ──►  Fashion Ranking Engine  ──►  Budget Optimiser  ──�
 ---
 
 ## Как считает Fashion Ranking Engine
+
+Этот ранжировщик остаётся в приложении как страховка: движок отвечает за вкус и архитектуру
+образа (см. [Fashion Engine](#fashion-engine--поиск-и-подбор-вещей)), а восемь факторов ниже
+удерживают бюджет, размеры, сезонность и верификацию товара.
 
 Каждый товар получает оценку 0…1 как взвешенную сумму восьми факторов:
 
@@ -127,6 +134,65 @@ FastAPI  ──►  Fashion Ranking Engine  ──►  Budget Optimiser  ──�
 4. **Цельность образа** — отдельно считается согласованность цвета, стиля и формальности; итоговые
    0…100 = 62 % средняя оценка вещей + 38 % цельность. Отсюда же вердикт A/B/C/D.
 5. **Объяснения** — для каждой вещи генерируются причины на русском, а не «AI так решил».
+
+---
+
+## Fashion Engine — поиск и подбор вещей
+
+Подбор вещей и свободный поиск выполняет движок **ASSTYLIST Fashion Engine** из
+[github.com/karalik19-a11y/-](https://github.com/karalik19-a11y/-). Он портирован на Python
+(`backend/app/fashion_engine/`, ~28 модулей) и работает полностью офлайн: ни сети, ни ключей,
+ни внешних сервисов. Порт сохраняет поведение оригинала и добавляет русские основы в таблицы
+ключевых слов, чтобы запросы на русском («грязный индустриальный образ с прозрачным верхом»)
+расширялись так же, как английские.
+
+```
+запрос пользователя
+   → Query Expander (до 14 расширенных запросов)
+   → провайдеры поиска (каталог asStylist + опциональный mock дизайнерских архетипов)
+   → Fashion Intelligence: материалы, силуэты, палитра, тренды
+   → Taste Engine + anti-generic отсев (нишевость 0…100, рейтинг fashion score 0…100)
+   → Item Validator (confidence, бренд, ссылка на источник) → Image Matcher
+   → Product Identity Resolver (дедуп brand::name)
+   → Outfit Architect: роли hero / base / layer / footwear / accessory, ≥ 3 вещей
+   → Outfit Scorer (0…100) → Fashion Critic (APPROVE / REVISE / REBUILD)
+   → стилистический тезис + логика образа + альтернативы
+```
+
+**Как это сочетается с Fashion Ranking Engine приложения.** Движок отвечает за вкус и
+архитектуру образа, приложение — за бюджет, размеры и верификацию:
+
+| Режим | `FASHION_ENGINE_MODE` | Поведение |
+| --- | --- | --- |
+| Гибридный (по умолчанию) | `hybrid` | движок собирает образ, бюджетный оптимизатор и слоты приложения доводят его до лимита |
+| Только движок | `engine` | образ и оценка целиком от движка |
+| Прежний ранжировщик | `legacy` | Fashion Ranking Engine без движка |
+
+Позиция вещи в гибридном режиме: `0.55 * оценка движка + 0.30 * оценка приложения + 0.15 * ранг в
+шортлисте`, итоговая оценка образа: `0.7 * приложение + 0.3 * движок`. Если движок не собрал образ
+(например, каталог пуст), `FASHION_ENGINE_ALLOW_FALLBACK=true` возвращает прежний ранжировщик — в
+`diagnostics.engine.pipeline` будет `legacy-ranker`.
+
+**Что видно в интерфейсе:** экран «Поиск по движку» отдаёт тезис образа, оценку, вердикт критика,
+состав по категориям вкуса и подобранные вещи; в карточке образа — блок `ТЕЗИС ДВИЖКА`, а у каждой
+вещи — роль, категория вкуса и fashion score.
+
+**Эндпоинты движка** (полная схема — `/docs`):
+
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `GET` | `/api/engine/health` | версия, пайплайн, размер каталога |
+| `GET` | `/api/engine/schema` | tool-схема движка (`asystylist_create_outfit`) |
+| `GET` | `/api/engine/taxonomy` | стили-профили, тезисы, категории вкуса, роли |
+| `POST` | `/api/engine/search` | свободный поиск вещей по запросу (тезис + вещи + подсказка для генерации) |
+| `POST` | `/api/engine/outfit` | прямой прогон движка (camelCase API, паритет с оригиналом) |
+
+```bash
+curl -s -X POST localhost:8000/api/engine/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"грязный индустриальный образ с прозрачным верхом","style":"grunge","niche_level":82}' \
+  | jq '{thesis:.engine.styling_thesis_ru, items:[.items[].name]}'
+```
 
 ---
 
@@ -176,6 +242,11 @@ FastAPI  ──►  Fashion Ranking Engine  ──►  Budget Optimiser  ──�
 | `GET` | `/api/catalog/verification` | отчёт верификации |
 | `POST` | `/api/catalog/import` | импорт внешних товаров (каждый проходит верификацию) |
 | `POST` | `/api/catalog/reverify` | повторная верификация каталога |
+| `GET` | `/api/engine/health` | состояние движка подбора |
+| `GET` | `/api/engine/schema` | tool-схема движка |
+| `GET` | `/api/engine/taxonomy` | таксономия движка (стили, тезисы, категории вкуса, роли) |
+| `POST` | `/api/engine/search` | поиск вещей движком по свободному запросу |
+| `POST` | `/api/engine/outfit` | прямой прогон движка подбора |
 
 Пример:
 
@@ -246,19 +317,20 @@ asstylist/
 │   │   ├── api/            # health, telegram, looks, catalog
 │   │   ├── catalog/        # демо-каталог (107 товаров)
 │   │   ├── engine/         # body, palette, colors, ranking, budget, explain, look_builder
+│   │   ├── fashion_engine/ # ASSTYLIST Fashion Engine: поиск, интеллект, архитектура образа, критик
 │   │   ├── services/       # каталог + образы (БД)
 │   │   ├── telegram/       # проверка initData
 │   │   ├── verification/   # слой верификации товаров + реестр источников
 │   │   ├── vision/         # локальный анализ фото + опциональные AI-провайдеры
 │   │   ├── config.py, db.py, models.py, schemas.py, main.py
-│   └── tests/              # 113 тестов
+│   └── tests/              # 182 теста
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # ui, PhotoUploader, ItemCard, LookResult
 │   │   ├── lib/            # api, telegram, format, types
-│   │   ├── pages/          # Home, Wizard, History, Verification
+│   │   ├── pages/          # Home, Wizard, Search (движок), History, Verification
 │   │   └── state/wizard.ts # редьюсер мастера + валидация шагов
-│   └── tests/              # 25 тестов (включая сквозной флоу)
+│   └── tests/              # 29 тестов (включая сквозной флоу и движок)
 ├── .env.example            # все настройки с рабочими значениями по умолчанию
 ├── Makefile / package.json # setup, run, test, build
 ├── Dockerfile, docker-compose.yml
@@ -280,6 +352,10 @@ asstylist/
 | `VERIFICATION_NETWORK_ENABLED` | `false` | живые проверки ссылок |
 | `ALLOW_UNVERIFIED_PRODUCTS` | `false` | пускать ли непроверенные товары в образ |
 | `DATABASE_URL` | `sqlite:///./data/asstylist.db` | смена на Postgres — одна строка |
+| `FASHION_ENGINE_ENABLED` | `true` | поиск и подбор через движок |
+| `FASHION_ENGINE_MODE` | `hybrid` | `hybrid` / `engine` / `legacy` |
+| `FASHION_ENGINE_ALLOW_FALLBACK` | `true` | откат на прежний ранжировщик, если движок не собрал образ |
+| `FASHION_ENGINE_SCORE_WEIGHT` | `0.3` | вес оценки движка в итоговом индексе |
 
 ---
 
@@ -298,6 +374,7 @@ asstylist/
 - [x] Fashion Ranking Engine с объяснениями и диагностикой
 - [x] Слой верификации товаров и отчёт по каталогу
 - [x] Замена вещи, избранное, история
+- [x] ASSTYLIST Fashion Engine: поиск по свободному запросу и подбор вещей через движок
 - [ ] Реальные источники товаров (Ozon / Wildberries / Lamoda API) + партнёрские ссылки
 - [ ] Подбор размера по меркам и таблицам брендов
 - [ ] Капсульный гардероб: «собери 10 образов из 15 вещей»

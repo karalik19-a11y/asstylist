@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import catalog as catalog_api
+from .api import engine as engine_api
 from .api import health as health_api
 from .api import looks as looks_api
 from .api import telegram as telegram_api
@@ -52,6 +53,7 @@ app.include_router(health_api.router)
 app.include_router(telegram_api.router)
 app.include_router(looks_api.router)
 app.include_router(catalog_api.router)
+app.include_router(engine_api.router)
 
 
 @app.exception_handler(LookGenerationError)

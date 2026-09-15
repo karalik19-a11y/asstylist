@@ -1,4 +1,12 @@
-import type { HistoryEntry, Look, Meta, SetupResponse, TelegramStatus, WizardState } from './types'
+import type {
+  EngineSearchResult,
+  HistoryEntry,
+  Look,
+  Meta,
+  SetupResponse,
+  TelegramStatus,
+  WizardState,
+} from './types'
 import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -89,6 +97,8 @@ export const api = {
       preferred_colors: state.preferred_colors.join(','),
       avoid_colors: state.avoid_colors.join(','),
       size: state.size,
+      query: state.query,
+      niche_level: state.niche_level,
     }
     for (const [key, value] of Object.entries(fields)) {
       if (value !== null && value !== undefined && value !== '') form.set(key, String(value))
@@ -101,6 +111,32 @@ export const api = {
 
     return request<Look>('/api/looks/generate', { method: 'POST', body: form })
   },
+
+  /**
+   * Свободный поиск вещей движком ASSTYLIST Fashion Engine:
+   * расширение запроса, Fashion Intelligence, Taste и архитектура образа.
+   */
+  engineSearch: (params: {
+    query: string
+    style?: string
+    mood?: string
+    occasion?: string
+    season?: string
+    presentation?: string
+    height_cm?: number
+    weight_kg?: number
+    budget_rub?: number
+    preferred_colors?: string[]
+    avoid_colors?: string[]
+    size?: string | null
+    niche_level?: number | null
+    limit?: number
+  }) =>
+    request<EngineSearchResult>('/api/engine/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit: 8, ...params }),
+    }),
 
   history: (limit = 20) =>
     request<{ items: HistoryEntry[] }>(`/api/looks?${identityParams().toString()}&limit=${limit}`),
