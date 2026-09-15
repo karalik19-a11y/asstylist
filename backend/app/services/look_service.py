@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -20,28 +21,43 @@ from ..telegram.auth import TelegramUser
 from . import catalog_service, fashion_engine_service
 
 
+def _find_user(session: Session, telegram_id: str) -> User | None:
+    return session.execute(select(User).where(User.telegram_id == telegram_id)).scalar_one_or_none()
+
+
 def get_or_create_user(session: Session, identity: TelegramUser) -> User:
-    user = session.execute(select(User).where(User.telegram_id == identity.telegram_id)).scalar_one_or_none()
+    user = _find_user(session, identity.telegram_id)
     if user is None:
-        user = User(
+        candidate = User(
             telegram_id=identity.telegram_id,
             username=identity.username,
             first_name=identity.first_name,
             is_demo=identity.is_demo,
         )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    else:
-        changed = False
-        if identity.username and user.username != identity.username:
-            user.username = identity.username
-            changed = True
-        if identity.first_name and user.first_name != identity.first_name:
-            user.first_name = identity.first_name
-            changed = True
-        if changed:
+        session.add(candidate)
+        try:
             session.commit()
+            session.refresh(candidate)
+            return candidate
+        except IntegrityError:
+            # Два параллельных запроса (например, авторизация и история) могут
+            # создать демо-пользователя одновременно: строку уже вставил сосед,
+            # поэтому просто читаем её вместо падения в 500.
+            session.rollback()
+            user = _find_user(session, identity.telegram_id)
+            if user is None:
+                raise
+            return user
+
+    changed = False
+    if identity.username and user.username != identity.username:
+        user.username = identity.username
+        changed = True
+    if identity.first_name and user.first_name != identity.first_name:
+        user.first_name = identity.first_name
+        changed = True
+    if changed:
+        session.commit()
     return user
 
 
