@@ -1,25 +1,70 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { formatRub } from '../lib/format'
+import { isSoundEnabled, playClick, playTick, toggleSound } from '../lib/sound'
+import { SoundIcon } from '../lib/graphics'
 
-export function Header({ title, subtitle, onBack, right }: { title: string; subtitle?: string; onBack?: () => void; right?: ReactNode }) {
+export function Header({
+  title,
+  subtitle,
+  onBack,
+  right,
+}: {
+  title: string
+  subtitle?: string
+  onBack?: () => void
+  right?: ReactNode
+}) {
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
+
+  const handleSoundToggle = () => {
+    const next = toggleSound()
+    setSoundOn(next)
+  }
+
   return (
-    <header className="stack" style={{ gap: 6 }}>
+    <header className="stack" style={{ gap: 8 }}>
       <div className="row-between" style={{ alignItems: 'center' }}>
-        <div className="row" style={{ gap: 12, minWidth: 0, flex: 1 }}>
+        <div className="row" style={{ gap: 10, minWidth: 0, flex: 1 }}>
           {onBack ? (
-            <button className="btn btn-sm" onClick={onBack} aria-label="Назад" style={{ padding: '8px 11px' }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                playClick()
+                onBack()
+              }}
+              aria-label="Назад"
+              style={{ minHeight: 36, padding: '6px 12px', minWidth: 44 }}
+            >
               ←
             </button>
           ) : null}
-          <span className="kicker" style={{ flexShrink: 0 }}>
-            asStylist
-          </span>
+          <div className="kicker" style={{ flexShrink: 0 }}>
+            ASSTYLIST // ATELIER
+          </div>
         </div>
-        {right}
+
+        <div className="row" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={handleSoundToggle}
+            aria-label={soundOn ? 'Выключить звук' : 'Включить звук'}
+            title={soundOn ? 'Звук: включён' : 'Звук: выключен'}
+            style={{ padding: '6px 8px', minHeight: 34 }}
+          >
+            <SoundIcon enabled={soundOn} size={16} />
+          </button>
+          {right}
+        </div>
       </div>
-      <hr className="rule" />
-      <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
-      {subtitle ? <div className="muted small">{subtitle}</div> : null}
+
+      <hr className="rule-strong" />
+
+      <div>
+        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h2>
+        {subtitle ? <div className="muted small" style={{ marginTop: 2 }}>{subtitle}</div> : null}
+      </div>
     </header>
   )
 }
@@ -34,7 +79,16 @@ export function ProgressBar({ value }: { value: number }) {
 
 export function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" className="chip" data-active={active} onClick={onClick} aria-pressed={active}>
+    <button
+      type="button"
+      className="chip"
+      data-active={active}
+      onClick={() => {
+        playTick()
+        onClick()
+      }}
+      aria-pressed={active}
+    >
       {children}
     </button>
   )
@@ -43,21 +97,35 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
 export function Tile({
   active,
   onClick,
-  emoji,
+  badgeKanji,
+  badgeNum,
   title,
   description,
 }: {
   active: boolean
   onClick: () => void
-  emoji?: string
+  badgeKanji?: string
+  badgeNum?: string
   title: string
   description?: string
 }) {
   return (
-    <button type="button" className="tile" data-active={active} onClick={onClick} aria-pressed={active}>
-      {emoji ? <span className="tile-emoji">{emoji}</span> : null}
-      <strong style={{ fontSize: 14 }}>{title}</strong>
-      {description ? <span className="tile-desc">{description}</span> : null}
+    <button
+      type="button"
+      className="stamp-tile"
+      data-active={active}
+      onClick={() => {
+        playClick()
+        onClick()
+      }}
+      aria-pressed={active}
+    >
+      <div className="stamp-tile-top">
+        {badgeKanji ? <span className="stamp-tile-kanji">{badgeKanji}</span> : <span />}
+        {badgeNum ? <span className="stamp-tile-badge">№ {badgeNum}</span> : null}
+      </div>
+      <strong className="stamp-tile-title">{title}</strong>
+      {description ? <span className="stamp-tile-desc">{description}</span> : null}
     </button>
   )
 }
@@ -96,7 +164,9 @@ export function RangeField({
         step={step}
         value={value}
         aria-label={label}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => {
+          onChange(Number(event.target.value))
+        }}
       />
       {hint ? <span className="muted small">{hint}</span> : null}
     </div>
@@ -116,14 +186,14 @@ export function verificationTone(status: string): 'ok' | 'warn' | 'bad' {
 
 export function verificationLabel(status: string): string {
   if (status === 'verified') return 'проверено'
-  if (status === 'warning') return 'требует внимания'
+  if (status === 'warning') return 'внимание'
   if (status === 'failed') return 'не проверено'
   return status
 }
 
 function scoreColor(score: number): string {
   if (score >= 88) return 'var(--ok)'
-  if (score >= 70) return 'var(--accent)'
+  if (score >= 70) return 'var(--accent-leopard)'
   return 'var(--warn)'
 }
 
@@ -138,7 +208,7 @@ export function ScoreRing({ score }: { score: number }) {
         boxShadow: 'inset 0 0 0 6px var(--surface)',
         color,
       }}
-      aria-label={`Оценка образа ${Math.round(clamped)} из 100`}
+      aria-label={`Оценка селекции ${Math.round(clamped)} из 100`}
     >
       {Math.round(clamped)}
     </div>
@@ -157,7 +227,7 @@ export function BudgetBar({ total, budget }: { total: number; budget: number }) 
         <span>
           {formatRub(total)} из {formatRub(budget)}
         </span>
-        <span>{left > 0 ? `остаток ${formatRub(left)}` : 'бюджет выбран полностью'}</span>
+        <span>{left > 0 ? `остаток ${formatRub(left)}` : 'полный бюджет'}</span>
       </div>
     </div>
   )

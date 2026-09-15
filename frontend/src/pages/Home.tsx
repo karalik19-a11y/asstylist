@@ -1,23 +1,35 @@
+import { useState } from 'react'
 import type { HistoryEntry, Meta } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
 import { Badge, SectionTitle } from '../components/ui'
-import { TelegramSetup } from '../components/TelegramSetup'
+import { CheetahArtwork, DiamondIcon, LeopardRibbon, STYLE_BADGES } from '../lib/graphics'
+import { playClick, playTick } from '../lib/sound'
 
 const STEPS = [
-  { num: '01', title: 'Фото и параметры', text: 'Рост, вес и фото — для силуэта и палитры.' },
-  { num: '02', title: 'Стиль и настроение', text: '10 стилей и 8 настроений на выбор.' },
-  { num: '03', title: 'Бюджет до 100 000 ₽', text: 'Движок собирает образ строго в рамках суммы.' },
-  { num: '04', title: 'Проверенные товары', text: 'Каждая позиция проходит верификацию цены и ссылки.' },
+  { num: '01', kanji: '写', title: 'Фото и пропорции', text: 'Анализ силуэта, пропорций и природного колорита.' },
+  { num: '02', kanji: '格', title: 'Стиль и тональность', text: '10 гардеробных эстетик и 8 настроений.' },
+  { num: '03', kanji: '金', title: 'Бюджетный лимит', text: 'Строгий баланс стоимости без превышения лимита.' },
+  { num: '04', kanji: '証', title: 'Проверенные бренды', text: 'Верификация цен, ссылок и подлинности позиций.' },
 ]
 
-const TICKER_ITEMS = ['стиль', 'палитра', 'силуэт', 'бюджет', 'проверенные товары', 'личный стилист', 'выпуск 0 ₽']
+const TICKER_ITEMS = [
+  'ATELIER 2026',
+  'ПЕРСОНАЛЬНЫЙ СТИЛЬ',
+  'СИЛУЭТ И ПОСАДКА',
+  'ЦВЕТОВАЯ ГАММА',
+  'ВЕРИФИЦИРОВАННЫЙ КАТАЛОГ',
+  'КАЧЕСТВЕННЫЙ КРОЙ',
+  'ВЫПУСК 01',
+]
 
 function Ticker() {
   const sequence = (
     <>
       {TICKER_ITEMS.map((item) => (
         <span key={item}>
-          <i aria-hidden="true">✦</i>
+          <i>
+            <DiamondIcon size={8} />
+          </i>
           {item}
         </span>
       ))}
@@ -41,7 +53,6 @@ export function Home({
   onOpenVerification,
   onOpenLook,
   userName,
-  onBotConnected,
 }: {
   meta: Meta | null
   history: HistoryEntry[]
@@ -50,61 +61,209 @@ export function Home({
   onOpenVerification: () => void
   onOpenLook: (id: number) => void
   userName: string | null
-  onBotConnected: () => void
 }) {
+  const [activeStylePreview, setActiveStylePreview] = useState<string>('minimal')
+
+  const currentStyle = meta?.styles.find((s) => s.id === activeStylePreview) ?? meta?.styles[0]
+  const currentBadge = STYLE_BADGES[activeStylePreview] ?? { kanji: '簡', num: '01', code: 'MINIMAL' }
+
   return (
-    <div className="stack">
-      {/* ---------- обложка ---------- */}
-      <header className="masthead">
-        <div className="masthead-top">
-          <span className="tiny">Журнал образов</span>
-          <span className="tiny">N° 01 · 2026</span>
+    <div className="stack page-transition" style={{ gap: 18 }}>
+      {/* ---------- Leopard Ribbon Accent (Ref 3 & 1) ---------- */}
+      <LeopardRibbon height={10} />
+
+      {/* ---------- Atelier Masthead (Ref 1 & 2) ---------- */}
+      <header className="atelier-masthead">
+        <div className="masthead-meta">
+          <div className="masthead-meta-left">
+            <span className="tiny">ЖУРНАЛ СТИЛЯ</span>
+            <span className="tiny">·</span>
+            <span className="tiny">АРХИВ 2026</span>
+          </div>
+          <div className="tiny">EDITION № 01</div>
         </div>
-        <div className="masthead-word">
-          as<span>Stylist</span>
+
+        <div className="masthead-center">
+          <div className="masthead-logo-group">
+            <div className="masthead-title">
+              AS<span>STYLIST</span>
+            </div>
+            <div className="masthead-subline">СТУДИЯ ПЕРСОНАЛЬНОЙ ГАРДЕРОБНОЙ СЕЛЕКЦИИ</div>
+          </div>
+
+          <div className="masthead-stamp-badge">
+            <span className="masthead-stamp-kanji">東京</span>
+            <span className="masthead-stamp-code">ED.26</span>
+          </div>
         </div>
-        <div className="masthead-sub">личный стилист · каждый день новый выпуск</div>
       </header>
 
+      {/* ---------- Running Ticker (No emojis, crisp diamonds) ---------- */}
       <Ticker />
 
-      <section className="stack" style={{ gap: 14, paddingTop: 6 }}>
+      {/* ---------- Hero Editorial Screenprint Section (Ref 1) ---------- */}
+      <section className="stamp-card stack" style={{ gap: 14 }}>
         <div className="row-between">
-          <span className="kicker">Свежий номер</span>
+          <span className="kicker">
+            <DiamondIcon size={7} /> СТУДИЙНЫЙ НОМЕР
+          </span>
           {meta?.demo_mode ? <Badge tone="warn">демо-режим</Badge> : <Badge tone="ok">telegram</Badge>}
         </div>
-        <div className="kicker-rule" />
-        <h1 className="hero-title">
-          {userName ? `${userName}, ` : ''}
-          соберём образ, <em>который вам идёт</em>
-        </h1>
-        <p className="muted" style={{ margin: 0 }}>
-          Личный стилист: по фото, росту, весу, стилю, настроению и бюджету собирает персональный лук из проверенных
-          товаров. Некоммерческий проект — стоимость 0 ₽.
-        </p>
-        <button type="button" className="btn btn-primary btn-block" onClick={onStart} style={{ marginTop: 4, padding: '16px 18px' }}>
+
+        <div className="row" style={{ gap: 14, alignItems: 'center' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 28, color: 'var(--stamp-ink)', lineHeight: 1.1 }}>
+              {userName ? `${userName}, ` : ''}
+              соберём образ, <em>который вам идёт</em>
+            </h1>
+            <p className="small" style={{ margin: '8px 0 0', color: 'var(--stamp-ink-muted)' }}>
+              Персональный гардеробный директор: по пропорциям, росту, весу, эстетике и бюджету составляет выверенный лук
+              из проверенных каталогов. Стоимость сервиса — 0 ₽.
+            </p>
+          </div>
+
+          {/* Risograph Linocut Artwork from Ref 1 */}
+          <div
+            style={{
+              width: 90,
+              height: 105,
+              flexShrink: 0,
+              color: 'var(--stamp-ink)',
+              border: '1.5px solid var(--stamp-ink)',
+              padding: 4,
+              background: '#fff',
+              boxShadow: '3px 3px 0 var(--accent-blue)',
+            }}
+          >
+            <CheetahArtwork />
+          </div>
+        </div>
+
+        {/* Action Buttons: Guaranteed NEVER to overlap */}
+        <button
+          type="button"
+          className="btn btn-primary btn-block"
+          onClick={() => {
+            playClick()
+            onStart()
+          }}
+          style={{ padding: '16px 20px', minHeight: 52, fontSize: 13.5 }}
+        >
           Собрать образ
         </button>
-        <div className="row" style={{ gap: 18 }}>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenHistory}>
+
+        <div className="home-actions-grid">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              playClick()
+              onOpenHistory()
+            }}
+          >
             Мои образы
           </button>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={onOpenVerification}>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              playClick()
+              onOpenVerification()
+            }}
+          >
             Проверка товаров
           </button>
         </div>
       </section>
 
-      <TelegramSetup status={meta?.telegram} onConnected={onBotConnected} />
+      {/* ---------- Interactive Style Lookbook Matrix ---------- */}
+      {meta?.styles?.length ? (
+        <section className="style-showcase-container">
+          <SectionTitle hint="интерактивный каталог">Направления стиля</SectionTitle>
 
-      {/* ---------- содержание ---------- */}
+          <div className="style-pills-row">
+            {meta.styles.map((style) => (
+              <button
+                key={style.id}
+                type="button"
+                className="style-pill-btn"
+                data-active={activeStylePreview === style.id}
+                onClick={() => {
+                  playTick()
+                  setActiveStylePreview(style.id)
+                }}
+              >
+                {style.label}
+              </button>
+            ))}
+          </div>
+
+          {currentStyle ? (
+            <div className="style-preview-card">
+              <div className="style-preview-stamp">
+                <span className="stamp-kanji" style={{ fontSize: 22, color: 'var(--accent-crimson)' }}>
+                  {currentBadge.kanji}
+                </span>
+                <span className="tiny" style={{ fontSize: 9, marginTop: 2 }}>
+                  № {currentBadge.num}
+                </span>
+                <span className="tiny" style={{ fontSize: 8, color: 'var(--text-sub)' }}>
+                  {currentBadge.code}
+                </span>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong style={{ fontSize: 16, color: 'var(--stamp-ink)' }}>{currentStyle.label}</strong>
+                <div className="small" style={{ color: 'var(--stamp-ink-muted)', marginTop: 2 }}>
+                  {currentStyle.description}
+                </div>
+                {currentStyle.palette_hint?.length ? (
+                  <div className="wrap" style={{ marginTop: 6, gap: 4 }}>
+                    {currentStyle.palette_hint.map((colorId) => (
+                      <span
+                        key={colorId}
+                        className="badge"
+                        style={{
+                          background: 'rgba(0,0,0,0.06)',
+                          borderColor: 'rgba(0,0,0,0.15)',
+                          color: 'var(--stamp-ink)',
+                          fontSize: 9.5,
+                        }}
+                      >
+                        {colorId}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ---------- Архитектура гардероба ---------- */}
       <section className="card stack" style={{ gap: 12 }}>
-        <SectionTitle hint={meta ? `движок v${meta.version}` : undefined}>Содержание</SectionTitle>
-        <div className="grid-2" style={{ gap: 0 }}>
+        <SectionTitle hint={meta ? `система v${meta.version}` : undefined}>Содержание</SectionTitle>
+        <div className="grid-2" style={{ gap: 10 }}>
           {STEPS.map((step) => (
-            <div key={step.num} className="stack" style={{ gap: 4, padding: '10px 12px', borderLeft: '1px solid var(--line-soft)' }}>
-              <div className="index-num" style={{ fontSize: 22 }}>
-                {step.num}
+            <div
+              key={step.num}
+              className="stack"
+              style={{
+                gap: 4,
+                padding: '12px',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="row-between">
+                <span className="index-num" style={{ fontSize: 20 }}>
+                  {step.num}
+                </span>
+                <span className="stamp-kanji" style={{ fontSize: 13, color: 'var(--accent-crimson)' }}>
+                  {step.kanji}
+                </span>
               </div>
               <strong style={{ fontSize: 13.5 }}>{step.title}</strong>
               <div className="muted small" style={{ lineHeight: 1.35 }}>
@@ -115,9 +274,10 @@ export function Home({
         </div>
       </section>
 
+      {/* ---------- Характеристики каталога ---------- */}
       {meta ? (
         <section className="card stack" style={{ gap: 10 }}>
-          <SectionTitle hint="до 100 000 ₽">Что умеет движок</SectionTitle>
+          <SectionTitle hint="до 100 000 ₽">Параметры селекции</SectionTitle>
           <div className="wrap">
             <Badge>{meta.styles.length} стилей</Badge>
             <Badge>{meta.moods.length} настроений</Badge>
@@ -125,22 +285,28 @@ export function Home({
             <Badge>бюджет {formatRub(meta.budget.max_rub)}</Badge>
           </div>
           <div className="muted small">
-            Каждый товар в образе получает оценку по 8 параметрам: стиль, настроение, силуэт, цвет, формальность,
-            сезон, цена/качество и статус проверки.
+            Каждая единица в образе оценивается по 8 критериям: посадка, стилевой вектор, сочетаемость оттенков,
+            сезонность, баланс цены и статус верификации.
           </div>
         </section>
       ) : null}
 
+      {/* ---------- Последние образы ---------- */}
       {history.length ? (
         <section className="stack" style={{ gap: 10 }}>
-          <SectionTitle hint={`${history.length} ${history.length === 1 ? 'образ' : 'образов'}`}>Последние выпуски</SectionTitle>
+          <SectionTitle hint={`${history.length} ${history.length === 1 ? 'образ' : 'образов'}`}>
+            Последние селекции
+          </SectionTitle>
           <div className="card index-list">
             {history.slice(0, 3).map((entry, index) => (
               <button
                 key={entry.id}
                 type="button"
                 className="index-row"
-                onClick={() => onOpenLook(entry.id)}
+                onClick={() => {
+                  playClick()
+                  onOpenLook(entry.id)
+                }}
               >
                 <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
                 <span className="stack" style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -151,7 +317,7 @@ export function Home({
                     </span>
                   </span>
                   <span className="muted small">
-                    {itemsWord(entry.items_count)} · оценка {Math.round(entry.score)} · {relativeTime(entry.created_at)}
+                    {itemsWord(entry.items_count)} · индекс {Math.round(entry.score)} · {relativeTime(entry.created_at)}
                   </span>
                 </span>
               </button>
@@ -161,7 +327,7 @@ export function Home({
       ) : null}
 
       <hr className="rule-double" />
-      <div className="page-mark">— 01 —</div>
+      <div className="page-mark">— 01 · ASSTYLIST ATELIER —</div>
     </div>
   )
 }
