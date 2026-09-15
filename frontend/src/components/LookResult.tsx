@@ -37,6 +37,9 @@ export function LookResult({
     dropped_slots?: string[]
     plan_description?: string
   }
+  const engine = look.engine
+  const engineActive = engine?.pipeline === 'asstylist-fashion-engine'
+  const tasteMix = Object.entries(engine?.taste_mix ?? {})
   const hexById = new Map(colors.map((entry) => [entry.id, entry.hex]))
 
   const handleSealStamp = () => {
@@ -90,6 +93,44 @@ export function LookResult({
         </div>
 
         <BudgetBar total={look.total_rub} budget={look.budget_rub} />
+
+        {engineActive ? (
+          <div className="engine-thesis stack" style={{ gap: 8 }}>
+            <div className="row-between" style={{ gap: 10, alignItems: 'center' }}>
+              <span className="tiny">ТЕЗИС ДВИЖКА</span>
+              <span className="tiny">{engine?.styling_thesis}</span>
+            </div>
+            <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+              <div className="engine-score">
+                <strong>{Math.round(engine?.outfit_score ?? 0)}</strong>
+                <span className="tiny">fit score</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong style={{ fontSize: 15 }}>{engine?.styling_thesis_ru || engine?.styling_thesis}</strong>
+                <div className="muted small" style={{ marginTop: 2 }}>
+                  {engine?.score_formula}
+                  {engine?.aesthetic_ru || engine?.aesthetic ? ` · ${engine.aesthetic_ru ?? engine.aesthetic}` : ''}
+                </div>
+              </div>
+            </div>
+            <div className="wrap" style={{ gap: 6 }}>
+              <Badge tone={engine?.critic_decision === 'APPROVE' ? 'ok' : 'warn'}>
+                критик: {engine?.critic_decision === 'APPROVE' ? 'одобрено' : 'нужно усилить'}
+              </Badge>
+              {engine?.niche_level !== undefined ? <Badge>ниша {engine.niche_level}/100</Badge> : null}
+              {engine?.queries_total ? <Badge>запросов движка: {engine.queries_total}</Badge> : null}
+              {engine?.candidates?.validated ? <Badge>прошли отбор: {engine.candidates.validated}</Badge> : null}
+              {engine?.repair ? <Badge tone="warn">бюджетный баланс</Badge> : null}
+            </div>
+            {engine?.critic_feedback?.length ? (
+              <ul className="reasons">
+                {engine.critic_feedback.slice(0, 2).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Action Buttons: 2-column grid guaranteed NEVER to overlap */}
         <div className="home-actions-grid" style={{ marginTop: 4 }}>
@@ -226,6 +267,21 @@ export function LookResult({
         {showDiagnostics ? (
           <div className="small muted stack" style={{ gap: 6, paddingTop: 6 }}>
             <div>Студийный движок: v{look.engine_version}</div>
+            {engineActive ? (
+              <>
+                <div>Движок подбора: {engine?.pipeline} v{engine?.engine_version}</div>
+                <div>Тезис: {engine?.styling_thesis_ru} ({engine?.styling_thesis})</div>
+                <div>
+                  Оценка движка: {Math.round(engine?.outfit_score ?? 0)}/100 · оценка приложения:{' '}
+                  {Math.round(engine?.app_score ?? 0)}/100
+                </div>
+                <div>Критик: {engine?.critic_decision === 'APPROVE' ? 'одобрено' : 'рекомендованы правки'}</div>
+                {tasteMix.length ? (
+                  <div>Состав по вкусу: {tasteMix.map(([category, count]) => `${category} — ${count}`).join(', ')}</div>
+                ) : null}
+                {engine?.queries_used?.length ? <div>Запросы: {engine.queries_used.slice(0, 3).join(' · ')}</div> : null}
+              </>
+            ) : null}
             <div>Оценено позиций в каталоге: {diagnostics.candidates_total ?? 0}</div>
             <div>Отфильтровано позиций: {diagnostics.rejected_total ?? 0}</div>
             <div>План гардероба: {diagnostics.plan_description ?? look.plan}</div>

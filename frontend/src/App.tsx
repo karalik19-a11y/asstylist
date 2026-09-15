@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
-import type { HistoryEntry, Look, Meta } from './lib/types'
+import type { HistoryEntry, Look, Meta, WizardState } from './lib/types'
 import { api, ApiError } from './lib/api'
 import { haptic, initTelegram, isTelegram, telegramUserName } from './lib/telegram'
 import { initialModel, wizardReducer } from './state/wizard'
@@ -7,12 +7,13 @@ import { Home } from './pages/Home'
 import { Wizard } from './pages/Wizard'
 import { History } from './pages/History'
 import { Verification } from './pages/Verification'
+import { Search } from './pages/Search'
 import { LookResult } from './components/LookResult'
 import { Header } from './components/ui'
 import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
 
-type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification'
+type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification' | 'search'
 
 type VerificationReport = {
   total: number
@@ -32,6 +33,7 @@ const SCREEN_TITLES: Record<Screen, string> = {
   result: 'Персональная селекция',
   history: 'Архив гардеробов',
   verification: 'Верификация каталога',
+  search: 'Поиск по движку',
 }
 
 function errorMessage(error: unknown): string {
@@ -116,6 +118,33 @@ export default function App() {
     }
   }, [model.state, refreshHistory])
 
+  /**
+   * Сборка образа по запросу из экрана поиска: патч кладётся в состояние
+   * мастера, поэтому движок получает ту же формулировку, что и в поиске.
+   */
+  const handleEngineGenerate = useCallback(
+    async (patch: Partial<WizardState>) => {
+      const nextState = { ...model.state, ...patch }
+      dispatch({ type: 'patch', patch })
+      setGenerating(true)
+      setError(null)
+      try {
+        const result = await api.generateLook(nextState)
+        setLook(result)
+        setScreen('result')
+        haptic('success')
+        playSuccess()
+        void refreshHistory()
+      } catch (caught) {
+        setError(errorMessage(caught))
+        haptic('error')
+      } finally {
+        setGenerating(false)
+      }
+    },
+    [model.state, refreshHistory],
+  )
+
   const handleSwap = useCallback(
     async (slot: string) => {
       if (!look?.id) return
@@ -156,6 +185,11 @@ export default function App() {
     } finally {
       setLoadingList(false)
     }
+  }, [])
+
+  const openSearch = useCallback(() => {
+    setScreen('search')
+    setError(null)
   }, [])
 
   const openHistory = useCallback(() => {
@@ -207,6 +241,7 @@ export default function App() {
           onStart={startWizard}
           onOpenHistory={openHistory}
           onOpenVerification={() => void openVerification()}
+          onOpenSearch={openSearch}
           onOpenLook={(id) => void openLook(id)}
         />
       ) : null}
@@ -236,6 +271,15 @@ export default function App() {
           onSwap={(slot) => void handleSwap(slot)}
           onNewLook={startWizard}
           onFavorite={() => void handleFavorite()}
+        />
+      ) : null}
+
+      {screen === 'search' ? (
+        <Search
+          meta={meta}
+          onGenerate={(patch) => void handleEngineGenerate(patch)}
+          generating={generating}
+          error={error}
         />
       ) : null}
 

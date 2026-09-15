@@ -1,0 +1,1221 @@
+"""ASSTYLIST Fashion Engine в контуре asStylist.
+
+Здесь движок из репозитория ``karalik19-a11y/-`` (Python-порт в
+``app/fashion_engine``) подключается к приложению:
+
+* каталог приложения (только позиции, прошедшие верификацию) превращается в
+  карточки движка ``ProductItem`` — с переводом русских названий, стилей,
+  настроений и оттенков в словарь движка (``fashion_engine.lexicon``);
+* движок выполняет поиск и подбор: расширение запроса, Fashion Intelligence,
+  Taste/anti-generic, архитектура образа (hero/base/layer/footwear/accessory),
+  оценка совместимости и критик;
+* приложение остаётся страховкой: жёсткий бюджет (бюджетный оптимизатор
+  доводит образ до лимита), обязательные слоты плана, слой верификации.
+
+Итоговый индекс образа — смесь оценки приложения и оценки движка
+(``FASHION_ENGINE_SCORE_WEIGHT``), обе цифры показываются в UI.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Any
+
+from ..config import settings
+from ..engine.body import BodyProfile
+from ..engine.budget import build_look
+from ..engine.colors import COLORS
+from ..engine.explain import item_reasons, look_summary, look_tips
+from ..engine.look_builder import (
+    LookGenerationError,
+    LookRequest,
+    LookResult,
+    PreparedPool,
+    prepare_pool,
+)
+from ..engine.options import SLOT_CATEGORIES, SLOT_LABELS, mood_by_id, style_by_id
+from ..engine.palette import PaletteProfile
+from ..engine.ranking import (
+    CatalogItem,
+    RankingContext,
+    ScoredItem,
+    look_cohesion,
+    look_score,
+    score_item,
+    style_verdict,
+)
+from ..fashion_engine import (
+    CatalogSearchProvider,
+    EngineOptions,
+    FashionEngine,
+    MockRealProductProvider,
+    ProductItem,
+    UserStyleProfile,
+    lexicon,
+)
+from ..fashion_engine import keywords as engine_keywords
+from ..fashion_engine.search.multi_pass_search import DiscoveryResult
+from ..fashion_engine.types import OutfitResult
+
+PIPELINE = "asstylist-fashion-engine"
+
+#: Тир бренда: влияет на подсказки движку (нишевые позиции при высоком niche).
+BRAND_TIERS: dict[str, str] = {
+    "12 storeez": "designer",
+    "atelier no.5": "designer",
+    "cashmere lab": "designer",
+    "silk route": "designer",
+    "avant studio": "designer",
+    "old money club": "designer",
+    "techform": "designer",
+    "lamoda select": "designer",
+    "street lab": "contemporary",
+    "runform": "contemporary",
+    "cozy line": "contemporary",
+    "linen lab": "contemporary",
+    "sokolov": "contemporary",
+    "uniqlo": "mass",
+    "uniqlo sport": "mass",
+}
+DEFAULT_TIER = "contemporary"
+
+#: Насколько вещь из образа движка приоритетнее прочих кандидатов слота.
+ENGINE_OUTFIT_BONUS = 0.25
+
+#: Категория приложения → категория движка (если по названию не определить).
+APP_CATEGORY_TO_ENGINE: dict[str, str] = {
+    "outerwear": "jacket",
+    "top": "top",
+    "knitwear": "cardigan",
+    "bottom": "trousers",
+    "dress": "dress",
+    "shoes": "shoes",
+    "bag": "bag",
+    "accessory": "accessory",
+}
+
+#: Категория движка → слот приложения.
+ENGINE_CATEGORY_TO_SLOT: dict[str, str] = {
+    "coat": "outerwear",
+    "trench": "outerwear",
+    "jacket": "outerwear",
+    "blazer": "outerwear",
+    "parka": "outerwear",
+    "puffer": "outerwear",
+    "top": "top",
+    "shirt": "top",
+    "blouse": "top",
+    "knit": "top",
+    "sweater": "top",
+    "cardigan": "top",
+    "vest": "top",
+    "trousers": "bottom",
+    "jeans": "bottom",
+    "skirt": "bottom",
+    "shorts": "bottom",
+    "dress": "dress",
+    "jumpsuit": "dress",
+    "boots": "shoes",
+    "sneakers": "shoes",
+    "shoes": "shoes",
+    "bag": "bag",
+    "backpack": "bag",
+    "tote": "bag",
+    "clutch": "bag",
+    "crossbody": "bag",
+    "accessory": "accessory",
+    "belt": "accessory",
+    "scarf": "accessory",
+    "cap": "accessory",
+    "beanie": "accessory",
+    "gloves": "accessory",
+    "sunglasses": "accessory",
+    "earrings": "accessory",
+    "chain": "accessory",
+    "watch": "accessory",
+    "socks": "accessory",
+    "tie": "accessory",
+}
+
+#: Цвет приложения → слово движка.
+APP_COLOR_TO_ENGINE: dict[str, str] = {
+    "black": "black",
+    "charcoal": "grey",
+    "grey": "grey",
+    "light_grey": "grey",
+    "white": "white",
+    "ivory": "ivory",
+    "beige": "beige",
+    "sand": "beige",
+    "camel": "beige",
+    "brown": "brown",
+    "chocolate": "brown",
+    "terracotta": "brown",
+    "burgundy": "burgundy",
+    "red": "red",
+    "coral": "red",
+    "pink": "pink",
+    "blush": "pink",
+    "lavender": "purple",
+    "violet": "purple",
+    "blue": "blue",
+    "navy": "navy",
+    "sky": "blue",
+    "teal": "green",
+    "emerald": "green",
+    "olive": "olive",
+    "khaki": "olive",
+    "green": "green",
+    "mustard": "gold",
+    "yellow": "gold",
+    "orange": "red",
+    "silver": "silver",
+    "gold": "gold",
+}
+
+#: Стиль приложения → профиль движка (ниша, эстетики, ключевые слова запроса).
+STYLE_ENGINE: dict[str, dict[str, Any]] = {
+    "minimal": {
+        "niche": 52,
+        "aesthetics": ["minimal"],
+        "keywords": "minimal clean precise quiet luxury monochrome",
+    },
+    "old_money": {
+        "niche": 62,
+        "aesthetics": ["minimal", "archive"],
+        "keywords": "quiet luxury camel cashmere tailored classic loafers",
+    },
+    "streetwear": {
+        "niche": 66,
+        "aesthetics": ["street"],
+        "keywords": "streetwear urban oversized denim sneakers skate",
+    },
+    "business_casual": {
+        "niche": 55,
+        "aesthetics": ["minimal"],
+        "keywords": "tailored business blazer shirt trousers precise",
+    },
+    "techwear": {
+        "niche": 78,
+        "aesthetics": ["avantgarde", "industrial"],
+        "keywords": "technical nylon utilitarian functional dark layering",
+    },
+    "romantic": {
+        "niche": 62,
+        "aesthetics": ["romantic"],
+        "keywords": "romantic sheer ruffle delicate silk pastel flowy",
+    },
+    "athleisure": {
+        "niche": 50,
+        "aesthetics": ["street"],
+        "keywords": "athleisure performance sporty knit comfortable",
+    },
+    "grunge": {
+        "niche": 74,
+        "aesthetics": ["gothic", "archive"],
+        "keywords": "grunge distressed denim leather raw 90s combat boots",
+    },
+    "boho": {
+        "niche": 60,
+        "aesthetics": ["romantic"],
+        "keywords": "boho natural linen earthy flowy textured",
+    },
+    "avantgarde": {
+        "niche": 85,
+        "aesthetics": ["avantgarde", "gothic"],
+        "keywords": "avant garde deconstructed asymmetric architectural black sculptural",
+    },
+}
+
+MOOD_ENGINE: dict[str, str] = {
+    "confident": "confident strong sharp",
+    "calm": "calm soft quiet",
+    "playful": "playful light colour",
+    "bold": "bold statement graphic",
+    "cozy": "cozy soft warm knit",
+    "elegant": "elegant refined silk cashmere",
+    "energetic": "energetic sporty dynamic",
+    "mysterious": "mysterious dark black",
+}
+
+OCCASION_ENGINE: dict[str, str] = {
+    "everyday": "everyday casual",
+    "work": "work tailoring office",
+    "date": "date romantic evening",
+    "party": "night party statement",
+    "travel": "travel comfortable practical",
+    "event": "editorial evening occasion",
+}
+
+SEASON_ENGINE: dict[str, str] = {
+    "all": "all season layering",
+    "spring": "spring transitional light",
+    "summer": "summer lightweight breathable",
+    "autumn": "autumn layering wool",
+    "winter": "winter wool warm heavy",
+}
+
+FIT_ENGINE: dict[str, str] = {
+    "slim": "slim",
+    "regular": "regular",
+    "relaxed": "relaxed",
+    "oversize": "oversized",
+}
+
+#: Подсказки для query при замене вещи в конкретном слоте.
+SLOT_QUERY_HINTS: dict[str, str] = {
+    "outerwear": "coat jacket outerwear layer",
+    "top": "top shirt knit sweater",
+    "bottom": "trousers jeans skirt bottom",
+    "dress": "dress",
+    "shoes": "boots shoes sneakers footwear",
+    "bag": "bag tote crossbody",
+    "accessory": "belt scarf accessory",
+}
+
+#: Перевод отзывов критика движка (строки портированы дословно).
+CRITIC_RU: dict[str, str] = {
+    "Silhouette is too predictable / safe. Needs stronger shape language.": (
+        "Силуэт слишком предсказуемый — нужна более сильная форма."
+    ),
+    "No clear hero piece. The outfit lacks a strong focal point.": (
+        "Нет явной ключевой вещи — образу не хватает фокуса."
+    ),
+    "Insufficient contrast in texture or volume.": "Мало контраста по фактуре или объёму.",
+    "Too many generic items. Dilutes the fashion strength of the look.": (
+        "Слишком много масс-маркета — он размывает характер образа."
+    ),
+    "Styling thesis is weak or generic. Needs a sharper cultural idea.": (
+        "Стилистический тезис слабый — нужна более точная идея."
+    ),
+    "Color story is fragmented.": "Цветовая история распадается.",
+    "Overall item quality is not high enough for a strong editorial-feeling look.": (
+        "Среднее качество вещей ниже уровня сильного эдиториал-образа."
+    ),
+    "CRITICAL: Outfit needs full rebuild.": "Критично: образ нужно пересобрать.",
+    "Several issues detected — recommend refinement.": "Найдено несколько замечаний — стоит уточнить состав.",
+    "Strong, coherent, fashion-forward look. Approved.": "Сильный, цельный образ — одобрено.",
+    "Minor notes only. Acceptable.": "Только мелкие замечания, допустимо.",
+}
+
+
+# ─── карточки движка из каталога приложения ─────────────────────────────────
+
+
+def brand_tier(brand: str) -> str:
+    return BRAND_TIERS.get((brand or "").strip().lower(), DEFAULT_TIER)
+
+
+def to_engine_card(item: CatalogItem) -> ProductItem:
+    """``CatalogItem`` (₽, русские теги) → ``ProductItem`` движка."""
+    name_terms = lexicon.detect_terms(item.name, ("garment", "material", "silhouette", "aesthetic"))
+    style_profile = STYLE_ENGINE.get(item.styles[0] if item.styles else "minimal", STYLE_ENGINE["minimal"])
+    style_terms = [word for word in str(style_profile["keywords"]).split() if len(word) > 3]
+    mood_terms = [word for mood in item.moods for word in str(MOOD_ENGINE.get(mood, "")).split() if len(word) > 3]
+    color_terms = [APP_COLOR_TO_ENGINE[color] for color in item.colors if color in APP_COLOR_TO_ENGINE]
+    winter = "winter" in item.seasons or "autumn" in item.seasons
+    seasonal = "winter wool layered" if winter else "light breathable summer"
+
+    description = " ".join(
+        dict.fromkeys(
+            name_terms
+            + style_terms
+            + mood_terms
+            + color_terms
+            + [APP_CATEGORY_TO_ENGINE.get(item.category, "accessory"), item.fit, seasonal]
+        )
+    )
+    tags = list(
+        dict.fromkeys(
+            name_terms
+            + color_terms
+            + [word for word in " ".join(name_terms).split() if word]
+            + item.styles
+            + item.moods
+            + item.colors
+        )
+    )
+    tier = brand_tier(item.brand)
+    category = lexicon.engine_category(item.name, APP_CATEGORY_TO_ENGINE.get(item.category, "accessory"))
+    return ProductItem(
+        id=item.sku,
+        sku=item.sku,
+        product_id=item.product_id,
+        name=item.name,
+        brand=item.brand,
+        category=category,
+        price=float(item.price_rub),
+        currency="RUB",
+        image=item.image_url,
+        source_url=item.url,
+        source_type=tier,
+        availability="available",
+        confidence=min(0.99, max(settings.fashion_engine_min_confidence, float(item.verification_score or 0.7))),
+        description=description,
+        color=color_terms[0] if color_terms else None,
+        tags=tags,
+        meta={
+            "tier": tier,
+            "app_category": item.category,
+            "styles": list(item.styles),
+            "moods": list(item.moods),
+            "color_ids": list(item.colors),
+            "formality": item.formality,
+            "rating": item.rating,
+            "reviews": item.reviews_count,
+        },
+    )
+
+
+def slot_for_item(item: CatalogItem, engine_category: str | None) -> str:
+    """Слот приложения: приоритет у категории движка, но только если она
+    согласуется с категорией каталога."""
+    app_slots = [slot for slot, categories in SLOT_CATEGORIES.items() if item.category in categories]
+    mapped = ENGINE_CATEGORY_TO_SLOT.get(str(engine_category or "").lower())
+    if mapped and mapped in app_slots:
+        return mapped
+    if app_slots:
+        return app_slots[0]
+    return mapped or "accessory"
+
+
+# ─── профиль и запрос для движка ────────────────────────────────────────────
+
+
+def _fit_preference(body: BodyProfile | None) -> str:
+    if body is None or not body.recommended_fits:
+        return "regular"
+    return FIT_ENGINE.get(body.recommended_fits[0], "regular")
+
+
+def build_profile(
+    request: LookRequest,
+    *,
+    palette: PaletteProfile | None = None,
+    body: BodyProfile | None = None,
+) -> UserStyleProfile:
+    """Профиль движка из запроса приложения."""
+    style_profile = STYLE_ENGINE.get(request.style, STYLE_ENGINE["minimal"])
+    colors: list[str] = []
+    for color_id in list(request.preferred_colors) + list(getattr(palette, "recommended", ()) or [])[:4]:
+        mapped = APP_COLOR_TO_ENGINE.get(color_id)
+        if mapped and mapped not in colors:
+            colors.append(mapped)
+    disliked = [
+        APP_COLOR_TO_ENGINE[color_id]
+        for color_id in request.avoid_colors
+        if color_id in APP_COLOR_TO_ENGINE
+    ]
+    niche = request.niche_level if request.niche_level is not None else int(style_profile["niche"])
+    return UserStyleProfile(
+        niche_level=niche,
+        aesthetics=list(style_profile["aesthetics"]),
+        budget_max=float(request.budget_rub),
+        currency="RUB",
+        occasion=request.occasion,
+        fit_preference=_fit_preference(body),
+        gender=request.presentation,
+        colors=colors,
+        preferred_silhouette=[_fit_preference(body)],
+        disliked_items=sorted(set(disliked)),
+        height_cm=request.height_cm,
+        notes=list(getattr(palette, "signals", ()) or []),
+    )
+
+
+def build_engine_query(
+    request: LookRequest,
+    *,
+    palette: PaletteProfile | None = None,
+    body: BodyProfile | None = None,
+    extra: str = "",
+) -> str:
+    """Свободный текстовый запрос для движка (RU + EN термины)."""
+    style_profile = STYLE_ENGINE.get(request.style, STYLE_ENGINE["minimal"])
+    parts: list[str] = []
+    if request.query:
+        parts.append(request.query)
+        parts.append(lexicon.translate_text(request.query, ("garment", "material", "silhouette", "aesthetic")))
+        parts.extend(lexicon.detect_colors(request.query))
+    parts.append(str(style_profile["keywords"]))
+    parts.append(str(MOOD_ENGINE.get(request.mood, "")))
+    parts.append(str(OCCASION_ENGINE.get(request.occasion, "")))
+    parts.append(str(SEASON_ENGINE.get(request.season, "")))
+    fit = _fit_preference(body)
+    parts.append(fit)
+    # Цвета добавляем только выбранные пользователем: автоматическая палитра
+    # из фото слишком охотно уводит тезис движка в «тёмную» сторону.
+    for color_id in list(request.preferred_colors)[:3]:
+        mapped = APP_COLOR_TO_ENGINE.get(color_id)
+        if mapped:
+            parts.append(mapped)
+    if extra:
+        parts.append(extra)
+    return " ".join(part for part in parts if part).strip()
+
+
+def _request_from_look(look: Any) -> LookRequest:
+    ranking = look.loads(look.ranking_json, {}) if hasattr(look, "loads") else {}
+    return LookRequest(
+        style=look.style,
+        mood=look.mood,
+        occasion=look.occasion,
+        season=look.season,
+        presentation=look.presentation,
+        height_cm=float(look.height_cm),
+        weight_kg=float(look.weight_kg),
+        budget_rub=float(look.budget_rub),
+        preferred_colors=list(ranking.get("preferred_colors") or []),
+        avoid_colors=list(ranking.get("avoid_colors") or []),
+        size=ranking.get("size"),
+        weights=ranking.get("weights"),
+    )
+
+
+# ─── запуск движка ──────────────────────────────────────────────────────────
+
+
+@dataclass
+class EngineRun:
+    """Результат прогона движка по каталогу приложения."""
+
+    query: str
+    profile: UserStyleProfile
+    discovery: DiscoveryResult
+    outfit: OutfitResult
+    cards: dict[str, ProductItem] = field(default_factory=dict)
+
+    @property
+    def ordered_skus(self) -> list[str]:
+        return [card.sku or card.id for card in self.discovery.products]
+
+    def rank_index(self, sku: str) -> int | None:
+        try:
+            return self.ordered_skus.index(sku)
+        except ValueError:
+            return None
+
+
+def run_engine(
+    prepared: PreparedPool,
+    request: LookRequest,
+    *,
+    cards: list[ProductItem] | None = None,
+) -> EngineRun:
+    """Прогнать пайплайн движка по пулу кандидатов приложения."""
+    if cards is None:
+        cards = [to_engine_card(scored.item) for scored in prepared.ranked]
+    cards = cards[: max(1, settings.fashion_engine_max_cards)]
+
+    providers: list[Any] = [CatalogSearchProvider(cards)]
+    if settings.fashion_engine_enable_mock:
+        providers.append(MockRealProductProvider())
+
+    options = EngineOptions(
+        max_products=settings.fashion_engine_max_products,
+        limit_per_query=settings.fashion_engine_limit_per_query,
+        min_confidence=settings.fashion_engine_min_confidence,
+    )
+    engine = FashionEngine(providers=providers, options=options)
+
+    profile = build_profile(request, palette=prepared.palette, body=prepared.body)
+    query = build_engine_query(request, palette=prepared.palette, body=prepared.body)
+    discovery = engine.discover(query, profile)
+    outfit = engine.create_outfit(query, profile, preloaded=discovery)
+    return EngineRun(
+        query=query,
+        profile=profile,
+        discovery=discovery,
+        outfit=outfit,
+        cards={card.sku or card.id: card for card in cards},
+    )
+
+
+# ─── сборка ответа ──────────────────────────────────────────────────────────
+
+
+def aesthetic_ru(run: EngineRun) -> str:
+    """Эстетика движка по-русски: тезис + доминирующий оттенок образа."""
+    thesis = engine_keywords.thesis_label_ru(run.outfit.styling_thesis)
+    items = list(run.outfit.items)
+    color_id = ""
+    for item in items:
+        attributes = item.fashion_attributes
+        if attributes and attributes.color not in (None, "", "unknown"):
+            color_id = str(attributes.color)
+            break
+    spec = COLORS.get(color_id)
+    if spec is None:
+        return thesis
+    return f"{thesis} · палитра: {spec.ru}"
+
+
+def _critic_ru(feedback: list[str]) -> list[str]:
+    return [CRITIC_RU.get(line, line) for line in feedback]
+
+
+def _taste_mix(run: EngineRun) -> dict[str, int]:
+    mix: dict[str, int] = {}
+    for card in run.discovery.products:
+        mix[card.taste_category] = mix.get(card.taste_category, 0) + 1
+    return mix
+
+
+#: Роль вещи по слоту — для позиций, которые добрал бюджетный оптимизатор
+#: (движок их в своём образе не выбирал).
+ROLE_BY_SLOT: dict[str, str] = {
+    "outerwear": "layer",
+    "top": "hero",
+    "bottom": "base",
+    "dress": "hero",
+    "shoes": "footwear",
+    "bag": "accessory",
+    "accessory": "accessory",
+}
+
+
+def _engine_item_meta(
+    card: ProductItem | None,
+    slot: str,
+    *,
+    role: str | None = None,
+    in_engine_outfit: bool = False,
+) -> dict[str, Any]:
+    if card is None:
+        return {
+            "slot": slot,
+            "slot_label": SLOT_LABELS.get(slot, slot),
+            "role": role or ROLE_BY_SLOT.get(slot),
+            "role_label": lexicon.role_label_ru(role or ROLE_BY_SLOT.get(slot)),
+            "fashion_score": 0,
+            "taste_category": "",
+            "taste_label": "",
+            "source_in_run": "budget-guard",
+        }
+    attributes = card.fashion_attributes
+    components = card.taste_components or {}
+    resolved_role = role or card.role or ROLE_BY_SLOT.get(slot)
+    return {
+        "slot": slot,
+        "slot_label": SLOT_LABELS.get(slot, slot),
+        "role": resolved_role,
+        "role_label": lexicon.role_label_ru(resolved_role),
+        "in_engine_outfit": in_engine_outfit,
+        "source_in_run": "engine-outfit" if in_engine_outfit else "engine-shortlist",
+        "taste_category": card.taste_category,
+        "taste_label": lexicon.taste_label_ru(card.taste_category),
+        "fashion_score": int(card.fashion_score or 0),
+        "trend_relevance": round(float(getattr(attributes, "trend_relevance", 0.4) or 0.4), 3),
+        "uniqueness": round(float(components.get("uniqueness", 50) or 50) / 100, 3),
+        "generic_score": int(card.generic_score or 0),
+        "silhouette": list(getattr(attributes, "silhouette", []) or []),
+        "material": getattr(attributes, "material", None),
+        "aesthetic": getattr(attributes, "aesthetic", None),
+        "engine_category": card.category,
+        "provider": card.provider,
+    }
+
+
+def _engine_reasons(
+    card: ProductItem | None,
+    run: EngineRun,
+    limit: int = 3,
+    *,
+    role: str | None = None,
+) -> list[str]:
+    if card is None:
+        return []
+    resolved_role = role or card.role
+    reasons = [
+        f"Движок: {lexicon.role_label_ru(resolved_role)} · {lexicon.taste_label_ru(card.taste_category)} "
+        f"({int(card.fashion_score or 0)}/100)"
+    ]
+    attributes = card.fashion_attributes
+    if attributes is not None:
+        details: list[str] = []
+        if attributes.material and attributes.material != "unknown":
+            details.append(f"фактура — {lexicon.material_label_ru(attributes.material)}")
+        if attributes.silhouette:
+            labels = [lexicon.silhouette_label_ru(value) for value in attributes.silhouette[:2]]
+            details.append("силуэт — " + ", ".join(label for label in labels if label))
+        if attributes.aesthetic and attributes.aesthetic != "contemporary":
+            details.append(f"эстетика — {lexicon.aesthetic_label_ru(attributes.aesthetic)}")
+        if details:
+            reasons.append("Fashion Intelligence: " + "; ".join(details))
+    thesis = engine_keywords.thesis_label_ru(run.outfit.styling_thesis)
+    if thesis:
+        reasons.append(f"Работает на тезис образа «{thesis}»")
+    return reasons[:limit]
+
+
+def _engine_tips(run: EngineRun) -> list[str]:
+    logic = run.outfit.styling_logic or {}
+    tips: list[str] = []
+    if logic.get("silhouette") and logic["silhouette"] != "balanced":
+        tips.append(f"Силуэтная формула движка: {logic['silhouette'].replace('+', '·')}.")
+    if logic.get("color") and logic["color"] != "monochrome":
+        tips.append(f"Цветовая ось движка: {logic['color'].replace('/', '·')}.")
+    if logic.get("focalPoint"):
+        tips.append(f"Фокусная вещь, по версии движка, — {logic['focalPoint']}.")
+    if run.outfit.critic_decision == "APPROVE":
+        tips.append("Критик движка: образ одобрен без правок.")
+    elif run.outfit.critic_feedback:
+        tips.append(f"Критик движка: {_critic_ru(run.outfit.critic_feedback)[0]}")
+    return tips
+
+
+def _blended_score(app_score: float, card: ProductItem | None, rank_index: int | None, total: int) -> float:
+    """Оценка позиции: движок + ранжировщик приложения (детерминированно)."""
+    engine_norm = float(card.fashion_score or 0) / 100 if card else 0.5
+    rank_bonus = 0.0
+    if rank_index is not None and total > 0:
+        rank_bonus = max(0.0, 1.0 - rank_index / total)
+    return round(0.55 * engine_norm + 0.30 * app_score + 0.15 * rank_bonus, 4)
+
+
+#: Доля релевантности тексту запроса в позиции вещи внутри выдачи поиска.
+#: Без неё выдача определялась бы только fashion score вещи и не зависела бы
+#: от запроса (у провайдера поверх всего каталога пул одинаковый для всех
+#: расширенных запросов).
+SEARCH_RELEVANCE_WEIGHT = 0.15
+
+#: ``query_match`` провайдера — сумма попаданий по токенам запроса; за
+#: «полную» релевантность принимаем 60 баллов (примерно четыре точных
+#: попадания), дальше рост не даёт преимущества.
+SEARCH_RELEVANCE_FULL = 60.0
+
+
+def _query_relevance(card: ProductItem | None) -> float:
+    if card is None:
+        return 0.0
+    raw = float((card.meta or {}).get("query_match") or 0.0)
+    return max(0.0, min(1.0, raw / SEARCH_RELEVANCE_FULL))
+
+
+def _search_position(
+    app_score: float,
+    card: ProductItem | None,
+    rank_index: int | None,
+    total: int,
+) -> float:
+    """Позиция вещи в выдаче поиска: гибридная оценка + релевантность запросу."""
+    base = _blended_score(app_score, card, rank_index, total)
+    return round((1 - SEARCH_RELEVANCE_WEIGHT) * base + SEARCH_RELEVANCE_WEIGHT * _query_relevance(card), 4)
+
+
+def _engine_block(
+    run: EngineRun,
+    *,
+    app_score: float,
+    final_score: float,
+    repair: str | None,
+    fallback: str | None = None,
+) -> dict[str, Any]:
+    meta = run.outfit.meta or {}
+    return {
+        "pipeline": PIPELINE,
+        "enabled": True,
+        "engine_version": str(meta.get("engineVersion", "")),
+        "styling_thesis": run.outfit.styling_thesis,
+        "styling_thesis_ru": engine_keywords.thesis_label_ru(run.outfit.styling_thesis),
+        "aesthetic": run.outfit.aesthetic,
+        "aesthetic_ru": aesthetic_ru(run),
+        "outfit_score": round(float(run.outfit.outfit_score or 0), 1),
+        "app_score": round(float(app_score), 1),
+        "final_score": round(float(final_score), 1),
+        "score_formula": f"{round((1 - settings.fashion_engine_score_weight) * 100)}% приложение + "
+        f"{round(settings.fashion_engine_score_weight * 100)}% движок",
+        "critic_decision": run.outfit.critic_decision,
+        "critic_feedback": _critic_ru(run.outfit.critic_feedback),
+        "styling_logic": run.outfit.styling_logic,
+        "roles": {card.sku or card.id: card.role for card in run.outfit.items},
+        "queries_used": list(meta.get("queriesUsed") or run.discovery.queries_used[:8]),
+        "queries_total": int(meta.get("queriesTotal") or len(run.discovery.queries_used)),
+        "candidates": {
+            "raw_items": int(meta.get("rawItems") or run.discovery.raw_items),
+            "considered": int(meta.get("totalCandidatesConsidered") or run.discovery.considered),
+            "validated": int(meta.get("validatedProducts") or len(run.discovery.products)),
+            "outfits_built": int(meta.get("candidatesBuilt") or 0),
+            "dropped": dict(meta.get("dropped") or run.discovery.dropped),
+        },
+        "taste_mix": _taste_mix(run),
+        "niche_level": run.profile.niche_level,
+        "aesthetics": list(run.profile.aesthetics),
+        "fit_preference": run.profile.fit_preference,
+        "profile": run.profile.to_dict(),
+        "theses": list(meta.get("theses") or []),
+        "alternatives": list(run.outfit.alternatives),
+        "repair": repair,
+        "fallback": fallback,
+    }
+
+
+def _slot_pool(prepared: PreparedPool, run: EngineRun, slot: str) -> list[ScoredItem]:
+    """Кандидаты слота в порядке движка, затем — в порядке приложения."""
+    slot_items = prepared.candidates_by_slot.get(slot) or []
+    by_sku = {scored.sku: scored for scored in slot_items}
+    ordered: list[ScoredItem] = []
+    for card in run.discovery.products:
+        sku = card.sku or card.id
+        if sku in by_sku:
+            ordered.append(by_sku.pop(sku))
+    ordered.extend(sorted(by_sku.values(), key=lambda s: (-s.score, s.item.price_rub, s.item.sku)))
+    return ordered
+
+
+def _alternatives(prepared: PreparedPool, run: EngineRun, slot: str, taken: set[str], limit: int = 3) -> list[dict[str, Any]]:
+    options: list[dict[str, Any]] = []
+    for scored in _slot_pool(prepared, run, slot):
+        if scored.sku in taken:
+            continue
+        card = run.cards.get(scored.sku)
+        options.append(
+            {
+                "sku": scored.sku,
+                "name": scored.item.name,
+                "brand": scored.item.brand,
+                "price_rub": scored.item.price_rub,
+                "score": round(scored.score, 3),
+                "colors": list(scored.item.colors),
+                "fashion_score": int(card.fashion_score or 0) if card else 0,
+                "taste_category": card.taste_category if card else "",
+            }
+        )
+        if len(options) >= limit:
+            break
+    return options
+
+
+def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResult:
+    """Собрать образ движком ASSTYLIST (с бюджетной страховкой приложения)."""
+    prepared = prepare_pool(products, request)
+    run = run_engine(prepared, request)
+    if not run.outfit.items:
+        reason = (run.outfit.critic_feedback or ["движок не нашёл достаточно вещей"])[0]
+        raise LookGenerationError(f"Движок не собрал образ: {reason}")
+
+    plan_slots = prepared.plan["slots"]
+    roles = {card.sku or card.id: card.role for card in run.outfit.items}
+
+    # Кандидаты по слотам в порядке движка: Fashion Score, место в его образе и
+    # релевантность запросу. Вещи из образа движка получают приоритет — дальше
+    # бюджетный оптимизатор приложения доводит состав до лимита и добирает
+    # обязательные слоты, не выходя за бюджет.
+    slot_candidates: dict[str, list[ScoredItem]] = {}
+    for slot, pool in prepared.candidates_by_slot.items():
+        enriched: list[ScoredItem] = []
+        for scored in pool:
+            breakdown = score_item(scored.item, prepared.ctx).breakdown
+            blended = _blended_score(
+                scored.score,
+                run.cards.get(scored.sku),
+                run.rank_index(scored.sku),
+                len(run.discovery.products),
+            )
+            if scored.sku in roles:
+                blended = min(1.0, round(blended + ENGINE_OUTFIT_BONUS, 4))
+            enriched.append(ScoredItem(item=scored.item, score=blended, breakdown=breakdown))
+        enriched.sort(key=lambda s: (-s.score, s.item.price_rub, s.item.sku))
+        slot_candidates[slot] = enriched
+
+    draft = build_look(slot_candidates, plan_slots, request.budget_rub)
+    if len(draft.picked) < 3:
+        raise LookGenerationError(
+            "Движок не собрал образ: после бюджетной страховки осталось меньше трёх вещей"
+        )
+
+    chosen: dict[str, tuple[ScoredItem, ProductItem | None]] = {
+        slot: (scored, run.cards.get(scored.sku)) for slot, scored in draft.picked.items()
+    }
+    engine_kept = sum(1 for scored, _card in chosen.values() if scored.sku in roles)
+    repair: str | None = None if engine_kept == len(chosen) else "budget-optimiser"
+    budget_info: dict[str, Any] = {
+        "total_rub": draft.total_rub,
+        "budget_rub": draft.budget_rub,
+        "over_budget": draft.over_budget,
+        "dropped_slots": list(draft.dropped_slots),
+        "warnings": list(draft.warnings),
+        "budget_utilization": round(draft.total_rub / draft.budget_rub, 3) if draft.budget_rub else 0.0,
+        "engine_outfit_items": len(run.outfit.items),
+        "engine_outfit_kept": engine_kept,
+    }
+
+    slot_order = {slot: spec.get("order", 9) for slot, spec in plan_slots.items()}
+    ordered = sorted(chosen.items(), key=lambda pair: (slot_order.get(pair[0], 9), pair[0]))
+
+    taken = {scored.sku for scored, _card in chosen.values()}
+    ctx_info = {
+        "style": request.style,
+        "mood": request.mood,
+        "palette_label": prepared.palette.season_label,
+        "silhouette_ru": prepared.body.silhouette_ru,
+    }
+
+    items_payload: list[dict[str, Any]] = []
+    for index, (slot, (scored, card)) in enumerate(ordered):
+        in_engine_outfit = scored.sku in roles
+        role = roles.get(scored.sku)
+        meta = _engine_item_meta(card, slot, role=role, in_engine_outfit=in_engine_outfit)
+        breakdown: dict[str, Any] = dict(scored.breakdown)
+        breakdown["engineAttributes"] = meta
+        if meta.get("fashion_score"):
+            breakdown["engine"] = round(meta["fashion_score"] / 100, 3)
+            breakdown["trend"] = meta.get("trend_relevance", 0.4)
+            breakdown["uniqueness"] = meta.get("uniqueness", 0.5)
+        reasons = _engine_reasons(card, run, role=role) + item_reasons(scored, ctx_info)
+        unique_reasons: list[str] = []
+        for reason in reasons:
+            if reason not in unique_reasons:
+                unique_reasons.append(reason)
+        items_payload.append(
+            {
+                "position": index,
+                "slot": slot,
+                "slot_label": SLOT_LABELS.get(slot, slot),
+                "sku": scored.sku,
+                "category": scored.item.category,
+                "name": scored.item.name,
+                "brand": scored.item.brand,
+                "price_rub": scored.item.price_rub,
+                "url": scored.item.url,
+                "image_url": scored.item.image_url,
+                "colors": scored.item.colors,
+                "color_hexes": scored.item.color_hexes,
+                "fit": scored.item.fit,
+                "score": scored.score,
+                "breakdown": breakdown,
+                # Метаданные движка доступны и напрямую (UI), и внутри
+                # breakdown (persistence в LookItem.breakdown_json).
+                "engine": meta,
+                "reasons": unique_reasons[:5],
+                "verification_status": scored.item.verification_status,
+                "verification_score": round(scored.item.verification_score, 3),
+                "source": scored.item.source,
+                "alternatives": _alternatives(prepared, run, slot, taken),
+            }
+        )
+
+    chosen_scored = {slot: scored for slot, (scored, _card) in ordered}
+    cohesion = look_cohesion(list(chosen_scored.values()), prepared.ctx)
+    app_score = look_score(list(chosen_scored.values()), cohesion)
+    weight = max(0.0, min(1.0, float(settings.fashion_engine_score_weight)))
+    engine_score = float(run.outfit.outfit_score or 0)
+    final_score = round((1 - weight) * app_score + weight * engine_score, 1)
+    verdict = style_verdict(final_score)
+
+    tips = look_tips(list(prepared.body.tips), prepared.palette.to_dict(), request.style, chosen_scored)
+    tips = list(dict.fromkeys(tips + _engine_tips(run)))[:7]
+
+    thesis_ru = engine_keywords.thesis_label_ru(run.outfit.styling_thesis)
+    summary = look_summary(
+        request.style,
+        request.mood,
+        request.occasion,
+        budget_info["total_rub"],
+        request.budget_rub,
+        chosen_scored,
+        final_score,
+    )
+    if thesis_ru:
+        summary = f"Тезис движка — «{thesis_ru}» ({engine_score:.0f}/100). {summary}"
+
+    engine_block = _engine_block(run, app_score=app_score, final_score=final_score, repair=repair)
+
+    diagnostics = {
+        "plan": prepared.plan_id,
+        "plan_description": prepared.plan["description"],
+        "candidates_total": len(prepared.ranked),
+        "rejected_total": len(prepared.rejected),
+        "rejected_sample": prepared.rejected[:10],
+        "dropped_slots": budget_info["dropped_slots"],
+        "warnings": budget_info["warnings"],
+        "budget": budget_info,
+        "weights": prepared.ctx.weights,
+        "excluded_skus": request.exclude_skus,
+        "engine": engine_block,
+    }
+
+    return LookResult(
+        items=items_payload,
+        total_rub=budget_info["total_rub"],
+        budget_rub=request.budget_rub,
+        score=final_score,
+        verdict=verdict,
+        cohesion=cohesion,
+        summary=summary,
+        tips=tips,
+        body=prepared.body,
+        palette=prepared.palette,
+        plan=prepared.plan_id,
+        diagnostics=diagnostics,
+    )
+
+
+def _engine_outfit_skus(look: Any) -> set[str]:
+    """SKU вещей, которые движок выбрал в образ (из сохранённого ``ranking_json``)."""
+    raw = getattr(look, "ranking_json", None)
+    if not raw:
+        return set()
+    try:
+        ranking = look.loads(raw, {}) if hasattr(look, "loads") else json.loads(raw)
+    except Exception:  # сохранённый образ мог быть записан прошлой версией
+        return set()
+    if not isinstance(ranking, dict):
+        return set()
+    engine = ranking.get("engine")
+    roles = engine.get("roles") if isinstance(engine, dict) else None
+    if isinstance(roles, dict):
+        return {str(sku) for sku in roles}
+    return set()
+
+
+def rerank_for_slot(
+    ranked: list[ScoredItem],
+    slot: str,
+    *,
+    look: Any,
+    ctx: RankingContext,
+) -> list[ScoredItem]:
+    """Переставить кандидатов слота по релевантности движка (для «Заменить»)."""
+    request = _request_from_look(look)
+    profile = build_profile(request, palette=ctx.palette, body=ctx.body)
+    query = build_engine_query(
+        request,
+        palette=ctx.palette,
+        body=ctx.body,
+        extra=SLOT_QUERY_HINTS.get(slot, slot),
+    )
+    cards = [to_engine_card(scored.item) for scored in ranked]
+    providers: list[Any] = [CatalogSearchProvider(cards, min_score=0.0)]
+    if settings.fashion_engine_enable_mock:
+        providers.append(MockRealProductProvider())
+    engine = FashionEngine(
+        providers=providers,
+        options=EngineOptions(
+            max_products=max(12, min(len(cards), settings.fashion_engine_max_products)),
+            limit_per_query=4,
+            min_confidence=settings.fashion_engine_min_confidence,
+        ),
+    )
+    discovery = engine.discover(query, profile)
+    # Слот показывается целиком: вещи вне пула запросов тоже должны получить
+    # атрибуты, fashion score и taste-категорию движка.
+    engine.enrich(cards, profile)
+    # Вещи, которые движок выбрал в образ при генерации: их видно в сохранённом
+    # образе, поэтому замена слота не должна предлагать им на замену случайную
+    # позицию из шортлиста. Пул одного слота целого образа не образует, поэтому
+    # роли берём из самого образа (ranking_json → engine.roles).
+    chosen = _engine_outfit_skus(look)
+    order = {card.sku or card.id: index for index, card in enumerate(discovery.products)}
+    total = max(1, len(discovery.products))
+    cards_by_sku = {card.sku or card.id: card for card in cards}
+
+    enriched: list[ScoredItem] = []
+    for scored in ranked:
+        card = cards_by_sku.get(scored.sku)
+        breakdown: dict[str, Any] = dict(scored.breakdown)
+        if card is not None and card.fashion_attributes is not None:
+            breakdown["engine"] = round(float(card.fashion_score or 0) / 100, 3)
+            breakdown["engineAttributes"] = _engine_item_meta(card, slot)
+        blended = _blended_score(scored.score, card, order.get(scored.sku), total)
+        in_engine_outfit = scored.sku in chosen
+        if in_engine_outfit:
+            blended = min(1.0, round(blended + ENGINE_OUTFIT_BONUS, 4))
+        breakdown["engineOutfit"] = in_engine_outfit
+        enriched.append(ScoredItem(item=scored.item, score=blended, breakdown=breakdown))
+    # Вещь, которую движок выбрал в этот слот, идёт первой: пользователь видит
+    # её в образе, остальные — альтернативы в порядке движка.
+    enriched.sort(key=lambda s: (not s.breakdown.get("engineOutfit"), -s.score, s.item.price_rub, s.item.sku))
+    return enriched
+
+
+# ─── поиск (для экрана «Поиск» и API движка) ────────────────────────────────
+
+
+def search(
+    payload: dict[str, Any],
+    products: list[CatalogItem],
+    *,
+    limit: int = 8,
+) -> dict[str, Any]:
+    """Свободный текстовый поиск вещей по движку (без сохранения образа)."""
+    query = str(payload.get("query") or "").strip()
+    if len(query) < 2:
+        raise LookGenerationError("Нужен текстовый запрос длиной от 2 символов")
+
+    request = LookRequest(
+        style=str(payload.get("style") or "minimal"),
+        mood=str(payload.get("mood") or "calm"),
+        occasion=str(payload.get("occasion") or "everyday"),
+        season=str(payload.get("season") or "all"),
+        presentation=str(payload.get("presentation") or "unisex"),
+        height_cm=float(payload.get("height_cm") or 172),
+        weight_kg=float(payload.get("weight_kg") or 68),
+        budget_rub=float(payload.get("budget_rub") or settings.budget_max_rub),
+        preferred_colors=list(payload.get("preferred_colors") or []),
+        avoid_colors=list(payload.get("avoid_colors") or []),
+        size=payload.get("size"),
+        query=query,
+        niche_level=payload.get("niche_level"),
+        weights=settings.resolved_ranking_weights(),
+    )
+    prepared = prepare_pool(products, request)
+    run = run_engine(prepared, request)
+
+    theses = engine_keywords.THESIS_LABELS_RU
+    thesis = run.outfit.styling_thesis
+    cards = run.cards
+    # Сначала вещи, которые провайдер отметил как совпадение по запросу, затем
+    # остальной проверенный пул: иначе разные запросы давали бы одну выдачу.
+    discovered = sorted(
+        run.discovery.products,
+        key=lambda card: (
+            -_query_relevance(card),
+            -float(card.fashion_score or 0),
+            card.id,
+        ),
+    )[: max(1, limit)]
+    by_sku = {scored.sku: scored for scored in prepared.ranked}
+
+    items: list[dict[str, Any]] = []
+    for card in discovered:
+        sku = card.sku or card.id
+        scored = by_sku.get(sku)
+        if scored is None:
+            continue
+        slot = slot_for_item(scored.item, card.category)
+        meta = _engine_item_meta(card, slot)
+        app_scored = score_item(scored.item, prepared.ctx)
+        items.append(
+            {
+                "sku": sku,
+                "name": scored.item.name,
+                "brand": scored.item.brand,
+                "category": scored.item.category,
+                "slot": slot,
+                "slot_label": SLOT_LABELS.get(slot, slot),
+                "price_rub": scored.item.price_rub,
+                "url": scored.item.url,
+                "colors": list(scored.item.colors),
+                "color_hexes": list(scored.item.color_hexes),
+                "score": _search_position(
+                    app_scored.score, card, run.rank_index(sku), len(run.discovery.products)
+                ),
+                "engine": meta,
+                "reasons": _engine_reasons(card, run, limit=3)
+                + item_reasons(
+                    app_scored,
+                    {
+                        "style": request.style,
+                        "mood": request.mood,
+                        "palette_label": prepared.palette.season_label,
+                        "silhouette_ru": prepared.body.silhouette_ru,
+                    },
+                    limit=2,
+                ),
+                "verification_status": scored.item.verification_status,
+                "verification_score": round(scored.item.verification_score, 3),
+            }
+        )
+
+    fallback = None
+    if not items:
+        fallback = "engine-empty"
+        for scored in prepared.ranked[: max(1, limit)]:
+            slot = slot_for_item(scored.item, APP_CATEGORY_TO_ENGINE.get(scored.item.category))
+            items.append(
+                {
+                    "sku": scored.sku,
+                    "name": scored.item.name,
+                    "brand": scored.item.brand,
+                    "category": scored.item.category,
+                    "slot": slot,
+                    "slot_label": SLOT_LABELS.get(slot, slot),
+                    "price_rub": scored.item.price_rub,
+                    "url": scored.item.url,
+                    "colors": list(scored.item.colors),
+                    "color_hexes": list(scored.item.color_hexes),
+                    "score": scored.score,
+                    "engine": {},
+                    "reasons": item_reasons(
+                        scored,
+                        {
+                            "style": request.style,
+                            "mood": request.mood,
+                            "palette_label": prepared.palette.season_label,
+                            "silhouette_ru": prepared.body.silhouette_ru,
+                        },
+                    ),
+                    "verification_status": scored.item.verification_status,
+                    "verification_score": round(scored.item.verification_score, 3),
+                }
+            )
+
+    total = round(sum(item["price_rub"] for item in items), 2)
+    return {
+        "query": query,
+        "engine": {
+            "pipeline": PIPELINE,
+            "engine_version": str((run.outfit.meta or {}).get("engineVersion", "")),
+            "styling_thesis": thesis,
+            "styling_thesis_ru": engine_keywords.thesis_label_ru(thesis),
+            "aesthetic": run.outfit.aesthetic,
+        "aesthetic_ru": aesthetic_ru(run),
+            "outfit_score": round(float(run.outfit.outfit_score or 0), 1),
+            "styling_logic": run.outfit.styling_logic,
+            "critic_decision": run.outfit.critic_decision,
+            "critic_feedback": _critic_ru(run.outfit.critic_feedback),
+            "queries_used": list((run.outfit.meta or {}).get("queriesUsed") or run.discovery.queries_used[:8]),
+            "queries_total": len(run.discovery.queries_used),
+            "candidates": {
+                "raw_items": run.discovery.raw_items,
+                "considered": run.discovery.considered,
+                "validated": len(run.discovery.products),
+                "dropped": dict(run.discovery.dropped),
+            },
+            "niche_level": run.profile.niche_level,
+            "aesthetics": list(run.profile.aesthetics),
+            "profile": run.profile.to_dict(),
+            "taste_mix": _taste_mix(run),
+            "alternatives": list(run.outfit.alternatives),
+            "fallback": fallback,
+        },
+        "thesis_options": [theses.get(name, name) for name in (run.outfit.meta or {}).get("theses", [])],
+        "items": items,
+        "total_rub": total,
+        "budget_rub": request.budget_rub,
+        "suggested_request": {
+            "query": query,
+            "style": request.style,
+            "mood": request.mood,
+            "occasion": request.occasion,
+            "season": request.season,
+            "presentation": request.presentation,
+            "budget_rub": request.budget_rub,
+            "height_cm": request.height_cm,
+            "weight_kg": request.weight_kg,
+            "niche_level": run.profile.niche_level,
+        },
+    }
+
+
+__all__ = [
+    "APP_CATEGORY_TO_ENGINE",
+    "APP_COLOR_TO_ENGINE",
+    "BRAND_TIERS",
+    "EngineRun",
+    "MOOD_ENGINE",
+    "OCCASION_ENGINE",
+    "PIPELINE",
+    "STYLE_ENGINE",
+    "brand_tier",
+    "build_engine_query",
+    "build_profile",
+    "generate_look",
+    "rerank_for_slot",
+    "run_engine",
+    "search",
+    "slot_for_item",
+    "to_engine_card",
+]

@@ -15,6 +15,10 @@ const BREAKDOWN_LABELS: Record<string, string> = {
   season: 'сезон',
   value: 'цена/качество',
   verification: 'проверка',
+  // метрики движка ASSTYLIST Fashion Engine
+  engine: 'fashion score',
+  trend: 'тренд',
+  uniqueness: 'уникальность',
 }
 
 export function ItemCard({
@@ -65,6 +69,11 @@ export function ItemCard({
               {verificationLabel(item.verification_status)} · {Math.round(item.verification_score * 100)}%
             </Badge>
             <Badge>селекция {Math.round(item.score * 100)}%</Badge>
+            {item.engine?.role_label ? <Badge>{item.engine.role_label}</Badge> : null}
+            {item.engine?.taste_label ? (
+              <Badge tone={item.engine.in_engine_outfit ? 'ok' : 'neutral'}>{item.engine.taste_label}</Badge>
+            ) : null}
+            {item.engine?.fashion_score ? <Badge>fashion {item.engine.fashion_score}/100</Badge> : null}
           </div>
         </div>
       </div>
@@ -116,7 +125,9 @@ export function ItemCard({
 
       {open ? (
         <div className="breakdown">
-          {Object.entries(item.breakdown).map(([key, value]) => (
+          {Object.entries(item.breakdown)
+            .filter(([, value]) => typeof value === 'number')
+            .map(([key, value]) => (
             <div className="breakdown-row" key={key}>
               <span style={{ width: 84, flex: '0 0 auto' }}>{BREAKDOWN_LABELS[key] ?? key}</span>
               <span className="bar">
@@ -127,6 +138,13 @@ export function ItemCard({
               </span>
             </div>
           ))}
+          {item.engine?.engine_category ? (
+            <div className="muted small">
+              Движок: {item.engine.engine_category}
+              {item.engine.material && item.engine.material !== 'unknown' ? ` · фактура: ${item.engine.material}` : ''}
+              {item.engine.silhouette?.length ? ` · силуэт: ${item.engine.silhouette.join(', ')}` : ''}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </article>

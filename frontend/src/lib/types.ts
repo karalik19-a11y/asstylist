@@ -75,6 +75,106 @@ export interface Alternative {
   colors?: string[]
 }
 
+/** Метаданные вещи от движка ASSTYLIST Fashion Engine. */
+export interface EngineItemMeta {
+  slot?: string
+  slot_label?: string
+  role?: string | null
+  role_label?: string
+  /** true — вещь выбрана самим движком в его образе */
+  in_engine_outfit?: boolean
+  source_in_run?: 'engine-outfit' | 'engine-shortlist' | 'budget-guard' | string
+  taste_category?: string
+  taste_label?: string
+  fashion_score?: number
+  trend_relevance?: number
+  uniqueness?: number
+  generic_score?: number
+  silhouette?: string[]
+  material?: string | null
+  aesthetic?: string | null
+  engine_category?: string
+  provider?: string
+}
+
+/** Результат прогона движка: тезис образа, оценка, критик, статистика поиска. */
+export interface LookEngine {
+  pipeline?: string
+  enabled?: boolean
+  runtime_mode?: string
+  engine_version?: string
+  styling_thesis?: string
+  styling_thesis_ru?: string
+  aesthetic?: string
+  /** Эстетика по-русски: тезис + доминирующий оттенок образа. */
+  aesthetic_ru?: string
+  outfit_score?: number
+  app_score?: number
+  final_score?: number
+  score_formula?: string
+  critic_decision?: string
+  critic_feedback?: string[]
+  styling_logic?: Record<string, unknown>
+  roles?: Record<string, string>
+  queries_used?: string[]
+  queries_total?: number
+  candidates?: {
+    raw_items?: number
+    considered?: number
+    validated?: number
+    outfits_built?: number
+    dropped?: Record<string, number>
+  }
+  taste_mix?: Record<string, number>
+  niche_level?: number
+  aesthetics?: string[]
+  fit_preference?: string
+  theses?: string[]
+  repair?: string | null
+  fallback?: string | null
+  fallback_reason?: string
+}
+
+/** Вещь из свободного поиска по движку (/api/engine/search). */
+export interface EngineSearchItem {
+  sku: string
+  name: string
+  brand: string
+  category: string
+  slot: string
+  slot_label: string
+  price_rub: number
+  url: string
+  colors: string[]
+  color_hexes: string[]
+  score: number
+  engine: EngineItemMeta
+  reasons: string[]
+  verification_status: string
+  verification_score: number
+}
+
+export interface EngineSearchResult {
+  query: string
+  engine: LookEngine
+  thesis_options: string[]
+  items: EngineSearchItem[]
+  total_rub: number
+  budget_rub: number
+  suggested_request: {
+    query: string
+    style: string
+    mood: string
+    occasion: string
+    season: string
+    presentation: string
+    budget_rub: number
+    height_cm: number
+    weight_kg: number
+    niche_level: number
+  }
+}
+
 export interface LookItem {
   position: number
   slot: string
@@ -91,6 +191,8 @@ export interface LookItem {
   fit: string
   score: number
   breakdown: Record<string, number>
+  /** Роль, taste-категория и Fashion Score от движка (может быть пустым). */
+  engine?: EngineItemMeta
   reasons: string[]
   verification_status: 'verified' | 'warning' | 'failed' | string
   verification_score: number
@@ -150,6 +252,8 @@ export interface Look {
   palette: PaletteProfile
   plan: string
   engine_version: string
+  /** Блок движка ASSTYLIST: тезис, оценка образа, критик, статистика поиска. */
+  engine?: LookEngine
   diagnostics: Record<string, unknown>
   items: LookItem[]
   is_favorite: boolean
@@ -185,6 +289,10 @@ export interface WizardState {
   preferred_colors: string[]
   avoid_colors: string[]
   size: string | null
+  /** Свободная формулировка образа — уходит в движок как поисковый запрос. */
+  query: string
+  /** Явный уровень ниши движка 0…100 (иначе выводится из стиля). */
+  niche_level: number | null
   photoDataUrl: string | null
   photoFile: File | null
 }
