@@ -2,6 +2,7 @@ import type { HistoryEntry, Meta } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
 import { Badge, SectionTitle } from '../components/ui'
 import { TelegramSetup } from '../components/TelegramSetup'
+import { TrendsFeed } from '../components/TrendsFeed'
 
 const STEPS = [
   { emoji: '📷', title: 'Фото и параметры', text: 'Рост, вес и фото — для силуэта и палитры.' },
@@ -33,19 +34,23 @@ export function Home({
 }) {
   return (
     <div className="stack">
-      <section className="stack" style={{ gap: 10, paddingTop: 8 }}>
-        <div className="row" style={{ gap: 8 }}>
-          <strong className="accent" style={{ letterSpacing: '0.14em', fontSize: 13 }}>
-            ASSTYLIST
-          </strong>
+      <section className="cover stack" style={{ gap: 12 }}>
+        <div className="row-between">
+          <span className="cover-badge">выпуск 2000-х</span>
           {meta?.demo_mode ? <Badge tone="warn">демо-режим</Badge> : <Badge tone="ok">telegram</Badge>}
         </div>
+        <div className="masthead">asStylist</div>
         <h1 className="hero-title">
           {userName ? `${userName}, ` : ''}соберём образ, который вам идёт
         </h1>
+        <ul className="cover-lines">
+          <li><span>Нишевые</span> вещи из TikTok & Pinterest</li>
+          <li>Луки <span>до 100 000 ₽</span> по фото и параметрам</li>
+          <li><span>Рабочие</span> ссылки на каждую позицию</li>
+        </ul>
         <p className="muted" style={{ margin: 0 }}>
-          AI fashion director: по фото, росту, весу, стилю, настроению и бюджету собирает персональный лук из
-          проверенных товаров. Некоммерческий проект — стоимость 0 ₽.
+          Персональный стилист: по фото, росту, весу, стилю, настроению и бюджету собирает лук из
+          нишевых проверенных товаров. Некоммерческий проект — стоимость 0 ₽.
         </p>
         <button type="button" className="btn btn-primary btn-block" onClick={onStart} style={{ marginTop: 6 }}>
           Собрать образ
@@ -85,7 +90,7 @@ export function Home({
             <Badge>{meta.moods.length} настроений</Badge>
             <Badge>{meta.colors.length} оттенков в палитре</Badge>
             <Badge>бюджет {formatRub(meta.budget.max_rub)}</Badge>
-            <Badge tone="ok">AI: {meta.ai_provider}</Badge>
+            <Badge tone="ok">ссылки проверены</Badge>
           </div>
           <div className="muted small">
             Каждый товар в образе получает оценку по 8 параметрам: стиль, настроение, силуэт, цвет, формальность,
@@ -93,6 +98,8 @@ export function Home({
           </div>
         </section>
       ) : null}
+
+      <TrendsFeed />
 
       {history.length ? (
         <section className="stack" style={{ gap: 10 }}>

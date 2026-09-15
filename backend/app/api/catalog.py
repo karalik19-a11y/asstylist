@@ -12,6 +12,7 @@ from ..config import settings
 from ..db import get_session
 from ..engine.colors import COLORS, hexes_for
 from ..engine.options import SLOT_PLANS, all_options
+from ..catalog import generator
 from ..models import Product
 from ..schemas import ProductImportRequest
 from ..services import catalog_service
@@ -49,6 +50,15 @@ def meta() -> dict[str, Any]:
         "ai_provider": settings.effective_ai_provider,
         "version": settings.version,
     }
+
+
+@router.get("/catalog/feed")
+def feed(cursor: int = Query(default=0, ge=0), count: int = Query(default=12, ge=1, le=48), style: str | None = Query(default=None)) -> dict[str, Any]:
+    """An endless, deterministic trend feed (niche items + photo + working link)."""
+    items, next_cursor = generator.generate_items(cursor, count)
+    if style:
+        items = [i for i in items if i["style"] == style]
+    return {"cursor": next_cursor, "next": next_cursor, "items": items}
 
 
 @router.get("/catalog/items")

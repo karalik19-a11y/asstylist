@@ -1,4 +1,4 @@
-import type { HistoryEntry, Look, Meta, SetupResponse, TelegramStatus, WizardState } from './types'
+import type { FeedItem, HistoryEntry, Look, Meta, SetupResponse, TelegramStatus, WizardState } from './types'
 import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -118,6 +118,10 @@ export const api = {
     request<{ id: number; is_favorite: boolean }>(`/api/looks/${id}/favorite?${identityParams().toString()}`, {
       method: 'POST',
     }),
+
+  /** Endless niche trend feed (photo + working link). */
+  feed: (cursor: number, count = 12) =>
+    request<{ cursor: number; next: number; items: FeedItem[] }>(`/api/catalog/feed?cursor=${cursor}&count=${count}`),
 
   verification: () =>
     request<{

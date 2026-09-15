@@ -230,10 +230,118 @@ _BROKEN_ROWS: list[dict[str, Any]] = [
 ]
 
 
+
+
+# --- living catalog: real buy-links + photos + niche naming --------------------
+from urllib.parse import quote as _quote
+
+SEARCH_URLS = {
+    "lamoda": "https://www.lamoda.ru/search/?q={q}",
+    "ozon": "https://www.ozon.ru/search/?text={q}",
+    "wildberries": "https://www.wildberries.ru/catalog/0/search.aspx?search={q}",
+    "12storeez": "https://12storeez.com/search/?q={q}",
+    "uniqlo": "https://www.uniqlo.com/ru/ru/search/?q={q}",
+    "sokolov": "https://sokolov.ru/search/?q={q}",
+}
+
+
+def search_url(source: str, query: str) -> str:
+    q = _quote(query)
+    return SEARCH_URLS.get(source, SEARCH_URLS["lamoda"]).format(q=q)
+
+
+IMG_BY_CATEGORY = {
+    "outerwear": "puffer", "top": "babytee", "knitwear": "velour",
+    "bottom": "baggyjeans", "dress": "halter", "shoes": "sneakers",
+    "bag": "baguette", "accessory": "shades",
+}
+
+_IMG_KEYWORDS = [
+    (("юбк",), "miniskirt"),
+    (("панам", "кепк", "бини"), "bucket"),
+    (("очк",), "shades"),
+    (("карго", "парашют"), "cargo"),
+    (("пухов", "пуффер", "курт", "бомбер", "парка", "косух", "тренч", "пальто"), "puffer"),
+    (("халтер", "корсет", "бюстье"), "halter"),
+    (("велюр", "худи", "свитшот"), "velour"),
+    (("сумк", "багет", "клатч", "шоппер", "рюкзак"), "baguette"),
+    (("бот", "угг", "сапог"), "boots"),
+    (("кроссов", "лофер", "мокасин", "туфл", "кед", "балет", "санда"), "sneakers"),
+    (("джинс", "брюк", "шорт", "палаццо", "чинос"), "baggyjeans"),
+]
+
+
+def img_for(sku: str, category: str, name: str) -> str:
+    low = name.lower()
+    for keys, arch in _IMG_KEYWORDS:
+        if any(k in low for k in keys):
+            return f"/img/{arch}.jpg"
+    return f"/img/{IMG_BY_CATEGORY.get(category, 'babytee')}.jpg"
+
+
+RENAME = {
+ "OW-001": ("Кроп-пуховик металлик", "I.AM.GIA"), "OW-002": ("Пальто оверсайз «matrix»", "Motel Rocks"),
+ "OW-003": ("Тренч с поясом 00-х", "Urban Outfitters"), "OW-004": ("Косуха с заклёпками", "Nasty Gal"),
+ "OW-005": ("Дутый длинный пуховик", "PacSun"), "OW-006": ("Бомбер varsity", "Hollister"),
+ "OW-007": ("Жакет «office siren»", "Motel Rocks"), "OW-008": ("Парка gorpcore", "The North Face"),
+ "OW-009": ("Кардиган «ангора»", "Brandy Melville"), "OW-010": ("Жилет стёганый", "Uniqlo"),
+ "OW-011": ("Пальто-халат кашемир", "12 STOREEZ"), "OW-012": ("Деним-куртка оверсайз", "True Religion"),
+ "OW-013": ("Кроп-ветровка", "Von Dutch"),
+ "TP-001": ("Бэби-ти базовая", "Brandy Melville"), "TP-002": ("Рубашка oversize «boyfriend»", "Urban Outfitters"),
+ "TP-003": ("Шёлковая рубашка «disco»", "Nasty Gal"), "TP-004": ("Футболка с принтом Ed Hardy", "Ed Hardy"),
+ "TP-005": ("Водолазка «second skin»", "Skims"), "TP-006": ("Топ-бюстье со стразами", "I.AM.GIA"),
+ "TP-007": ("Поло «old money»", "Ralph Lauren"), "TP-008": ("Блуза с воланами coquette", "Princess Polly"),
+ "TP-009": ("Лонгслив с сеткой", "Dolls Kill"), "TP-010": ("Фланель indie sleaze", "Urban Outfitters"),
+ "TP-011": ("Кроп-топ «hello kitty»", "Sanrio"), "TP-012": ("Льняная рубашка «riviera»", "Motel Rocks"),
+ "TP-013": ("Боди «naked»", "Skims"), "TP-014": ("Рубашка tech", "Techform"),
+ "TP-015": ("Футболка премиум-хлопок", "12 STOREEZ"), "TP-016": ("Свитшот оверсайз", "PacSun"),
+ "TP-017": ("Бэби-ти со стразами", "I.AM.GIA"),
+ "KN-001": ("Кашемир «quiet luxe»", "12 STOREEZ"), "KN-002": ("Свитер с косами", "Brandy Melville"),
+ "KN-003": ("Меринос тонкий", "Uniqlo"), "KN-004": ("Худи оверсайз", "PacSun"),
+ "KN-005": ("Кардиган с бантами coquette", "Princess Polly"), "KN-006": ("Свитер с высоким воротом", "12 STOREEZ"),
+ "KN-007": ("Жилет «tennis»", "Ralph Lauren"), "KN-008": ("Мохер оверсайз", "Dolls Kill"),
+ "KN-009": ("Поло-свитер «old money»", "Ralph Lauren"), "KN-010": ("Джемпер sport", "Adidas"),
+ "KN-011": ("Велюр-кофта на молнии", "Juicy Couture"),
+ "BT-001": ("Брюки «suiting»", "Motel Rocks"), "BT-002": ("Джинсы low-rise", "Levis"),
+ "BT-003": ("Baggy-джинсы wide leg", "JNCO"), "BT-004": ("Палаццо «fluid»", "House of CB"),
+ "BT-005": ("Юбка-плиссе микро", "Brandy Melville"), "BT-006": ("Мини-юбка кожаная", "Nasty Gal"),
+ "BT-007": ("Чиносы", "Hollister"), "BT-008": ("Карго-парашюты", "True Religion"),
+ "BT-009": ("Джинсы skinny", "Levis"), "BT-010": ("Шорты-бермуды", "Hollister"),
+ "BT-011": ("Спортивные брюки", "Adidas"), "BT-012": ("Юбка макси бохо", "Urban Outfitters"),
+ "BT-013": ("Брюки «office siren»", "Motel Rocks"), "BT-014": ("Белые джинсы", "Levis"),
+ "BT-015": ("Baggy-джинсы с цепью", "Baby Phat"),
+ "DR-001": ("Платье-комбинация satin", "House of CB"), "DR-002": ("Миди-трикотаж", "Skims"),
+ "DR-003": ("Платье-рубашка", "Urban Outfitters"), "DR-004": ("Макси «fairy grunge»", "Dolls Kill"),
+ "DR-005": ("Платье-футляр «siren»", "House of CB"), "DR-006": ("Мини оверсайз", "I.AM.GIA"),
+ "DR-007": ("Вязаное платье", "Brandy Melville"), "DR-008": ("Асимметрия mcbling", "Dolls Kill"),
+ "DR-009": ("Спортивное платье", "Adidas"), "DR-010": ("Сарафан лён", "Urban Outfitters"),
+ "SH-001": ("Кроссовки chunky белые", "New Balance"), "SH-002": ("Лоферы «old money»", "Steve Madden"),
+ "SH-003": ("Челси", "Steve Madden"), "SH-004": ("Беговые кроссовки", "Puma"),
+ "SH-005": ("Ботинки grunge", "Jeffrey Campbell"), "SH-006": ("Балетки с бантом", "Miu Miu"),
+ "SH-007": ("Кеды текстильные", "Converse"), "SH-008": ("Ботильоны на платформе", "Jeffrey Campbell"),
+ "SH-009": ("Сандалии", "Birkenstock"), "SH-010": ("Угги с блёстками", "UGG"),
+ "SH-011": ("Тех-кроссовки", "Salomon"), "SH-012": ("Лодочки", "Steve Madden"),
+ "SH-013": ("Мокасины замша", "UGG"), "SH-014": ("Ботфорты на платформе", "Jeffrey Campbell"),
+ "SH-015": ("Кроссовки базовые", "Puma"),
+ "BG-001": ("Сумка-тоут кожа", "Coach"), "BG-002": ("Микро-кроссбоди", "Princess Polly"),
+ "BG-003": ("Рюкзак городской", "The North Face"), "BG-004": ("Плетёная сумка", "Urban Outfitters"),
+ "BG-005": ("Шоппер нейлон", "Uniqlo"), "BG-006": ("Клатч вечерний", "House of CB"),
+ "BG-007": ("Сумка хобо", "Coach"), "BG-008": ("Поясная сумка", "Von Dutch"),
+ "BG-009": ("Багет на цепочке со стразами", "Fendi"), "BG-010": ("Рюкзак спорт", "Adidas"),
+ "BG-011": ("Плюшевая сумка", "Baby Phat"),
+ "AC-001": ("Ремень кожа", "Ralph Lauren"), "AC-002": ("Кашемировый шарф", "12 STOREEZ"),
+ "AC-003": ("Панама деним", "Von Dutch"), "AC-004": ("Серьги-кольца золото", "Sokolov"),
+ "AC-005": ("Овальные очки 00-х", "Gucci"), "AC-006": ("Цепь серебряная", "Chrome Hearts"),
+ "AC-007": ("Шёлковый платок", "12 STOREEZ"), "AC-008": ("Часы «square»", "Casio"),
+ "AC-009": ("Бини", "PacSun"), "AC-010": ("Перчатки кожа", "12 STOREEZ"),
+ "AC-011": ("Чокер со стразами", "Claire's"),
+}
+
+
 def _build(row: tuple) -> dict[str, Any]:
     (sku, category, name, brand, price, colors, styles, moods, formality, fit, seasons, rating, reviews) = row
     source_id, base_url = BRAND_SOURCES.get(brand, FALLBACK_SOURCE)
-    return {
+    d = {
         "sku": sku,
         "category": category,
         "name": name,
@@ -256,6 +364,11 @@ def _build(row: tuple) -> dict[str, Any]:
         "rating": float(rating),
         "reviews_count": int(reviews),
     }
+    if sku in RENAME:
+        d["name"], d["brand"] = RENAME[sku]
+    d["url"] = search_url(source_id, f'{d["brand"]} {d["name"]}')
+    d["image_url"] = img_for(sku, category, d["name"])
+    return d
 
 
 def seed_products() -> list[dict[str, Any]]:

@@ -4,6 +4,25 @@ import { formatRub } from '../lib/format'
 import { openExternal } from '../lib/telegram'
 import { Badge, verificationLabel, verificationTone } from './ui'
 
+const FALLBACK_IMAGE: Record<string, string> = {
+  top: '/img/babytee.jpg',
+  bottom: '/img/baggyjeans.jpg',
+  knitwear: '/img/velour.jpg',
+  outerwear: '/img/puffer.jpg',
+  dress: '/img/halter.jpg',
+  shoes: '/img/sneakers.jpg',
+  bag: '/img/baguette.jpg',
+  accessory: '/img/shades.jpg',
+}
+
+function imageFor(item: LookItem): string {
+  if (item.image_url) return item.image_url
+  const tone = item.colors[0] ?? ''
+  if (item.category === 'accessory') return tone === 'head' ? '/img/bucket.jpg' : '/img/shades.jpg'
+  if (item.category === 'bottom') return tone === 'mini' ? '/img/miniskirt.jpg' : '/img/baggyjeans.jpg'
+  return FALLBACK_IMAGE[item.category] ?? '/img/babytee.jpg'
+}
+
 const BREAKDOWN_LABELS: Record<string, string> = {
   style: 'стиль',
   mood: 'настроение',
@@ -33,7 +52,10 @@ export function ItemCard({
   return (
     <article className="item-card">
       <div className="item-head">
-        <div className="item-swatch" style={{ background: swatch }} aria-hidden="true" />
+        <div className="item-photo">
+          <img src={imageFor(item)} alt={item.name} loading="lazy" />
+          <span className="item-photo-swatch" style={{ background: swatch }} aria-hidden="true" />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="row-between">
             <span className="tiny">{item.slot_label}</span>

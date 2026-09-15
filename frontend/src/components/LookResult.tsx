@@ -136,7 +136,6 @@ export function LookResult({
             <div>Проанализировано товаров: {diagnostics.candidates_total ?? 0}</div>
             <div>Отклонено фильтром: {diagnostics.rejected_total ?? 0}</div>
             <div>План образа: {diagnostics.plan_description ?? look.plan}</div>
-            <div>AI-провайдер: {look.ai_provider}</div>
             {diagnostics.dropped_slots?.length ? <div>Убрано из-за бюджета: {diagnostics.dropped_slots.join(', ')}</div> : null}
             {diagnostics.warnings?.length ? (
               <ul className="reasons">

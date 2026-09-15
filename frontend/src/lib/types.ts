@@ -66,6 +66,20 @@ export interface SetupResponse {
   next_step: string
 }
 
+export interface FeedItem {
+  sku: string
+  category: string
+  name: string
+  brand: string
+  price_rub: number
+  url: string
+  image_url: string
+  style: string
+  likes: string
+  source: string
+  verification_status: string
+}
+
 export interface Alternative {
   sku: string
   name: string
