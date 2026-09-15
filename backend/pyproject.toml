@@ -1,0 +1,17 @@
+[project]
+name = "asstylist-backend"
+version = "0.1.0"
+description = "asStylist backend: Fashion Ranking Engine + verification layer + Telegram Mini App API"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"

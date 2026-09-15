@@ -1,0 +1,16 @@
+services:
+  asstylist:
+    build: .
+    image: asstylist:latest
+    ports:
+      - "8000:8000"
+    environment:
+      DEMO_MODE: "true"
+      AI_PROVIDER: "local"
+      DATABASE_URL: "sqlite:////app/data/asstylist.db"
+    volumes:
+      - asstylist-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  asstylist-data:

@@ -1,0 +1,46 @@
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- node ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+
+# --- runtime data (SQLite, uploads) ---
+data/
+*.db
+*.db-wal
+*.db-shm
+uploads/
+
+# --- env & secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- editors / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- build artifacts ---
+dist/
+build/
+out/
+
+# --- typescript build info ---
+*.tsbuildinfo
