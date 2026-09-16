@@ -8,6 +8,7 @@ import './styles.chrome.css'
 import './styles.ambient.css'
 import './styles.brand-intro.css'
 import './styles.logo-fix.css'
+import './styles.journal.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root container #root not found')
