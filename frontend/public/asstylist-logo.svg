@@ -1,13 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1273 434" role="img" aria-labelledby="title desc">
   <title id="title">ASStylist</title>
-  <desc id="desc">ASStylist serif wordmark with clean devil horns and tail</desc>
+  <desc id="desc">ASStylist serif wordmark with balanced devil horns and a smooth tail</desc>
+
   <g font-family="Georgia, 'Times New Roman', serif" font-size="285" font-weight="700" letter-spacing="-17">
-    <text x="78" y="322" fill="#FFFFFF">AS</text>
-    <text x="493" y="322" fill="#8F1D3F">tylist</text>
+    <text x="70" y="322" fill="#FFFFFF">AS</text>
+    <text x="425" y="322" fill="#8F1D3F">tylist</text>
   </g>
-  <!-- balanced horns centered over the A -->
-  <path fill="#FFFFFF" d="M105 120C91 91 91 56 110 28C114 58 127 78 151 91C139 104 124 113 105 120Z"/>
-  <path fill="#FFFFFF" d="M258 91C282 78 295 58 299 28C318 56 318 91 304 120C285 113 270 104 258 91Z"/>
-  <!-- clean curved devil tail -->
-  <path fill="#8F1D3F" d="M479 319C527 332 558 357 558 383C558 404 542 417 523 412C538 407 542 397 537 386C530 370 505 355 476 347Z"/>
+
+  <!-- symmetric horns, kept entirely over the first A -->
+  <path fill="#FFFFFF" d="M105 121C91 94 93 61 113 28C116 56 130 78 151 91C140 104 125 114 105 121Z"/>
+  <path fill="#FFFFFF" d="M205 91C226 78 240 56 243 28C263 61 265 94 251 121C231 114 216 104 205 91Z"/>
+
+  <!-- smooth tail flowing from the lower right of the S -->
+  <path fill="#8F1D3F" d="M334 310C374 319 401 339 408 361C415 382 404 402 385 407C400 394 398 382 390 373C379 360 357 351 331 345Z"/>
 </svg>
