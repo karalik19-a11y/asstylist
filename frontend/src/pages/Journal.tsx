@@ -1,224 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 
-type JournalCategory = 'world' | 'russian-streetwear' | 'runway' | 'merch' | 'social-trends'
-
-interface JournalArticle {
-  id: string
-  title: string
-  summary: string
-  editorial?: string
-  url: string
-  source: string
-  published_at: string
-  category: JournalCategory
-  image_url?: string | null
-  tags?: string[]
-}
-
-interface JournalIssue {
-  issue: number
-  week_start: string
-  week_end: string
-  generated_at: string
-  lead: string
-  trend_note: string
-  articles: JournalArticle[]
-  source_count: number
-}
-
-const CATEGORY_LABELS: Record<JournalCategory, string> = {
-  world: 'Мир моды',
-  'russian-streetwear': 'Русский streetwear',
-  runway: 'Показы',
-  merch: 'Мерчи',
-  'social-trends': 'Соцсети & тренды',
-}
-
-const CATEGORY_ORDER: JournalCategory[] = ['world', 'russian-streetwear', 'runway', 'merch', 'social-trends']
-
-function formatDate(value: string) {
-  try {
-    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
-function shortText(value: string, max = 190) {
-  const clean = value.replace(/<[^>]+>/g, '').trim()
-  return clean.length > max ? `${clean.slice(0, max).trim()}…` : clean
-}
-
-export function Journal() {
-  const [issue, setIssue] = useState<JournalIssue | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState<JournalCategory | 'all'>('all')
-  const [selectedArticle, setSelectedArticle] = useState<JournalArticle | null>(null)
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/journal.json', { cache: 'no-store' })
-      .then((response) => {
-        if (!response.ok) throw new Error('journal unavailable')
-        return response.json() as Promise<JournalIssue>
-      })
-      .then((data) => {
-        if (!cancelled) setIssue(data)
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    if (!selectedArticle) return
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedArticle(null)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [selectedArticle])
-
-  const articles = useMemo(
-    () => issue?.articles.filter((article) => category === 'all' || article.category === category) ?? [],
-    [issue, category],
-  )
-
-  const sections = useMemo(() => {
-    if (!issue) return []
-    return CATEGORY_ORDER.map((id) => ({
-      id,
-      articles: issue.articles.filter((article) => article.category === id),
-    })).filter((section) => section.articles.length > 0)
-  }, [issue])
-
-  const lead = articles[0]
-
-  const openArticle = (article: JournalArticle) => setSelectedArticle(article)
-
-  return (
-    <main className="journal page-transition">
-      <header className="journal-cover">
-        <div className="journal-cover-top">
-          <span className="journal-brand">ASSTYLIST<span className="journal-brand-dot">.</span></span>
-          <span>THE FASHION EDIT</span>
-          <span>ISSUE {issue ? issue.issue : '—'}</span>
-        </div>
-        <div className="journal-cover-rule" />
-        <div className="journal-cover-title">
-          <div>
-            <span className="journal-kicker">МОДА · STREETWEAR · CULTURE</span>
-            <h1>ЖУРНАЛ</h1>
-          </div>
-          <p>Еженедельный выпуск о вещах, людях и движениях, которые формируют стиль прямо сейчас.</p>
-        </div>
-        {lead?.image_url ? (
-          <button className="journal-cover-image" onClick={() => openArticle(lead)} aria-label={`Открыть: ${lead.title}`}>
-            <img src={lead.image_url} alt="" />
-            <span className="journal-cover-image-shade" />
-            <span className="journal-cover-image-label">COVER STORY / READ INSIDE ↗</span>
-            <span className="journal-cover-caption">Фото: {lead.source}</span>
-          </button>
-        ) : null}
-        <div className="journal-cover-lead">
-          <span>В ЭТОМ НОМЕРЕ</span>
-          <strong>{issue?.lead ?? 'Выпуск уже собирается.'}</strong>
-        </div>
-      </header>
-
-      <nav className="journal-nav" aria-label="Разделы журнала">
-        <button className={category === 'all' ? 'is-active' : ''} onClick={() => setCategory('all')}>ВСЕ</button>
-        {CATEGORY_ORDER.map((id) => (
-          <button key={id} className={category === id ? 'is-active' : ''} onClick={() => setCategory(id)}>
-            {CATEGORY_LABELS[id]}
-          </button>
-        ))}
-      </nav>
-
-      {loading ? (
-        <div className="journal-loading"><span /><span /><span /></div>
-      ) : error || !issue ? (
-        <section className="journal-empty"><span className="journal-kicker">EDITORIAL OFFLINE</span><h2>Выпуск ещё собирается</h2><p>Следующий выпуск появится автоматически.</p></section>
-      ) : category === 'all' ? (
-        <div className="journal-sections">
-          {sections.map((section, sectionIndex) => {
-            const [featured, ...rest] = section.articles
-            return (
-              <section className="journal-section" key={section.id}>
-                <div className="journal-section-head">
-                  <div><span className="journal-section-index">0{sectionIndex + 1}</span><h2>{CATEGORY_LABELS[section.id]}</h2></div>
-                  <button onClick={() => setCategory(section.id)}>ВСЯ РУБРИКА ↗</button>
-                </div>
-                <div className="journal-section-rule" />
-                <div className="journal-section-grid">
-                  {featured ? (
-                    <article className="journal-story journal-story-main" onClick={() => openArticle(featured)} role="button" tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && openArticle(featured)}>
-                      {featured.image_url ? <div className="journal-story-image"><img src={featured.image_url} alt="" loading={sectionIndex < 2 ? 'eager' : 'lazy'} /></div> : null}
-                      <div className="journal-story-copy"><div className="journal-story-meta"><span>{featured.source}</span><time>{formatDate(featured.published_at)}</time></div><h3>{featured.title}</h3><p>{shortText(featured.editorial || featured.summary, 250)}</p><span className="journal-read">ЧИТАТЬ В ЖУРНАЛЕ ↗</span></div>
-                    </article>
-                  ) : null}
-                  <div className="journal-story-list">
-                    {rest.slice(0, 4).map((article, index) => (
-                      <article className="journal-story journal-story-small" key={article.id} onClick={() => openArticle(article)} role="button" tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && openArticle(article)}>
-                        <span className="journal-story-number">{String(index + 2).padStart(2, '0')}</span>
-                        {article.image_url ? <div className="journal-story-thumb"><img src={article.image_url} alt="" loading="lazy" /></div> : <div className="journal-story-thumb journal-no-image">AS.</div>}
-                        <div className="journal-story-copy"><div className="journal-story-meta"><span>{article.source}</span><time>{formatDate(article.published_at)}</time></div><h3>{article.title}</h3><span className="journal-read">ОТКРЫТЬ ↗</span></div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )
-          })}
-          {issue.trend_note ? <aside className="journal-radar"><span>ASSTYLIST / TREND RADAR</span><strong>{issue.trend_note}</strong></aside> : null}
-        </div>
-      ) : (
-        <section className="journal-category-view">
-          <div className="journal-category-heading"><span className="journal-kicker">EDITORIAL SECTION</span><h2>{CATEGORY_LABELS[category]}</h2><p>{articles.length} материалов · выпуск {issue.issue}</p></div>
-          <div className="journal-category-grid">
-            {articles.map((article, index) => (
-              <article className={`journal-story ${index === 0 ? 'journal-story-category-feature' : ''}`} key={article.id} onClick={() => openArticle(article)} role="button" tabIndex={0} onKeyDown={(event) => event.key === 'Enter' && openArticle(article)}>
-                {article.image_url ? <div className="journal-story-image"><img src={article.image_url} alt="" loading={index < 3 ? 'eager' : 'lazy'} /></div> : <div className="journal-story-image journal-no-image">ASSTYLIST</div>}
-                <div className="journal-story-copy"><div className="journal-story-meta"><span>{article.source}</span><time>{formatDate(article.published_at)}</time></div><h3>{article.title}</h3><p>{shortText(article.editorial || article.summary, 240)}</p><span className="journal-read">ЧИТАТЬ В ЖУРНАЛЕ ↗</span></div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {issue ? <footer className="journal-footnote">ASSTYLIST EDITORIAL · {formatDate(issue.week_start)} — {formatDate(issue.week_end)} · {issue.source_count} открытых потоков</footer> : null}
-
-      {selectedArticle ? (
-        <div className="journal-reader" role="dialog" aria-modal="true" aria-label={selectedArticle.title} onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedArticle(null) }}>
-          <article className="journal-reader-sheet">
-            <button className="journal-reader-close" onClick={() => setSelectedArticle(null)} aria-label="Закрыть">×</button>
-            <div className="journal-reader-top"><span>{CATEGORY_LABELS[selectedArticle.category]}</span><span>{formatDate(selectedArticle.published_at)}</span><span>{selectedArticle.source}</span></div>
-            {selectedArticle.image_url ? <div className="journal-reader-image"><img src={selectedArticle.image_url} alt="" /></div> : null}
-            <div className="journal-reader-body">
-              <span className="journal-kicker">ASSTYLIST EDITORIAL / {selectedArticle.source}</span>
-              <h2>{selectedArticle.title}</h2>
-              <div className="journal-reader-columns">
-                <p className="journal-reader-dropcap">{(selectedArticle.editorial || selectedArticle.summary).charAt(0)}</p>
-                <div>
-                  <p className="journal-reader-text">{selectedArticle.editorial || selectedArticle.summary}</p>
-                  <p className="journal-reader-note">Это редакционная выжимка из открытого материала. ASStylist не подменяет оригинал: факты и полный контекст доступны у первоисточника.</p>
-                </div>
-              </div>
-              <a className="journal-source-button" href={selectedArticle.url} target="_blank" rel="noreferrer">ПЕРЕЙТИ К ПЕРВОИСТОЧНИКУ ↗</a>
-            </div>
-          </article>
-        </div>
-      ) : null}
-    </main>
-  )
+type JournalCategory = 'russia' | 'russian-streetwear' | 'runway' | 'merch' | 'social-trends' | 'world'
+type EditorialWeight = 'hero' | 'major' | 'standard' | 'brief'
+interface JournalArticle { id:string; title:string; summary:string; editorial?:string; url:string; source:string; published_at:string; category:JournalCategory; image_url?:string|null; image_fallback_url?:string|null; tags?:string[]; editorial_weight?:EditorialWeight; editorial_color?:string }
+interface JournalIssue { issue:number; week_start:string; week_end:string; generated_at:string; lead:string; trend_note:string; articles:JournalArticle[]; source_count:number }
+const CATEGORY_LABELS:Record<JournalCategory,string>={russia:'Россия','russian-streetwear':'Русский streetwear',runway:'Показы',merch:'Мерчи & дропы','social-trends':'Соцсети & тренды',world:'Мир'}
+const CATEGORY_ORDER:JournalCategory[]=['russia','russian-streetwear','runway','merch','social-trends','world']
+function formatDate(v:string){try{return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date(v))}catch{return v}}
+function shortText(v:string,max=720){const s=v.replace(/<[^>]+>/g,'').trim();return s.length>max?`${s.slice(0,max).trim()}…`:s}
+function articleClass(a:JournalArticle,i:number){const w=a.editorial_weight||(i===0?'hero':i<3?'major':i<6?'standard':'brief');return `journal-editorial journal-editorial-${w}`}
+function Image({article,className='',eager=false}:{article:JournalArticle;className?:string;eager?:boolean}){const [src,setSrc]=useState(article.image_url||article.image_fallback_url||'');const [failed,setFailed]=useState(false);useEffect(()=>{setSrc(article.image_url||article.image_fallback_url||'');setFailed(false)},[article.image_url,article.image_fallback_url]);if(!src||failed)return <div className={`journal-image-fallback ${className}`}><span>AS<span className="journal-image-fallback-dot">.</span></span><small>IMAGE UNAVAILABLE</small></div>;return <img className={className} src={src} alt="" loading={eager?'eager':'lazy'} onError={()=>{if(article.image_fallback_url&&src!==article.image_fallback_url)setSrc(article.image_fallback_url);else setFailed(true)}}/>}
+export function Journal(){
+ const[issue,setIssue]=useState<JournalIssue|null>(null),[loading,setLoading]=useState(true),[category,setCategory]=useState<JournalCategory|'all'>('all'),[selectedArticle,setSelectedArticle]=useState<JournalArticle|null>(null),[error,setError]=useState(false)
+ useEffect(()=>{let cancelled=false;fetch('/journal.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json() as Promise<JournalIssue>}).then(d=>{if(!cancelled)setIssue(d)}).catch(()=>{if(!cancelled)setError(true)}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[])
+ useEffect(()=>{if(!selectedArticle)return;const p=document.body.style.overflow;document.body.style.overflow='hidden';const k=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelectedArticle(null)};window.addEventListener('keydown',k);return()=>{document.body.style.overflow=p;window.removeEventListener('keydown',k)}},[selectedArticle])
+ const articles=useMemo(()=>issue?.articles.filter(a=>category==='all'||a.category===category)??[],[issue,category]);const sections=useMemo(()=>!issue?[]:CATEGORY_ORDER.map(id=>({id,articles:issue.articles.filter(a=>a.category===id)})).filter(s=>s.articles.length),[issue]);const openArticle=(a:JournalArticle)=>setSelectedArticle(a);const lead=articles[0]
+ return <main className="journal page-transition">
+  <header className="journal-cover"><div className="journal-cover-top"><span className="journal-brand">ASSTYLIST<span className="journal-brand-dot">.</span></span><span>RUSSIAN FASHION EDIT</span><span>ISSUE {issue?.issue??'—'}</span></div><div className="journal-cover-rule"/><div className="journal-cover-title"><div><span className="journal-kicker">РОССИЯ · STREETWEAR · CULTURE</span><h1>ЖУРНАЛ</h1></div><p>Редакционная лента о российской моде: бренды, дизайнеры, показы, локальная сцена и визуальные движения.</p></div>{lead&&<button className="journal-cover-image" onClick={()=>openArticle(lead)} aria-label={`Открыть: ${lead.title}`}><Image article={lead} className="journal-cover-photo" eager/><span className="journal-cover-image-shade"/><span className="journal-cover-image-label">COVER STORY / READ INSIDE ↗</span><span className="journal-cover-caption">{lead.source}</span></button>}<div className="journal-cover-lead"><span>В ЭТОМ НОМЕРЕ</span><strong>{issue?.lead??'Выпуск уже собирается.'}</strong></div></header>
+  <nav className="journal-nav" aria-label="Разделы журнала"><button className={category==='all'?'is-active':''} onClick={()=>setCategory('all')}>ВСЕ</button>{CATEGORY_ORDER.map(id=><button key={id} className={category===id?'is-active':''} onClick={()=>setCategory(id)}>{CATEGORY_LABELS[id]}</button>)}</nav>
+  {loading?<div className="journal-loading"><span/><span/><span/></div>:error||!issue?<section className="journal-empty"><span className="journal-kicker">EDITORIAL OFFLINE</span><h2>Выпуск ещё собирается</h2><p>Следующий выпуск появится автоматически.</p></section>:category==='all'?<div className="journal-sections">{sections.map((section,si)=>{const[f,...rest]=section.articles;return <section className="journal-section" key={section.id}><div className="journal-section-head"><div><span className="journal-section-index">0{si+1}</span><h2>{CATEGORY_LABELS[section.id]}</h2></div><button onClick={()=>setCategory(section.id)}>ВСЯ РУБРИКА ↗</button></div><div className="journal-section-rule"/><div className="journal-editorial-grid">{f&&<article className={articleClass(f,0)} style={{'--journal-color':f.editorial_color} as React.CSSProperties} onClick={()=>openArticle(f)} role="button" tabIndex={0}><div className="journal-editorial-image"><Image article={f} eager/></div><div className="journal-story-copy"><div className="journal-story-meta"><span>{f.source}</span><time>{formatDate(f.published_at)}</time></div><h3>{f.title}</h3><p>{shortText(f.editorial||f.summary,1050)}</p><span className="journal-read">ЧИТАТЬ В ЖУРНАЛЕ ↗</span></div></article>}<div className="journal-editorial-stack">{rest.slice(0,6).map((a,i)=><article key={a.id} className={articleClass(a,i+1)} style={{'--journal-color':a.editorial_color} as React.CSSProperties} onClick={()=>openArticle(a)} role="button" tabIndex={0}><span className="journal-story-number">{String(i+2).padStart(2,'0')}</span><div className="journal-editorial-thumb"><Image article={a}/></div><div className="journal-story-copy"><div className="journal-story-meta"><span>{a.source}</span><time>{formatDate(a.published_at)}</time></div><h3>{a.title}</h3><p>{shortText(a.editorial||a.summary,430)}</p><span className="journal-read">ОТКРЫТЬ ↗</span></div></article>)}</div></div></section>})}{issue.trend_note&&<aside className="journal-radar"><span>ASSTYLIST / TREND RADAR</span><strong>{issue.trend_note}</strong></aside>}</div>:<section className="journal-category-view"><div className="journal-category-heading"><span className="journal-kicker">EDITORIAL SECTION</span><h2>{CATEGORY_LABELS[category]}</h2><p>{articles.length} материалов · выпуск {issue.issue}</p></div><div className="journal-category-grid">{articles.map((a,i)=><article key={a.id} className={articleClass(a,i)} style={{'--journal-color':a.editorial_color} as React.CSSProperties} onClick={()=>openArticle(a)} role="button" tabIndex={0}><div className="journal-story-image"><Image article={a} eager={i<2}/></div><div className="journal-story-copy"><div className="journal-story-meta"><span>{a.source}</span><time>{formatDate(a.published_at)}</time></div><h3>{a.title}</h3><p>{shortText(a.editorial||a.summary,900)}</p><span className="journal-read">ЧИТАТЬ В ЖУРНАЛЕ ↗</span></div></article>)}</div></section>}
+  {issue&&<footer className="journal-footnote">ASSTYLIST EDITORIAL · {formatDate(issue.week_start)} — {formatDate(issue.week_end)} · {issue.source_count} открытых потоков</footer>}
+  {selectedArticle&&<div className="journal-reader" role="dialog" aria-modal="true" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedArticle(null)}}><article className="journal-reader-sheet" style={{'--journal-color':selectedArticle.editorial_color} as React.CSSProperties}><button className="journal-reader-close" onClick={()=>setSelectedArticle(null)} aria-label="Закрыть">×</button><div className="journal-reader-top"><span>{CATEGORY_LABELS[selectedArticle.category]}</span><span>{formatDate(selectedArticle.published_at)}</span><span>{selectedArticle.source}</span></div><div className="journal-reader-image"><Image article={selectedArticle} eager/></div><div className="journal-reader-body"><span className="journal-kicker">ASSTYLIST EDITORIAL / {selectedArticle.source}</span><h2>{selectedArticle.title}</h2><div className="journal-reader-columns"><p className="journal-reader-dropcap">{(selectedArticle.editorial||selectedArticle.summary).charAt(0)}</p><div><p className="journal-reader-text">{selectedArticle.editorial||selectedArticle.summary}</p><p className="journal-reader-note">Это редакционная выжимка из открытого материала. Полный контекст и оригинальная публикация доступны у первоисточника.</p></div></div><a className="journal-source-button" href={selectedArticle.url} target="_blank" rel="noreferrer">ПЕРЕЙТИ К ПЕРВОИСТОЧНИКУ ↗</a></div></article></div>}
+ </main>
 }
