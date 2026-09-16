@@ -26,6 +26,7 @@ import { Header, ThemeToggle } from './components/ui'
 import { TabBar } from './components/TabBar'
 import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
+import { BootIntro } from './components/BootIntro'
 import { BUILD_STAMP, formatBuildLabel } from './lib/build'
 
 type Screen = 'home' | 'wizard' | 'result' | 'history' | 'profile' | 'search'
@@ -60,6 +61,23 @@ export default function App() {
   const [theme, setTheme] = useState<'noir' | 'parchment'>(() =>
     telegramColorScheme() === 'dark' ? 'noir' : 'parchment',
   )
+
+  const [introDone, setIntroDone] = useState(() => {
+    try {
+      return sessionStorage.getItem('asstylist-intro-v1') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const finishIntro = useCallback(() => {
+    try {
+      sessionStorage.setItem('asstylist-intro-v1', '1')
+    } catch {
+      /* ignore */
+    }
+    setIntroDone(true)
+  }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -271,13 +289,16 @@ export default function App() {
   }, [screen])
 
   return (
-    <div className="app" data-screen={screen}>
+    <div className="stage">
       <div className="ambient" aria-hidden="true">
         <span className="blob blob-a" />
         <span className="blob blob-b" />
         <span className="blob blob-c" />
       </div>
 
+      {!introDone ? <BootIntro onDone={finishIntro} /> : null}
+
+      <div className={`app${introDone ? ' app-ready' : ' app-booting'}`} data-screen={screen}>
       <LeopardPatternDef />
 
       {screen !== 'home' && screen !== 'wizard' ? (
@@ -364,6 +385,7 @@ export default function App() {
           <code>{formatBuildLabel(BUILD_STAMP)}</code>
         </footer>
       ) : null}
+    </div>
     </div>
   )
 }
