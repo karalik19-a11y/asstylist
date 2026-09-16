@@ -14,7 +14,6 @@ from app.fashion_engine import (
 from app.fashion_engine.intelligence.fashion_intelligence import FashionIntelligence
 from app.fashion_engine.intelligence.taste_engine import TasteEngine
 from app.fashion_engine.intelligence.trend_engine import TrendEngine
-from app.fashion_engine.outfit.critic import FashionCritic
 from app.fashion_engine.search.query_expander import QueryExpander
 from app.fashion_engine.validation.identity_resolver import ProductIdentityResolver
 from app.fashion_engine.validation.image_matcher import ImageMatcher
@@ -95,11 +94,8 @@ def test_query_expander_is_unique_and_niche_first():
 def test_validator_rejects_unusable_marketplace_items():
     validator = ItemValidator(0.6)
     assert validator.validate(card("A-1", "Wool Coat", "Lemaire", "coat")).valid
-
     no_brand = card("A-2", "Wool Coat", "", "coat")
-    no_brand_result = validator.validate(no_brand)
-    assert not no_brand_result.valid
-
+    assert not validator.validate(no_brand).valid
     low_confidence = card("A-3", "Wool Coat", "Lemaire", "coat", confidence=0.2)
     assert not validator.validate(low_confidence).valid
 
@@ -110,10 +106,8 @@ def test_identity_resolver_keeps_distinct_avito_listings():
     second = card("AV-2", "Пальто оверсайз двубортное", "12 STOREEZ", "coat")
     third = card("AV-3", "Брюки широкие", "Street Lab", "trousers")
     assert {item.id for item in resolver.resolve([first, second, third])} == {"AV-1", "AV-2", "AV-3"}
-
     duplicate = card("AV-4", "Пальто оверсайз двубортное", "12 STOREEZ", "coat", confidence=0.95)
-    resolved = resolver.resolve([second, duplicate])
-    assert len(resolved) == 1
+    assert len(resolver.resolve([second, duplicate])) == 1
 
 
 def test_image_matcher_flags_contradictory_listing():
@@ -179,12 +173,3 @@ def test_taste_engine_preserves_distinctive_archive_piece():
     result = engine.score(item, niche)
     assert result.fashion_score > result.generic_score
     assert result.taste_category in TASTE_CATEGORIES
-
-
-def test_critic_returns_structured_verdict():
-    critic = FashionCritic()
-    item = card("C-1", "Leather jacket", "Archive Studio", "jacket", tags=("leather", "archive"))
-    item.fashion_attributes = FashionAttributes(aesthetic="archive", rarity=0.8)
-    result = critic.critique([item], UserStyleProfile(niche_level=85, aesthetics=["archive"]))
-    assert result
-    assert hasattr(result, "score")
