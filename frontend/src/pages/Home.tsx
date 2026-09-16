@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta } from '../lib/types'
 import { formatRub } from '../lib/format'
-import { Badge, BrandLogo, ThemeToggle } from '../components/ui'
+import { Badge, BrandLogo, SoundToggle, ThemeToggle } from '../components/ui'
 import { playClick, playTick } from '../lib/sound'
 
 export function Home({
@@ -29,6 +29,7 @@ export function Home({
           <BrandLogo big tagline onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
           <div className="hero-top-controls">
             {meta?.demo_mode ? <Badge tone="warn">демо</Badge> : <Badge tone="ok">online</Badge>}
+            <SoundToggle />
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </div>
