@@ -19,12 +19,13 @@ Core intelligence lives in `backend/app/fashion_engine/` (search + outfit archit
 5. **Never commit secrets**. Use `.env.example` only.
 6. **Demo / local mode must keep working** without bot tokens or paid API keys.
 7. **One concern per PR** when possible (engine vs API vs frontend vs docs).
+8. **Fashion Engine dependency rule:** code under `backend/app/fashion_engine/` must not import `app.api`, `app.db`, or `app.services`. Adapters stay in services.
 
 ## Safe zones (preferred for agents)
 
 | Path | What to change |
 | --- | --- |
-| `backend/app/fashion_engine/**` | Search, taste, architect, scorer, critic, providers |
+| `backend/app/fashion_engine/**` | Search, taste, architect, scorer, critic, providers — see package [README](backend/app/fashion_engine/README.md) and `pipeline.PIPELINE_STEPS` |
 | `backend/app/engine/**` | Ranking factors, budget optimiser, body/color helpers (with tests + ADR if defaults change) |
 | `backend/app/verification/**` | Product checks (add tests; critical checks need ADR) |
 | `backend/tests/**` or `backend/**/test_*.py` | Tests |
@@ -45,12 +46,13 @@ Core intelligence lives in `backend/app/fashion_engine/` (search + outfit archit
 ## How to add a feature (checklist)
 
 1. Read this file and `docs/architecture.md`.
-2. If the change affects ranking, budget, verification, or API shape → write `docs/adr/XXXX-title.md`.
-3. Implement pure logic first under `fashion_engine/` or `engine/`.
-4. Add unit tests; run `make test-backend` (or `make test-engine` if available).
-5. Only then wire API / UI if needed.
-6. Update `docs/adding-feature.md` section if you introduce a new extension point.
-7. Keep commit messages imperative and scoped (`feat(engine): …`, `docs: …`, `test: …`).
+2. For Fashion Engine work, read `backend/app/fashion_engine/README.md` and pick a step from `PIPELINE_STEPS`.
+3. If the change affects ranking, budget, verification, or API shape → write `docs/adr/XXXX-title.md`.
+4. Implement pure logic first under `fashion_engine/` or `engine/`.
+5. Add unit tests; run `make test-backend` (or `make test-engine`).
+6. Only then wire API / UI if needed.
+7. Update `docs/adding-feature.md` section if you introduce a new extension point.
+8. Keep commit messages imperative and scoped (`feat(engine): …`, `docs: …`, `test: …`).
 
 ## How to run locally (agents)
 
@@ -58,7 +60,7 @@ Core intelligence lives in `backend/app/fashion_engine/` (search + outfit archit
 make setup
 make test          # full suite
 make test-backend  # pytest
-make test-engine   # fashion_engine-focused if target exists
+make test-engine   # fashion_engine-focused
 make typecheck
 make run           # http://localhost:8000 — must still work after your change
 ```
@@ -67,9 +69,9 @@ Do **not** require network, bot tokens, or paid keys for unit tests.
 
 ## Extension points (stable)
 
-- **Search providers**: `backend/app/fashion_engine/search/providers/`
-- **Outfit pipeline steps**: expander → providers → intelligence → taste → validator → architect → scorer → critic
-- **Ranking factors**: configurable via `RANKING_WEIGHTS_JSON` (defaults must not silently change)
+- **Search providers**: `backend/app/fashion_engine/search/providers/` (`SearchProvider`)
+- **Outfit pipeline steps**: `from app.fashion_engine import PIPELINE_STEPS` (expand → search → intelligence → validate → … → critic)
+- **Ranking factors** (app layer): configurable via `RANKING_WEIGHTS_JSON` (defaults must not silently change)
 - **Verification checks**: `backend/app/verification/`
 - **Engine mode**: `FASHION_ENGINE_MODE` = `hybrid` | `engine` | `legacy`
 
