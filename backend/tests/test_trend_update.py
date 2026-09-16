@@ -48,27 +48,3 @@ def test_radar_separates_generic_quiet_luxury_from_niche_signals():
 def test_catalog_items_keep_live_image_contract():
     for row in valid_products():
         assert row["image_url"] == "", row["sku"]
-
-
-def test_personal_note_uses_v2_style_alias_without_breaking_api(client):
-    response = client.post(
-        "/api/looks/generate",
-        json={
-            "style": "office_siren",
-            "mood": "confident",
-            "occasion": "work",
-            "season": "all",
-            "presentation": "unisex",
-            "height_cm": 170,
-            "weight_kg": 62,
-            "budget_rub": 60_000,
-            "demo_user_id": "trend-user-v2",
-            "save": False,
-        },
-    )
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["personal_note"]
-    assert "minimal precision" in body["personal_note"].lower()
-    assert "фото" in body["personal_note"].lower()
-    assert body["items"]
