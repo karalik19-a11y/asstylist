@@ -1,85 +1,53 @@
-/* ASStylist logo refinement: typography-matched A + solid devil details. */
+/* ==========================================================================
+   НОВЫЙ ЛОГОТИП: антиква Bodoni Moda (Didone) + дьявольская «A».
+   Буква — currentColor (инк темы), рога и хвост — вишнёвый акцент.
+   ========================================================================== */
+
+/* Знак «A» — inline-block высотой 1.55em: 1.15em над базовой линией
+   (рога) + 0.4em под ней (хвост). vertical-align ставит базовую линию
+   буквы (y=0 в SVG) на базовую линию окружающего текста. */
 .devil-a {
-  position: relative;
   display: inline-block;
-  width: 0.78em;
-  height: 1em;
-  flex: 0 0 0.78em;
-  vertical-align: baseline;
-  color: inherit;
+  height: 1.55em;
+  vertical-align: -0.4em;
   overflow: visible;
+  font-family: var(--font-logo);
+  font-weight: 650;
+  line-height: 0;
+  flex: none;
 }
 
 .devil-a-letter {
-  position: absolute;
-  inset: 0;
-  display: block;
+  fill: currentColor;
   font-family: inherit;
-  font-size: 1em;
   font-weight: inherit;
-  line-height: 1;
-  letter-spacing: inherit;
-  color: inherit;
 }
 
-.devil-a-horn {
-  position: absolute;
-  z-index: 2;
-  top: -0.18em;
-  width: 0.24em;
-  height: 0.34em;
-  background: var(--accent-leopard);
-  border-radius: 75% 18% 12% 18%;
-  transform-origin: bottom center;
-}
-
-.devil-a-horn::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -0.02em;
-  width: 0.18em;
-  height: 0.18em;
-  background: var(--accent-leopard);
-  transform: translateX(-50%) rotate(45deg);
-}
-
-.devil-a-horn-left {
-  left: 0.18em;
-  transform: rotate(-31deg) skewY(-8deg);
-}
-
-.devil-a-horn-right {
-  right: 0.16em;
-  transform: scaleX(-1) rotate(-31deg) skewY(-8deg);
+.devil-a-accent {
+  fill: var(--accent-leopard);
 }
 
 .devil-a-tail {
-  position: absolute;
-  z-index: 1;
-  left: -0.18em;
-  bottom: -0.02em;
-  width: 0.42em;
-  height: 0.58em;
-  border-left: 0.085em solid var(--accent-leopard);
-  border-bottom: 0.085em solid var(--accent-leopard);
-  border-radius: 0 0 0 90%;
-  transform: rotate(-34deg);
-  transform-origin: bottom right;
-  pointer-events: none;
+  fill: none;
+  stroke: var(--accent-leopard);
 }
 
-.devil-a-tail::after {
-  content: '';
-  position: absolute;
-  left: -0.13em;
-  top: -0.02em;
-  width: 0;
-  height: 0;
-  border-top: 0.085em solid transparent;
-  border-bottom: 0.085em solid transparent;
-  border-right: 0.18em solid var(--accent-leopard);
-  transform: rotate(-32deg);
+/* Надпись-логотип теперь антиквой: высококонтрастный Didone вместо Unbounded. */
+.brand-logo-word {
+  font-family: var(--font-logo);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-logo-word em {
+  font-weight: 650;
+}
+
+/* «ASS» — одним цветом с инком темы, без хардкода белого. */
+.brand-logo-ass {
+  display: inline;
+  color: inherit;
+  font-weight: inherit;
 }
 
 /* Header: compensate for the old negative left margin so the logo stays inside. */

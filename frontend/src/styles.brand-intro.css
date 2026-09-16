@@ -90,40 +90,8 @@ body {
   transition: opacity 0.55s ease;
 }
 
-.devil-a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-  vertical-align: -0.12em;
-  color: #fff;
-  margin: 0 0.02em 0 0.06em;
-}
-
-.devil-a-mark {
-  display: block;
-  width: 0.92em;
-  height: 1.05em;
-  overflow: visible;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-}
-
-.brand-logo-ass {
-  display: inline-flex;
-  align-items: baseline;
-  color: #fff;
-  font-weight: 800;
-}
-
-.brand-logo-big .devil-a-mark {
-  width: 0.95em;
-  height: 1.1em;
-}
-
-.devil-a--intro .devil-a-mark {
-  width: 0.95em;
-  height: 1.1em;
-}
+/* Знак DevilA и цвета «ASS» описаны в styles.logo-fix.css / styles.chrome.css:
+   буква наследует инк темы, рога и хвост — вишнёвый акцент. */
 
 .app-header,
 .app[data-screen='wizard'] .app-header,
@@ -178,11 +146,17 @@ body {
 .boot-intro-word {
   display: flex;
   align-items: flex-end;
-  font-family: var(--font-display, inherit);
-  font-weight: 800;
-  font-size: clamp(42px, 12vw, 72px);
+  font-family: var(--font-logo, inherit);
+  font-weight: 650;
+  font-size: clamp(46px, 13vw, 80px);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
+}
+
+/* Знак «A» в flex-ряду: компенсируем разницу боксов буквы и SVG,
+   чтобы базовые линии совпали при align-items: flex-end. */
+.boot-intro .devil-a {
+  margin-bottom: -0.1em;
 }
 
 .boot-intro-letter {
@@ -193,7 +167,7 @@ body {
 }
 
 .boot-intro-letter--ass {
-  color: #fff;
+  color: var(--text-main);
 }
 
 .boot-intro-letter--tyl {
@@ -206,7 +180,7 @@ body {
 
 .boot-intro-letter--devil {
   -webkit-text-fill-color: initial;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .boot-intro-rule {
