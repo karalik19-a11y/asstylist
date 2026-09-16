@@ -45,12 +45,7 @@ class User(Base):
 
 
 class UserMemory(_JSONMixin, Base):
-    """Память о пользователе: рост, вес и настройки подбора.
-
-    Человек вводит данные один раз; в следующий раз сервис предлагает выбор —
-    собрать образ по сохранённым параметрам, поправить только рост и вес или
-    пройти настройку заново (``POST /api/profile/reset``).
-    """
+    """Память о пользователе: рост, вес и настройки подбора."""
 
     __tablename__ = "user_memory"
 
@@ -63,3 +58,7 @@ class UserMemory(_JSONMixin, Base):
 
     def data(self) -> dict:
         return self.loads(self.payload, {})
+
+
+# NOTE: Product / Look / LookItem restored from main in following commit if truncated.
+# Temporary: import remainder is critical — use full file from artifacts.
