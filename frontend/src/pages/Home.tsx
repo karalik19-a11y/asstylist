@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import type { Meta } from '../lib/types'
 import { formatRub } from '../lib/format'
-import { Badge, BrandLogo, SectionTitle, ThemeToggle } from '../components/ui'
+import { Badge, BrandLogo, ThemeToggle } from '../components/ui'
 import { playClick, playTick } from '../lib/sound'
 
 export function Home({
   meta,
   onStart,
+  onOpenHistory,
   onOpenSearch,
   userName,
   theme,
@@ -14,6 +15,7 @@ export function Home({
 }: {
   meta: Meta | null
   onStart: () => void
+  onOpenHistory?: () => void
   onOpenSearch?: () => void
   userName: string | null
   theme: 'noir' | 'parchment'
@@ -70,6 +72,15 @@ export function Home({
         >
           Поиск конкретных вещей <span aria-hidden="true">→</span>
         </button>
+        {onOpenHistory ? (
+          <button
+            type="button"
+            className="btn btn-outline btn-block home-secondary-cta"
+            onClick={() => { playClick(); onOpenHistory() }}
+          >
+            Архив образов <span aria-hidden="true">↗</span>
+          </button>
+        ) : null}
       </section>
 
       {meta?.styles?.length ? (
