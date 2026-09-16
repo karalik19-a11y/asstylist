@@ -1,95 +1,53 @@
-/* ASStylist logo refinement: typography-matched A + solid devil details. */
-.devil-a {
-  position: relative;
-  display: inline-block;
-  width: 0.78em;
-  height: 1em;
-  flex: 0 0 0.78em;
-  vertical-align: baseline;
-  color: inherit;
-  overflow: visible;
+/* Supplied ASStylist mark — responsive, monochrome, theme-aware. */
+.brand-logo-word {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
-.devil-a-letter {
-  position: absolute;
-  inset: 0;
+.brand-logo-ass {
   display: block;
-  font-family: inherit;
-  font-size: 1em;
-  font-weight: inherit;
-  line-height: 1;
-  letter-spacing: inherit;
-  color: inherit;
+  width: 148px;
+  flex: 0 0 148px;
 }
 
-.devil-a-horn {
-  position: absolute;
-  z-index: 2;
-  top: -0.18em;
-  width: 0.24em;
-  height: 0.34em;
-  background: var(--accent-leopard);
-  border-radius: 75% 18% 12% 18%;
-  transform-origin: bottom center;
+.brand-logo-ass .brand-logo-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: #000;
+  filter: invert(1);
 }
 
-.devil-a-horn::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -0.02em;
-  width: 0.18em;
-  height: 0.18em;
-  background: var(--accent-leopard);
-  transform: translateX(-50%) rotate(45deg);
+.brand-logo-ass > span {
+  display: none;
 }
 
-.devil-a-horn-left {
-  left: 0.18em;
-  transform: rotate(-31deg) skewY(-8deg);
+.brand-logo-word > em {
+  display: none;
 }
 
-.devil-a-horn-right {
-  right: 0.16em;
-  transform: scaleX(-1) rotate(-31deg) skewY(-8deg);
+.brand-logo-rule {
+  margin-top: 6px;
 }
 
-.devil-a-tail {
-  position: absolute;
-  z-index: 1;
-  left: -0.18em;
-  bottom: -0.02em;
-  width: 0.42em;
-  height: 0.58em;
-  border-left: 0.085em solid var(--accent-leopard);
-  border-bottom: 0.085em solid var(--accent-leopard);
-  border-radius: 0 0 0 90%;
-  transform: rotate(-34deg);
-  transform-origin: bottom right;
-  pointer-events: none;
+.brand-logo-big .brand-logo-ass {
+  width: min(380px, 78vw);
+  flex-basis: min(380px, 78vw);
 }
 
-.devil-a-tail::after {
-  content: '';
-  position: absolute;
-  left: -0.13em;
-  top: -0.02em;
-  width: 0;
-  height: 0;
-  border-top: 0.085em solid transparent;
-  border-bottom: 0.085em solid transparent;
-  border-right: 0.18em solid var(--accent-leopard);
-  transform: rotate(-32deg);
-}
-
-/* Header: compensate for the old negative left margin so the logo stays inside. */
-.app-header .brand-logo {
-  margin-left: 2px;
+[data-theme='parchment'] .brand-logo-ass .brand-logo-image {
+  filter: none;
 }
 
 @media (max-width: 520px) {
-  .app-header .brand-logo {
-    padding: 4px;
-    margin: -4px 0 -4px 2px;
+  .brand-logo-ass {
+    width: 128px;
+    flex-basis: 128px;
+  }
+
+  .brand-logo-big .brand-logo-ass {
+    width: min(330px, 86vw);
+    flex-basis: min(330px, 86vw);
   }
 }
