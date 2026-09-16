@@ -1,0 +1,156 @@
+/* ASStylist production hardening: layout safety + mobile performance.
+   Loaded last so it acts as the final, non-destructive safety net. */
+
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+*, *::before, *::after {
+  min-width: 0;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+}
+
+img, video {
+  height: auto;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+button, .btn, [role='button'] {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+p, h1, h2, h3, h4, span, label, strong, small {
+  overflow-wrap: anywhere;
+}
+
+/* Never allow horizontal flex children to force the viewport wider. */
+.row, .row-between, .wrap, .stack,
+.app-header, .app-header-inner,
+.action-bar-inner, .tab-bar,
+.card, .stamp-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.row > *, .row-between > *, .action-bar-inner > * {
+  min-width: 0;
+}
+
+/* Long catalog/product names must wrap instead of pushing controls away. */
+.item-card-v2, .item-card-body, .look-item, .look-item-body,
+.product-card, .product-card-body, .history-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Images are layout-contained even when the source has unexpected dimensions. */
+.item-card-v2 img, .look-item img, .product-card img, .history-item img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Prevent sticky/fixed chrome from covering content at narrow widths. */
+.app[data-screen='result'],
+.app[data-screen='search'],
+.app[data-screen='history'],
+.app[data-screen='profile'],
+.app[data-screen='journal'] {
+  overflow-x: clip;
+}
+
+.app[data-screen='wizard'] {
+  overflow-x: clip;
+}
+
+/* Small screens: prioritize predictable flow over decorative effects. */
+@media (max-width: 400px) {
+  :root {
+    --space-x: 12px;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .item-card-v2 {
+    grid-template-columns: 76px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .item-actions-v2 {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .item-actions-v2 .btn,
+  .action-bar-btn-back,
+  .action-bar-btn-main {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .action-bar-inner {
+    flex-direction: column !important;
+  }
+
+  .action-bar-btn-back {
+    max-width: none !important;
+    flex: 0 0 auto !important;
+  }
+
+  .tab-bar {
+    width: calc(100% - 16px) !important;
+  }
+}
+
+/* Disable expensive visual effects on devices where they are most likely to hurt scrolling. */
+@media (max-width: 480px), (prefers-reduced-motion: reduce) {
+  .ambient .blob {
+    animation: none !important;
+    filter: blur(44px) !important;
+    will-change: auto !important;
+  }
+
+  .card, .stamp-card,
+  .app-header, .tab-bar, .action-bar {
+    backdrop-filter: blur(6px) saturate(125%) !important;
+    -webkit-backdrop-filter: blur(6px) saturate(125%) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Avoid accidental text selection/drag while operating the Mini App. */
+button, .btn, .tab-bar-btn, .action-bar-btn-back, .action-bar-btn-main {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Focus remains visible for keyboard/accessibility without changing geometry. */
+:focus-visible {
+  outline: 2px solid var(--accent-leopard, #ff5d72);
+  outline-offset: 2px;
+}
