@@ -1,3 +1,4 @@
+import '../styles.journal-editorial.css'
 import { useEffect, useMemo, useState } from 'react'
 
 type JournalCategory = 'russia' | 'russian-streetwear' | 'runway' | 'merch' | 'social-trends' | 'world'
