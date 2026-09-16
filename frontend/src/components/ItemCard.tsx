@@ -62,14 +62,16 @@ export function ItemCard({
 
   return (
     <article className="item-card">
-      {item.image_url ? (
-        <ItemPhoto
-          src={item.image_url}
-          alt={`${item.brand} — ${item.name} — фото объявления Авито`}
-          swatch={swatch}
-          className="item-photo-card"
-        />
-      ) : null}
+      {/* Фото показываем всегда: если снимок объявления не приехал, вместо
+          чёрного прямоугольника будет понятная заглушка с оттенками вещи. */}
+      <ItemPhoto
+        src={item.image_url}
+        alt={`${item.brand} — ${item.name} — фото объявления Авито`}
+        swatch={swatch}
+        chips={item.color_hexes}
+        fallbackLabel={isListing ? 'Фото объявления' : 'Фото вещи'}
+        className="item-photo-card"
+      />
 
       {isListing ? (
         <div className="listing-strip">

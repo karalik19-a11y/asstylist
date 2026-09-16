@@ -35,6 +35,8 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
         src={item.image_url}
         alt={`${item.brand} — ${item.name}`}
         swatch={swatch}
+        chips={item.color_hexes}
+        fallbackLabel={item.link_kind === 'listing' ? 'Фото объявления' : 'Фото вещи'}
         className="engine-item-photo"
       />
       <div style={{ flex: 1, minWidth: 0 }}>
