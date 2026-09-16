@@ -142,13 +142,14 @@ body {
   overflow: hidden;
 }
 
+/* ---------- Intro: only the ASStylist palette, no accidental inversion ---------- */
 .boot-intro {
   position: fixed;
   inset: 0;
   z-index: 9999;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--canvas, #050a12) 92%, #000);
+  background: #071523;
   pointer-events: none;
 }
 
@@ -156,22 +157,24 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  transform: scale(1);
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+  gap: 16px;
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+  will-change: transform, opacity;
 }
 
 .boot-intro--shrink .boot-intro-logo {
-  transform: scale(0.28) translateY(-42vh);
+  transform: translate3d(0, -40vh, 0) scale(0.26);
 }
 
 .boot-intro--out {
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.45s ease;
 }
 
 .boot-intro--out .boot-intro-logo {
-  transform: scale(0.22) translateY(-48vh);
+  transform: translate3d(0, -46vh, 0) scale(0.2);
   opacity: 0;
 }
 
@@ -187,20 +190,19 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  filter: invert(1);
-}
-
-[data-theme='parchment'] .boot-intro-image {
-  filter: none;
+  filter: none !important;
+  transform: translateZ(0);
 }
 
 .boot-intro-rule {
   display: block;
   width: 0;
-  height: 4px;
+  height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-leopard, #e82045), transparent);
-  animation: bootRule 0.6s 0.9s ease forwards;
+  background: #ffffff;
+  opacity: 0.9;
+  animation: bootRule 0.65s 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: width;
 }
 
 @keyframes bootRule {
@@ -210,11 +212,15 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .boot-intro-logo {
-    transition: opacity 0.3s ease;
-  }
+  .boot-intro-logo,
   .boot-intro--shrink .boot-intro-logo,
   .boot-intro--out .boot-intro-logo {
+    transition: opacity 0.3s ease;
     transform: none;
+  }
+
+  .boot-intro-rule {
+    animation: none;
+    width: min(220px, 50vw);
   }
 }
