@@ -6,6 +6,8 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
+  content-visibility: auto;
 }
 
 .ambient::before,

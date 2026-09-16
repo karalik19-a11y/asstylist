@@ -4,34 +4,33 @@
 
 :root {
   --chrome-max: 640px;
-  --header-h: 64px;
-  --tab-bar-h: 72px;
-  --action-bar-h: 112px;
+  --header-h: 76px;
+  --tab-bar-h: 76px;
+  --action-bar-h: 128px;
 }
 
-/* Scrollable shell: fixed chrome is OUTSIDE transforms */
 .app {
   min-height: 100dvh;
   max-width: var(--chrome-max);
   margin: 0 auto;
-  padding-top: calc(var(--header-h) + 20px + var(--tg-content-safe-top, 0px));
+  padding-top: calc(var(--header-h) + 28px + var(--tg-content-safe-top, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-bottom: calc(
-    var(--tab-bar-h) + 40px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+    var(--tab-bar-h) + 48px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
   );
   display: flex;
   flex-direction: column;
   gap: 20px;
   position: relative;
-  /* critical: no transform/filter on .app — keeps position:fixed relative to viewport */
   transform: none !important;
   filter: none !important;
 }
 
 .app[data-screen='wizard'] {
+  padding-top: calc(var(--header-h) + 32px + var(--tg-content-safe-top, 0px));
   padding-bottom: calc(
-    var(--action-bar-h) + 36px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+    var(--action-bar-h) + 56px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
   );
 }
 
@@ -40,7 +39,7 @@
 .app[data-screen='history'],
 .app[data-screen='profile'] {
   padding-bottom: calc(
-    var(--tab-bar-h) + 44px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+    var(--tab-bar-h) + 52px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
   );
 }
 
@@ -48,7 +47,11 @@
   padding-top: calc(16px + var(--tg-content-safe-top, 0px));
 }
 
-/* ---- Fixed glass header (logo / sound / theme / back) ---- */
+html {
+  scroll-padding-bottom: calc(var(--action-bar-h) + 24px);
+  scroll-padding-top: calc(var(--header-h) + 12px);
+}
+
 .app-header {
   position: fixed !important;
   top: 0;
@@ -86,7 +89,6 @@
   font-size: clamp(18px, 5vw, 22px);
 }
 
-/* ---- Fixed bottom tab bar — centered ---- */
 .tab-bar {
   position: fixed !important;
   left: 50% !important;
@@ -147,7 +149,6 @@
   color: var(--text-main);
 }
 
-/* ---- Wizard action bar ---- */
 .action-bar {
   position: fixed !important;
   left: 50%;
@@ -155,7 +156,7 @@
   bottom: 0;
   z-index: 220;
   width: min(var(--chrome-max), 100%);
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+  padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
   box-sizing: border-box;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: saturate(180%) blur(24px);
@@ -183,15 +184,19 @@
 }
 
 .action-bar-btn-back {
-  flex: 0 0 108px;
-  min-width: 96px;
-  height: 52px;
+  flex: 0 0 min(30%, 120px) !important;
+  min-width: 96px !important;
+  min-height: 56px !important;
+  height: auto !important;
 }
 
 .action-bar-btn-main {
   flex: 1 1 auto;
   min-width: 0;
-  height: 52px;
+  min-height: 56px !important;
+  height: auto !important;
+  font-size: 17px !important;
+  font-weight: 650 !important;
 }
 
 .section-head {
