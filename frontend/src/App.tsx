@@ -23,6 +23,7 @@ import { Verification } from './pages/Verification'
 import { Search } from './pages/Search'
 import { LookResult } from './components/LookResult'
 import { Header, ThemeToggle } from './components/ui'
+import { TabBar } from './components/TabBar'
 import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
 import { BUILD_STAMP, formatBuildLabel } from './lib/build'
@@ -163,11 +164,11 @@ export default function App() {
     if (!savedBody) return
     void markBodyUsed()
     dispatch({ type: 'patch', patch: { height_cm: savedBody.height_cm, weight_kg: savedBody.weight_kg } })
-    dispatch({ type: 'goTo', step: 'style' })
+    dispatch({ type: 'goTo', step: 'photo' })
   }, [savedBody])
 
   const handleNewBody = useCallback(() => {
-    dispatch({ type: 'goTo', step: 'body' })
+    dispatch({ type: 'goTo', step: 'photo' })
   }, [])
 
   const handleRestartAll = useCallback(() => {
@@ -307,6 +308,7 @@ export default function App() {
       {screen !== 'home' && screen !== 'wizard' ? (
         <Header
           title={SCREEN_TITLES[screen]}
+          compact
           onBack={isTelegram() ? undefined : backAction}
           onHome={goHome}
           right={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
@@ -375,6 +377,14 @@ export default function App() {
 
       {screen === 'verification' ? (
         <Verification report={report} loading={loadingList && !report} error={error} />
+      ) : null}
+
+      {screen !== 'wizard' ? (
+        <TabBar
+          active={screen === 'history' ? 'archive' : 'home'}
+          onHome={goHome}
+          onArchive={openHistory}
+        />
       ) : null}
 
       <footer className="build-stamp" title="Идентификатор сборки фронтенда">

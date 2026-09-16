@@ -6,7 +6,6 @@ import { bodyLabel, bodyUpdatedLabel } from '../lib/profile'
 import { formatRub } from '../lib/format'
 import { Chip, Header, ProgressBar, RangeField, SectionTitle, Spinner, Tile } from '../components/ui'
 import { PhotoUploader } from '../components/PhotoUploader'
-import { MOOD_BADGES, STYLE_BADGES } from '../lib/graphics'
 import { isTelegram } from '../lib/telegram'
 import { playClick } from '../lib/sound'
 
@@ -40,7 +39,6 @@ export function Wizard({
   onExit: () => void
   generating: boolean
   error: string | null
-  /** Сохранённые рост и вес: предлагаем выбор «сохранённые или новые». */
   savedBody?: BodyMemory | null
   onUseSavedBody?: () => void
   onNewBody?: () => void
@@ -50,18 +48,25 @@ export function Wizard({
   const blocker = validateStep(step, state)
   const isLast = step === STEP_ORDER[STEP_ORDER.length - 1]
   const bmi = state.weight_kg / Math.pow(state.height_cm / 100, 2)
+  const stepIndex = STEP_ORDER.indexOf(step)
 
   return (
     <div className="stack page-transition" style={{ gap: 16 }}>
       <Header
         title={STEP_TITLES[step]}
-        subtitle={
-          step === 'memory' ? 'рост и вес уже сохранены' : `Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length}`
-        }
+        compact
         onBack={isTelegram() || step === 'photo' || step === 'memory' ? undefined : onBack}
         onHome={onExit}
       />
-      {step === 'memory' ? null : <ProgressBar value={(STEP_ORDER.indexOf(step) + 1) / STEP_ORDER.length} />}
+      <div className="step-heading">
+        <h2>{STEP_TITLES[step]}</h2>
+        <div className="muted small">
+          {step === 'memory'
+            ? 'рост и вес уже сохранены'
+            : `Шаг ${Math.max(1, stepIndex + 1)} из ${STEP_ORDER.length}`}
+        </div>
+      </div>
+      {step === 'memory' ? null : <ProgressBar value={(stepIndex + 1) / STEP_ORDER.length} />}
 
       {step === 'memory' ? (
         <div className="stack" style={{ gap: 16 }}>
@@ -77,34 +82,13 @@ export function Wizard({
                 <div className="muted small">обновлено {bodyUpdatedLabel(savedBody)}</div>
               ) : null}
             </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                playClick()
-                onUseSavedBody?.()
-              }}
-            >
+            <button type="button" className="btn btn-primary" onClick={() => { playClick(); onUseSavedBody?.() }}>
               Собрать по сохранённым данным
             </button>
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                playClick()
-                onNewBody?.()
-              }}
-            >
+            <button type="button" className="btn btn-outline" onClick={() => { playClick(); onNewBody?.() }}>
               Ввести новые рост и вес
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                playClick()
-                onRestartAll?.()
-              }}
-            >
+            <button type="button" className="btn btn-ghost" onClick={() => { playClick(); onRestartAll?.() }}>
               Пройти настройку полностью заново
             </button>
           </div>
@@ -123,7 +107,7 @@ export function Wizard({
           </div>
           {state.photoDataUrl ? (
             <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
-              Снимок прикреплён — разбор внешности (цветотип, подтон, контраст) запустится при формировании гардероба.
+              Снимок прикреплён — разбор внешности запустится при формировании гардероба.
             </div>
           ) : null}
         </div>
@@ -133,30 +117,13 @@ export function Wizard({
         <div className="stack" style={{ gap: 16 }}>
           {savedBody ? (
             <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
-              Сохранено: {bodyLabel(savedBody)}. Меняйте, если что-то изменилось — новые значения запомним
-              снова.
+              Сохранено: {bodyLabel(savedBody)}. Меняйте, если что-то изменилось — новые значения запомним снова.
             </div>
           ) : null}
           <div className="card stack" style={{ gap: 22 }}>
-            <RangeField
-              label="Рост"
-              suffix="см"
-              value={state.height_cm}
-              min={LIMITS.height.min}
-              max={LIMITS.height.max}
-              onChange={(value) => onPatch({ height_cm: value })}
-            />
-            <RangeField
-              label="Вес"
-              suffix="кг"
-              value={state.weight_kg}
-              min={LIMITS.weight.min}
-              max={LIMITS.weight.max}
-              onChange={(value) => onPatch({ weight_kg: value })}
-              hint={`Индекс массы тела: ${bmi.toFixed(1)}`}
-            />
+            <RangeField label="Рост" suffix="см" value={state.height_cm} min={LIMITS.height.min} max={LIMITS.height.max} onChange={(value) => onPatch({ height_cm: value })} />
+            <RangeField label="Вес" suffix="кг" value={state.weight_kg} min={LIMITS.weight.min} max={LIMITS.weight.max} onChange={(value) => onPatch({ weight_kg: value })} hint={`Индекс массы тела: ${bmi.toFixed(1)}`} />
           </div>
-
           <div className="card stack" style={{ gap: 14 }}>
             <SectionTitle>Линия посадки</SectionTitle>
             <div className="wrap">
@@ -173,39 +140,17 @@ export function Wizard({
 
       {step === 'style' ? (
         <div className="grid-2">
-          {(meta?.styles ?? []).map((style) => {
-            const badge = STYLE_BADGES[style.id] ?? { kanji: '格', num: '00' }
-            return (
-              <Tile
-                key={style.id}
-                active={state.style === style.id}
-                badgeKanji={badge.kanji}
-                badgeNum={badge.num}
-                title={style.label}
-                description={style.description}
-                onClick={() => onPatch({ style: style.id })}
-              />
-            )
-          })}
+          {(meta?.styles ?? []).map((style) => (
+            <Tile key={style.id} active={state.style === style.id} title={style.label} description={style.description} onClick={() => onPatch({ style: style.id })} />
+          ))}
         </div>
       ) : null}
 
       {step === 'mood' ? (
         <div className="grid-2">
-          {(meta?.moods ?? []).map((mood) => {
-            const badge = MOOD_BADGES[mood.id] ?? { kanji: '気', num: '00' }
-            return (
-              <Tile
-                key={mood.id}
-                active={state.mood === mood.id}
-                badgeKanji={badge.kanji}
-                badgeNum={badge.num}
-                title={mood.label}
-                description={mood.description}
-                onClick={() => onPatch({ mood: mood.id })}
-              />
-            )
-          })}
+          {(meta?.moods ?? []).map((mood) => (
+            <Tile key={mood.id} active={state.mood === mood.id} title={mood.label} description={mood.description} onClick={() => onPatch({ mood: mood.id })} />
+          ))}
         </div>
       ) : null}
 
@@ -221,7 +166,6 @@ export function Wizard({
               ))}
             </div>
           </div>
-
           <div className="card stack" style={{ gap: 14 }}>
             <SectionTitle>Сезонность</SectionTitle>
             <div className="wrap">
@@ -232,43 +176,23 @@ export function Wizard({
               ))}
             </div>
           </div>
-
           <div className="card stack">
-            <RangeField
-              label="Бюджет гардероба"
-              suffix="₽"
-              value={state.budget_rub}
-              min={LIMITS.budget.min}
-              max={LIMITS.budget.max}
-              step={LIMITS.budget.step}
-              onChange={(value) => onPatch({ budget_rub: value })}
-              hint={`Селекция составляется строго в пределах ${formatRub(state.budget_rub)}`}
-            />
+            <RangeField label="Бюджет гардероба" suffix="₽" value={state.budget_rub} min={LIMITS.budget.min} max={LIMITS.budget.max} step={LIMITS.budget.step} onChange={(value) => onPatch({ budget_rub: value })} hint={`Селекция в пределах ${formatRub(state.budget_rub)}`} />
           </div>
-
           {meta?.colors?.length ? (
             <div className="card stack" style={{ gap: 16 }}>
               <SectionTitle hint="до 5">Предпочтительные оттенки</SectionTitle>
               <div className="wrap">
                 {meta.colors.map((color) => (
-                  <Chip
-                    key={color.id}
-                    active={state.preferred_colors.includes(color.id)}
-                    onClick={() => onToggleColor(color.id, 'preferred_colors')}
-                  >
+                  <Chip key={color.id} active={state.preferred_colors.includes(color.id)} onClick={() => onToggleColor(color.id, 'preferred_colors')}>
                     {color.label}
                   </Chip>
                 ))}
               </div>
-
               <SectionTitle hint="до 5">Исключить из подбора</SectionTitle>
               <div className="wrap">
                 {meta.colors.map((color) => (
-                  <Chip
-                    key={color.id}
-                    active={state.avoid_colors.includes(color.id)}
-                    onClick={() => onToggleColor(color.id, 'avoid_colors')}
-                  >
+                  <Chip key={color.id} active={state.avoid_colors.includes(color.id)} onClick={() => onToggleColor(color.id, 'avoid_colors')}>
                     {color.label}
                   </Chip>
                 ))}
@@ -280,117 +204,46 @@ export function Wizard({
 
       {step === 'review' ? (
         <div className="stack" style={{ gap: 16 }}>
-          <div className="stamp-card stack" style={{ gap: 12 }}>
-            <div className="stamp-strip">
-              <span className="stamp-strip-title">Ваш запрос</span>
-              <span className="stamp-strip-num">проверьте детали</span>
-            </div>
-            <ReviewRow label="Направление стиля" value={meta?.styles.find((s) => s.id === state.style)?.label ?? state.style} />
-            <ReviewRow label="Тональность настроения" value={meta?.moods.find((m) => m.id === state.mood)?.label ?? state.mood} />
+          <div className="card stack" style={{ gap: 12 }}>
+            <div className="tiny">Ваш запрос</div>
+            <ReviewRow label="Стиль" value={meta?.styles.find((s) => s.id === state.style)?.label ?? state.style} />
+            <ReviewRow label="Настроение" value={meta?.moods.find((m) => m.id === state.mood)?.label ?? state.mood} />
             <ReviewRow label="Контекст" value={meta?.occasions.find((o) => o.id === state.occasion)?.label ?? state.occasion} />
             <ReviewRow label="Сезон" value={meta?.seasons.find((s) => s.id === state.season)?.label ?? state.season} />
-            <ReviewRow label="Параметры фигуры" value={`${state.height_cm} см / ${state.weight_kg} кг`} />
-            <ReviewRow label="Предел бюджета" value={formatRub(state.budget_rub)} />
+            <ReviewRow label="Параметры" value={`${state.height_cm} см / ${state.weight_kg} кг`} />
+            <ReviewRow label="Бюджет" value={formatRub(state.budget_rub)} />
             <ReviewRow label="Снимок" value={state.photoDataUrl ? 'прикреплён' : 'без фото'} />
-            <ReviewRow
-              label="Свободный запрос"
-              value={state.query.trim() ? state.query.trim() : 'собирается из стиля и настроения'}
-            />
-            <ReviewRow
-              label="Выбранные оттенки"
-              value={
-                state.preferred_colors.length
-                  ? state.preferred_colors.map((id) => meta?.colors.find((c) => c.id === id)?.label ?? id).join(', ')
-                  : 'по усмотрению стилиста'
-              }
-            />
-            <ReviewRow
-              label="Исключённые оттенки"
-              value={
-                state.avoid_colors.length
-                  ? state.avoid_colors.map((id) => meta?.colors.find((c) => c.id === id)?.label ?? id).join(', ')
-                  : 'нет ограничений'
-              }
-            />
           </div>
-
-          <div className="stamp-card stack" style={{ gap: 12 }}>
-            <div className="stamp-strip">
-              <span className="stamp-strip-title">Своя формулировка</span>
-              <span className="stamp-strip-num">необязательно</span>
-            </div>
+          <div className="card stack" style={{ gap: 12 }}>
+            <div className="tiny">Своя формулировка</div>
             <p className="muted small" style={{ margin: 0 }}>
-              Опишите образ словами — соберём вещи под ваш текст. Оставьте пустым — возьмём стиль и настроение.
+              Опишите образ словами или оставьте пустым — возьмём стиль и настроение.
             </p>
-            <textarea
-              className="engine-query"
-              rows={3}
-              value={state.query}
-              placeholder="Например: грязный индустриальный образ с прозрачным верхом"
-              aria-label="Своя формулировка образа"
-              onChange={(event) => onPatch({ query: event.target.value })}
-            />
+            <textarea className="engine-query" rows={3} value={state.query} placeholder="Например: грязный индустриальный образ" aria-label="Своя формулировка" onChange={(e) => onPatch({ query: e.target.value })} />
           </div>
-
           {state.photoDataUrl ? (
             <div className="photo-preview-container">
               <img src={state.photoDataUrl} alt="Кадр для анализа" />
             </div>
           ) : null}
-
           {error ? <div className="error-box">{error}</div> : null}
         </div>
       ) : null}
 
-      {/* Sticky Bottom Action Bar: Buttons CANNOT overlap */}
       <div className="action-bar">
         {blocker ? (
-          <div className="muted small" style={{ textAlign: 'center', color: 'var(--accent-crimson)' }}>
-            {blocker}
-          </div>
+          <div className="muted small" style={{ textAlign: 'center', color: 'var(--accent-crimson)' }}>{blocker}</div>
         ) : null}
         <div className="action-bar-inner">
-          {step !== 'photo' ? (
-            <button
-              type="button"
-              className="btn action-bar-btn-back"
-              onClick={() => {
-                playClick()
-                onBack()
-              }}
-            >
-              Назад
-            </button>
+          {step !== 'photo' && step !== 'memory' ? (
+            <button type="button" className="btn action-bar-btn-back" onClick={() => { playClick(); onBack() }}>Назад</button>
           ) : null}
-
           {isLast ? (
-            <button
-              type="button"
-              className="btn btn-primary action-bar-btn-main"
-              onClick={() => {
-                playClick()
-                onGenerate()
-              }}
-              disabled={generating}
-            >
-              {generating ? (
-                <>
-                  <Spinner /> Формируем гардероб
-                </>
-              ) : (
-                'Сгенерировать'
-              )}
+            <button type="button" className="btn btn-primary action-bar-btn-main" onClick={() => { playClick(); onGenerate() }} disabled={generating}>
+              {generating ? (<><Spinner /> Формируем гардероб</>) : 'Сгенерировать'}
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary action-bar-btn-main"
-              onClick={() => {
-                playClick()
-                onNext()
-              }}
-              disabled={Boolean(blocker)}
-            >
+          ) : step === 'memory' ? null : (
+            <button type="button" className="btn btn-primary action-bar-btn-main" onClick={() => { playClick(); onNext() }} disabled={Boolean(blocker)}>
               Далее
             </button>
           )}
@@ -402,11 +255,9 @@ export function Wizard({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="row-between small" style={{ borderBottom: '1px dashed var(--stamp-line-soft)', paddingBottom: 4 }}>
-      <span className="muted" style={{ color: 'var(--stamp-ink-muted)' }}>
-        {label}
-      </span>
-      <strong style={{ color: 'var(--stamp-ink)', textAlign: 'right' }}>{value}</strong>
+    <div className="row-between small" style={{ borderBottom: '1px dashed var(--border-muted)', paddingBottom: 4 }}>
+      <span className="muted">{label}</span>
+      <strong style={{ textAlign: 'right' }}>{value}</strong>
     </div>
   )
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { Look } from '../lib/types'
 import { formatRub, itemsWord } from '../lib/format'
-import { playClick, playStamp, playTick } from '../lib/sound'
-import { DobermanStamp, PostalCancellationStamp, StarIcon } from '../lib/graphics'
+import { playClick, playTick } from '../lib/sound'
+import { StarIcon } from '../lib/graphics'
 import { Badge, BudgetBar, ScoreRing, SectionTitle } from './ui'
 import { ItemCard } from './ItemCard'
 
@@ -27,7 +27,6 @@ export function LookResult({
   onFavorite: () => void
 }) {
   const [showDiagnostics, setShowDiagnostics] = useState(false)
-  const [stampActive, setStampActive] = useState(false)
   const [activeColorInfo, setActiveColorInfo] = useState<string | null>(null)
 
   const diagnostics = look.diagnostics as {
@@ -42,8 +41,6 @@ export function LookResult({
   const tasteMix = Object.entries(engine?.taste_mix ?? {})
   const hexById = new Map(colors.map((entry) => [entry.id, entry.hex]))
 
-  // Что именно открывается по кнопке у каждой вещи: конкретное объявление или
-  // (в крайнем случае) подборка Авито. Пользователь должен видеть разницу.
   const listingKinds = look.items.map((item) => item.link_kind ?? item.listing?.kind ?? 'listing')
   const concreteListings = listingKinds.filter((kind) => kind !== 'search').length
   const searchFallbacks = listingKinds.length - concreteListings
@@ -53,41 +50,34 @@ export function LookResult({
     null
   const fromSnapshot = look.items.filter((item) => (item.feed ?? item.listing?.feed) === 'snapshot').length
   const feedNotes = engine?.feed_notes ?? []
-
-  const handleSealStamp = () => {
-    playStamp()
-    setStampActive(true)
-    setTimeout(() => setStampActive(false), 400)
-  }
+  const unifiedScore = Math.round(look.score)
+  const thesisRu = engine?.styling_thesis_ru || engine?.styling_thesis
+  const fitHint =
+    engineActive && engine?.outfit_score != null
+      ? `посадка ${Math.round(engine.outfit_score)}/100`
+      : null
 
   return (
     <div className="stack page-transition" style={{ gap: 16 }}>
-      {/* ---------- Итог селекции ---------- */}
-      <section className="stamp-card stack" style={{ gap: 18 }}>
-        <div className="stamp-strip">
-          <div className="stamp-strip-title">
-            <span>Готовый образ</span>
-            <span className="tiny">· {look.plan}</span>
-          </div>
-          <div className="stamp-strip-num">№ {look.id ?? '01'}</div>
+      <section className="card stack" style={{ gap: 18 }}>
+        <div className="row-between" style={{ gap: 10 }}>
+          <span className="tiny">Готовый образ · {look.plan}</span>
+          <span className="tiny">№ {look.id ?? '01'}</span>
         </div>
 
-        <div className="result-head">
-          <ScoreRing score={look.score} />
-
-          <div className="result-head-main">
+        <div className="unified-score">
+          <ScoreRing score={unifiedScore} />
+          <div className="unified-score-main">
             <h2>{look.verdict.title || 'Персональный образ'}</h2>
             <div className="small muted" style={{ marginTop: 4 }}>
               {look.verdict.note}
             </div>
+            <div className="unified-score-meta">
+              Оценка {unifiedScore}/100
+              {fitHint ? ` · ${fitHint}` : ''}
+              {look.verdict.grade ? ` · ${look.verdict.grade}` : ''}
+            </div>
           </div>
-
-          <PostalCancellationStamp
-            text="ASStylist · 2026"
-            sub="VERIFIED SELECTION"
-            active={stampActive}
-            onClick={handleSealStamp}
-          />
         </div>
 
         <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.55 }}>{look.summary}</p>
@@ -107,30 +97,23 @@ export function LookResult({
             <Badge tone="ok">все вещи — с Авито</Badge>
           ) : null}
           {look.is_favorite ? <Badge tone="ok">в избранном</Badge> : null}
-          <span className="stamp-badge">Сертификат · {look.verdict.grade}</span>
         </div>
 
         <BudgetBar total={look.total_rub} budget={look.budget_rub} />
 
         {engineActive ? (
-          <div className="engine-thesis stack" style={{ gap: 12 }}>
-            <div className="row-between" style={{ gap: 10, alignItems: 'center' }}>
-              <span className="tiny">Тезис образа</span>
-              <span className="tiny">{engine?.styling_thesis}</span>
-            </div>
-            <div className="row" style={{ gap: 14, alignItems: 'center' }}>
-              <div className="engine-score">
-                <strong>{Math.round(engine?.outfit_score ?? 0)}</strong>
-                <span className="tiny">fit score</span>
+          <div className="stack" style={{ gap: 10 }}>
+            {thesisRu ? (
+              <div>
+                <div className="tiny">Тезис</div>
+                <strong style={{ fontSize: 16 }}>{thesisRu}</strong>
+                {engine?.score_formula || engine?.aesthetic_ru || engine?.aesthetic ? (
+                  <div className="muted small" style={{ marginTop: 3 }}>
+                    {[engine?.score_formula, engine?.aesthetic_ru ?? engine?.aesthetic].filter(Boolean).join(' · ')}
+                  </div>
+                ) : null}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <strong style={{ fontSize: 16 }}>{engine?.styling_thesis_ru || engine?.styling_thesis}</strong>
-                <div className="muted small" style={{ marginTop: 3 }}>
-                  {engine?.score_formula}
-                  {engine?.aesthetic_ru || engine?.aesthetic ? ` · ${engine.aesthetic_ru ?? engine.aesthetic}` : ''}
-                </div>
-              </div>
-            </div>
+            ) : null}
             <div className="wrap" style={{ gap: 8 }}>
               <Badge tone={engine?.critic_decision === 'APPROVE' ? 'ok' : 'warn'}>
                 критик: {engine?.critic_decision === 'APPROVE' ? 'одобрено' : 'нужно усилить'}
@@ -150,26 +133,14 @@ export function LookResult({
           </div>
         ) : null}
 
-        {/* Действия — сетка с широкими промежутками */}
         <div className="home-actions-grid">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              playClick()
-              onNewLook()
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={() => { playClick(); onNewLook() }}>
             Новый образ
           </button>
-
           <button
             type="button"
             className="btn btn-outline"
-            onClick={() => {
-              playClick()
-              onFavorite()
-            }}
+            onClick={() => { playClick(); onFavorite() }}
             disabled={look.id === null}
           >
             <StarIcon filled={look.is_favorite} size={14} />
@@ -178,31 +149,23 @@ export function LookResult({
         </div>
       </section>
 
-      {/* ---------- Силуэт и пропорции ---------- */}
       <section className="card stack" style={{ gap: 14 }}>
         <SectionTitle index="01" hint={`точность ${Math.round(look.body.confidence * 100)}%`}>
           Силуэт и посадка
         </SectionTitle>
-
-        <div className="row" style={{ gap: 18, alignItems: 'center' }}>
-          <div style={{ width: 60, flexShrink: 0 }}>
-            <DobermanStamp />
+        <div style={{ minWidth: 0 }}>
+          <strong style={{ fontSize: 16 }}>{look.body.silhouette_ru}</strong>
+          <div className="muted small" style={{ marginTop: 4 }}>
+            ИМТ {look.body.bmi} ({look.body.bmi_label}) · рост {look.body.height_cm} см · вес {look.body.weight_kg} кг
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <strong style={{ fontSize: 16 }}>{look.body.silhouette_ru}</strong>
-            <div className="muted small" style={{ marginTop: 4 }}>
-              ИМТ {look.body.bmi} ({look.body.bmi_label}) · рост {look.body.height_cm} см · вес {look.body.weight_kg} кг
+          {look.body.recommended_fits.length ? (
+            <div className="wrap" style={{ marginTop: 10, gap: 8 }}>
+              {look.body.recommended_fits.map((fit) => (
+                <Badge key={fit}>посадка: {fit}</Badge>
+              ))}
             </div>
-            {look.body.recommended_fits.length ? (
-              <div className="wrap" style={{ marginTop: 10, gap: 8 }}>
-                {look.body.recommended_fits.map((fit) => (
-                  <Badge key={fit}>посадка: {fit}</Badge>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-
         {look.body.signals?.length ? (
           <ul className="reasons">
             {look.body.signals.map((signal) => (
@@ -212,14 +175,12 @@ export function LookResult({
         ) : null}
       </section>
 
-      {/* ---------- Палитра оттенков ---------- */}
       <section className="card stack" style={{ gap: 10 }}>
         <SectionTitle index="02" hint={`точность ${Math.round(look.palette.confidence * 100)}%`}>
           {look.palette.source !== 'defaults' && look.palette.color_type_ru
             ? `Цветотип · ${look.palette.color_type_ru}`
             : `Цветовая гамма · ${look.palette.season_label}`}
         </SectionTitle>
-
         {look.palette.source !== 'defaults' ? (
           <div className="appearance-row">
             {look.palette.skin_hex ? (
@@ -233,7 +194,6 @@ export function LookResult({
             {look.palette.metal_ru ? <Badge>металл: {look.palette.metal_ru}</Badge> : null}
           </div>
         ) : null}
-
         {look.palette.signals?.length ? (
           <ul className="reasons">
             {look.palette.signals.slice(0, 3).map((signal) => (
@@ -241,7 +201,6 @@ export function LookResult({
             ))}
           </ul>
         ) : null}
-
         <div className="palette-dots">
           {look.palette.recommended.slice(0, 14).map((id) => (
             <span
@@ -256,11 +215,9 @@ export function LookResult({
             />
           ))}
         </div>
-
         {activeColorInfo ? (
           <div className="small muted">Выбран оттенок: <strong>{activeColorInfo}</strong></div>
         ) : null}
-
         {look.palette.avoid.length ? (
           <div className="muted small">
             Рекомендуется ограничить: {look.palette.avoid.map((id) => colorLabel(id, colors)).join(', ')}
@@ -273,12 +230,10 @@ export function LookResult({
         ) : null}
       </section>
 
-      {/* ---------- Предметы гардероба ---------- */}
       <section className="stack" style={{ gap: 12 }}>
         <SectionTitle index="03" hint={`структура: ${look.plan}`}>
           Предметы селекции
         </SectionTitle>
-
         <div className={`listing-summary ${searchFallbacks > 0 ? 'listing-summary-warn' : ''}`}>
           <strong>
             {concreteListings} из {look.items.length} вещей — конкретные объявления Авито
@@ -302,7 +257,6 @@ export function LookResult({
         ))}
       </section>
 
-      {/* ---------- Советы стилиста ---------- */}
       <section className="card stack" style={{ gap: 8 }}>
         <SectionTitle index="04">Советы стилиста</SectionTitle>
         <ul className="reasons">
@@ -312,7 +266,6 @@ export function LookResult({
         </ul>
       </section>
 
-      {/* ---------- Параметры селекции ---------- */}
       <section className="card stack" style={{ gap: 8 }}>
         <button
           type="button"
@@ -324,7 +277,6 @@ export function LookResult({
         >
           {showDiagnostics ? 'Скрыть параметры селекции' : 'Технические параметры селекции'}
         </button>
-
         {showDiagnostics ? (
           <div className="small muted stack" style={{ gap: 6, paddingTop: 6 }}>
             <div>Версия платформы: v{look.engine_version}</div>
