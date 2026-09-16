@@ -44,7 +44,6 @@ export function Home({
           <div className="wrap" style={{ gap: 8 }}>
             <Badge>{meta.styles.length} стилей</Badge>
             <Badge>{meta.moods.length} настроений</Badge>
-            <Badge>{meta.colors.length} оттенков</Badge>
             <Badge>до {formatRub(meta.budget.max_rub)}</Badge>
             <Badge tone="ok">вещи — с Авито</Badge>
           </div>
