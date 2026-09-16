@@ -58,9 +58,15 @@ export default function App() {
   const [loadingList, setLoadingList] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
   const [savedBody, setSavedBody] = useState<BodyMemory | null>(null)
-  const [theme, setTheme] = useState<'noir' | 'parchment'>(() =>
-    telegramColorScheme() === 'dark' ? 'noir' : 'parchment',
-  )
+  const [theme, setTheme] = useState<'noir' | 'parchment'>(() => {
+    try {
+      const saved = localStorage.getItem('asstylist-theme')
+      if (saved === 'noir' || saved === 'parchment') return saved
+    } catch {
+      /* ignore */
+    }
+    return 'noir'
+  })
 
   const [introDone, setIntroDone] = useState(() => {
     try {
@@ -82,6 +88,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     syncTelegramChrome(theme)
+    try {
+      localStorage.setItem('asstylist-theme', theme)
+    } catch {
+      /* ignore */
+    }
   }, [theme])
 
   const applyTheme = useCallback((next: 'noir' | 'parchment') => setTheme(next), [])
@@ -102,6 +113,11 @@ export default function App() {
 
   useEffect(() => {
     const offTheme = onTelegramEvent('themeChanged', () => {
+      try {
+        if (localStorage.getItem('asstylist-theme')) return
+      } catch {
+        /* ignore */
+      }
       applyTheme(telegramColorScheme() === 'dark' ? 'noir' : 'parchment')
     })
     return offTheme

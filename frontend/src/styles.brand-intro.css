@@ -4,6 +4,15 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 body {
@@ -37,6 +46,15 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.stage > .app::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
 }
 
 .app.app-booting {
@@ -49,7 +67,7 @@ body {
   transition: opacity 0.55s ease;
 }
 
-/* Devil letter A */
+/* Devil letter A — refined mark */
 
 .devil-a {
   position: relative;
@@ -58,45 +76,54 @@ body {
   justify-content: center;
   color: #fff;
   line-height: 1;
-  margin-right: 0.02em;
+  margin-right: 0.04em;
+  padding: 0.12em 0.15em 0.05em;
 }
 
 .devil-a-letter {
   font-weight: 800;
   line-height: 1;
   color: #fff;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 
 .devil-a-horns {
   position: absolute;
   left: 50%;
-  top: -0.28em;
+  top: -0.38em;
   transform: translateX(-50%);
-  width: 1.05em;
-  height: 0.48em;
-  color: var(--accent-leopard, #e82045);
+  width: 1.35em;
+  height: 0.58em;
+  overflow: visible;
   pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .devil-a-tail {
   position: absolute;
-  right: -0.42em;
-  bottom: -0.12em;
-  width: 0.72em;
-  height: 0.55em;
-  color: var(--accent-leopard, #e82045);
+  right: -0.55em;
+  bottom: -0.2em;
+  width: 0.95em;
+  height: 0.7em;
+  overflow: visible;
   pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .devil-a-staff {
   position: absolute;
-  left: -0.28em;
-  top: 0.05em;
-  width: 0.36em;
-  height: 0.72em;
-  color: var(--accent-gold, #e8b020);
+  left: -0.38em;
+  top: -0.02em;
+  width: 0.48em;
+  height: 0.95em;
+  overflow: visible;
   pointer-events: none;
-  opacity: 0.95;
+  z-index: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
 }
 
 .brand-logo-ass {
@@ -107,12 +134,38 @@ body {
 }
 
 .brand-logo-big .devil-a-horns {
-  top: -0.32em;
-  width: 1.1em;
+  top: -0.42em;
+  width: 1.45em;
+  height: 0.62em;
 }
 
 .brand-logo-big .devil-a-tail {
-  right: -0.48em;
+  right: -0.62em;
+  width: 1.05em;
+}
+
+.brand-logo-big .devil-a-staff {
+  left: -0.42em;
+  width: 0.52em;
+  height: 1.05em;
+}
+
+/* Rounded header corners */
+.app-header,
+.app[data-screen='wizard'] .app-header,
+.app[data-screen='result'] .app-header,
+.app[data-screen='search'] .app-header,
+.app[data-screen='history'] .app-header,
+.app[data-screen='profile'] .app-header {
+  border-radius: 0 0 20px 20px !important;
+}
+
+.app[data-screen='result'] .app-header,
+.app[data-screen='search'] .app-header,
+.app[data-screen='history'] .app-header,
+.app[data-screen='profile'] .app-header {
+  border-radius: 0 0 22px 22px !important;
+  overflow: hidden;
 }
 
 /* Boot intro */
