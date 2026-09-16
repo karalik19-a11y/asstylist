@@ -37,16 +37,22 @@ def default_weights() -> dict[str, float]:
 
 #: Which style tags count as a partial match for a requested style.
 STYLE_AFFINITY: dict[str, set[str]] = {
-    "minimal": {"old_money", "business_casual", "avantgarde", "techwear"},
-    "old_money": {"minimal", "business_casual", "romantic"},
-    "streetwear": {"athleisure", "techwear", "grunge"},
-    "business_casual": {"minimal", "old_money"},
-    "techwear": {"streetwear", "minimal", "athleisure"},
-    "romantic": {"boho", "old_money", "minimal"},
-    "athleisure": {"streetwear", "techwear", "minimal"},
-    "grunge": {"streetwear", "boho", "avantgarde"},
+    "minimal": {"old_money", "business_casual", "avantgarde", "techwear", "office_siren"},
+    "old_money": {"minimal", "business_casual", "romantic", "dark_academia"},
+    "streetwear": {"athleisure", "techwear", "grunge", "y2k", "indie_sleaze"},
+    "business_casual": {"minimal", "old_money", "office_siren", "dark_academia"},
+    "techwear": {"streetwear", "minimal", "athleisure", "gorpcore"},
+    "romantic": {"boho", "old_money", "minimal", "balletcore"},
+    "athleisure": {"streetwear", "techwear", "minimal", "gorpcore", "y2k"},
+    "grunge": {"streetwear", "boho", "avantgarde", "indie_sleaze"},
     "boho": {"romantic", "grunge", "minimal"},
     "avantgarde": {"minimal", "techwear", "grunge"},
+    "office_siren": {"business_casual", "old_money", "minimal", "y2k"},
+    "gorpcore": {"techwear", "athleisure", "streetwear"},
+    "y2k": {"streetwear", "indie_sleaze", "athleisure", "office_siren"},
+    "indie_sleaze": {"grunge", "y2k", "streetwear", "avantgarde"},
+    "dark_academia": {"old_money", "business_casual", "minimal", "romantic"},
+    "balletcore": {"romantic", "minimal", "old_money", "athleisure"},
 }
 
 MOOD_AFFINITY: dict[str, set[str]] = {

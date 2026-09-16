@@ -6,6 +6,7 @@ from typing import Any
 
 from .colors import COLORS
 from .options import SLOT_LABELS, mood_by_id, style_by_id
+from .palette import CONTRAST_RU, METAL_RU, PaletteProfile
 from .ranking import ScoredItem, describe_colors
 
 FIT_RU = {
@@ -124,3 +125,77 @@ def look_summary(
         f"{total_rub:,.0f} ₽ из {budget_rub:,.0f} ₽ (остаток {left:,.0f} ₽).{key_item} "
         f"Оценка цельности образа — {score:.0f}/100."
     )
+
+
+#: Повод по-русски для персонального объяснения (не дублируем OCCASION_OPTIONS,
+#: чтобы explain оставался независимым от подписей UI).
+OCCASION_RU = {
+    "everyday": "на каждый день",
+    "work": "на работу",
+    "date": "на свидание",
+    "party": "на вечеринку",
+    "travel": "в поездку",
+    "event": "на событие",
+}
+
+
+def personal_note(
+    *,
+    style: str,
+    mood: str,
+    occasion: str,
+    palette: PaletteProfile,
+    body: Any,
+    picked: dict[str, Any],
+    total_rub: float,
+    budget_rub: float,
+) -> str:
+    """2–3 коротких предложения, почему образ собран именно для этого
+    пользователя: цветотип по фото, силуэт, повод и бюджет."""
+    parts: list[str] = []
+    style_label = style_by_id(style)["label"]
+    mood_label = mood_by_id(mood)["label"]
+
+    look_colors: list[str] = []
+    for scored in picked.values():
+        item_colors = getattr(getattr(scored, "item", None), "colors", None) or []
+        look_colors.extend(str(cid) for cid in item_colors)
+    palette_hits = [cid for cid in dict.fromkeys(look_colors) if cid in set(palette.recommended)]
+    hit_names = describe_colors(palette_hits[:3]) if palette_hits else ""
+
+    if palette.source != "defaults":
+        undertone_ru = {"warm": "тёплый", "cool": "холодный", "neutral": "нейтральный"}.get(
+            palette.undertone, palette.undertone
+        )
+        contrast_ru = CONTRAST_RU.get(palette.contrast, palette.contrast)
+        color_part = f"гамма из вашей палитры — {hit_names}" if hit_names else "гамма из вашей палитры"
+        metal_ru = METAL_RU.get(palette.metal, palette.metal)
+        parts.append(
+            f"Под ваш цветотип «{palette.season_label}» ({undertone_ru} подтон, контраст {contrast_ru}) "
+            f"собрана {color_part}; фурнитура и металл — {metal_ru}."
+        )
+    elif hit_names:
+        parts.append(f"Оттенки ({hit_names}) взяты из ваших любимых и фирменных цветов стиля.")
+    else:
+        parts.append("Палитра собрана из фирменных оттенков стиля.")
+
+    fits: list[str] = []
+    for scored in picked.values():
+        fit = getattr(getattr(scored, "item", None), "fit", None)
+        if fit and fit not in fits:
+            fits.append(str(fit))
+    fit_ru = " и ".join(FIT_RU.get(fit, fit) for fit in fits[:2])
+    silhouette_ru = getattr(body, "silhouette_ru", "") or "ваш силуэт"
+    if fit_ru:
+        parts.append(f"Крой — под силуэт «{silhouette_ru}» и параметры фигуры: {fit_ru}.")
+    else:
+        parts.append(f"Крой — под силуэт «{silhouette_ru}» и параметры фигуры.")
+
+    occasion_ru = OCCASION_RU.get(occasion, "на каждый день")
+    note = (
+        f"Стиль «{style_label.lower()}» и настроение «{mood_label.lower()}» собраны {occasion_ru}: "
+        + " ".join(parts)
+    )
+    if palette.source == "defaults":
+        note += " Добавьте фото — тогда учтём цветотип и контраст внешности."
+    return note

@@ -1,18 +1,26 @@
 """MockRealProductProvider — порт ``src/search/providers/MockRealProductProvider.js``.
 
 Справочник архетипов реальных дизайнерских вещей (Ann Demeulemeester,
-Rick Owens, Margiela, Yohji…). В asStylist включается только явным флагом
-``FASHION_ENGINE_ENABLE_MOCK=true`` — по умолчанию поиск идёт по каталогу
-приложения, а этот провайдер остаётся для сравнения поведения с оригиналом.
+Rick Owens, Margiela, Yohji…). В asStylist включён по умолчанию
+(``FASHION_ENGINE_ENABLE_MOCK=true``): позиции дают движку нишевый
+референс-ряд, а ссылки ведут на живой поиск по ритейлеру (Farfetch) —
+никаких заглушечных ``example.invalid``.
 
 ``randomUUID()`` заменён на детерминированный ``stable_id``.
 """
 
 from __future__ import annotations
 
+from urllib.parse import quote_plus
+
 from ...helpers import stable_id
 from ...types import ProductItem
 from ..provider import SearchContext, SearchProvider, ValidationOutcome
+
+
+def _shop_link(brand: str, name: str) -> str:
+    """Живая ссылка, где вещь реально можно найти и купить (поиск ритейлера)."""
+    return f"https://www.farfetch.com/shopping/search/items.aspx?q={quote_plus(f'{brand} {name}')}"
 
 #: (name, brand, category, price, currency, source_type, availability, tags)
 _REAL_CATALOG: tuple[tuple, ...] = (
@@ -37,6 +45,14 @@ _REAL_CATALOG: tuple[tuple, ...] = (
 )
 
 _CONFIDENCE = {"designer": 0.92, "archive": 0.85, "niche": 0.82, "cult": 0.8, "independent": 0.78}
+
+#: Прямые hotlink-ссылки на изображения архетипов. По умолчанию пусто:
+#: вещи из живого поиска (web-search) приносят фото с собой в реальном
+#: времени, а архетипы без прямой ссылки на фото рендерятся цветным
+#: плейсхолдером — это честнее, чем битая или неточная картинка.
+#: Ссылки добавляются руками (``Имя архетипа → URL``); URL должен вести
+#: на реальное фото именно этой вещи.
+MOCK_IMAGES: dict[str, str] = {}
 
 
 class MockRealProductProvider(SearchProvider):
@@ -72,18 +88,23 @@ class MockRealProductProvider(SearchProvider):
             items.append(
                 ProductItem(
                     id=stable_id(brand, name, prefix="mock_"),
+                    sku=stable_id(brand, name, prefix="mock_"),
                     name=name,
                     brand=brand,
                     category=category,
                     price=float(price),
                     currency=currency,
-                    image="",
-                    source_url=f"https://example.invalid/{stable_id(brand, name, prefix='')}",
+                    image=MOCK_IMAGES.get(name, ""),
+                    source_url=_shop_link(brand, name),
                     source_type=source_type,
                     availability=availability,
                     confidence=_CONFIDENCE.get(source_type, 0.78),
                     tags=list(tags),
                     description=" ".join(tags),
+                    # Для смешанной сортировки в выдаче приложения: баллы
+                    # релевантности провайдера сравнимы с каталожными
+                    # (12 за токен, 18 за точный тег — та же шкала).
+                    meta={"query_match": float(_score)},
                 )
             )
         return items

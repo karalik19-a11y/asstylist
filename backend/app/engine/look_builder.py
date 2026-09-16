@@ -7,7 +7,7 @@ from typing import Any
 
 from .body import BodyProfile, analyze_body
 from .budget import LookDraft, build_look
-from .explain import item_reasons, look_summary, look_tips
+from .explain import item_reasons, look_summary, look_tips, personal_note
 from .options import SLOT_CATEGORIES, SLOT_LABELS, SLOT_PLANS, plan_for_season
 from .palette import PaletteProfile, analyze_palette
 from .ranking import (
@@ -66,6 +66,8 @@ class LookResult:
     palette: PaletteProfile
     plan: str
     diagnostics: dict[str, Any]
+    #: Короткое объяснение «почему этот образ именно вам» (цветотип, силуэт, повод).
+    personal_note: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -77,6 +79,7 @@ class LookResult:
             "verdict": self.verdict,
             "cohesion": self.cohesion,
             "summary": self.summary,
+            "personal_note": self.personal_note,
             "tips": self.tips,
             "body": self.body.to_dict(),
             "palette": self.palette.to_dict(),
@@ -328,4 +331,14 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
         palette=palette,
         plan=plan_id,
         diagnostics=diagnostics,
+        personal_note=personal_note(
+            style=request.style,
+            mood=request.mood,
+            occasion=request.occasion,
+            palette=palette,
+            body=body,
+            picked=picked,
+            total_rub=draft.total_rub,
+            budget_rub=request.budget_rub,
+        ),
     )

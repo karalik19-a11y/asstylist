@@ -120,10 +120,31 @@ class Settings(BaseSettings):
     #: Предохранитель по размеру пула, который уходит в движок.
     fashion_engine_max_cards: int = 160
     fashion_engine_min_confidence: float = 0.6
-    #: Подключать справочный mock-каталог дизайнерских архетипов из оригинала.
-    fashion_engine_enable_mock: bool = False
+    #: Подключать справочный каталог дизайнерских архетипов (Rick Owens,
+    #: Margiela, Yohji…): ссылки ведут на поиск по ритейлеру, позиции помечены
+    #: как «архетип движка» и проходят тот же интеллектуальный отбор.
+    fashion_engine_enable_mock: bool = True
     #: Вес оценки образа движка в итоговом индексе (0…1).
     fashion_engine_score_weight: float = 0.3
+
+    # --- живой поиск вещей (WebSearchProvider) ------------------------
+    #: Мастер-переключатель: без ключей провайдер тихо отдаёт пустой список,
+    #: пайплайн при этом работает по каталогу приложения.
+    web_search_enabled: bool = True
+    web_search_timeout_sec: float = 6.0
+    web_search_max_results: int = 8
+    #: SerpAPI (engine=google_shopping) — основной живой источник.
+    serpapi_api_key: str | None = None
+    #: Google Custom Search — запасной живой источник (нужны key + cx).
+    google_cse_api_key: str | None = None
+    google_cse_cx: str | None = None
+    #: Партнёрский фид магазина: URL JSON-массива товаров
+    #: [{name, brand, price, currency, category, image, url, tags?}, …].
+    product_feed_url: str | None = None
+    #: Курсы для пересчёта цен источников в рубли (отображение и бюджет).
+    fx_rates: dict[str, float] = Field(
+        default_factory=lambda: {"RUB": 1.0, "EUR": 100.0, "USD": 90.0, "GBP": 115.0, "CNY": 12.5}
+    )
 
     # --- ranking -------------------------------------------------------
     ranking_weights: dict[str, float] = Field(default_factory=lambda: dict(DEFAULT_RANKING_WEIGHTS))
@@ -156,6 +177,20 @@ class Settings(BaseSettings):
         if provider == "gemini" and not self.gemini_api_key:
             return "local"
         return provider
+
+    @property
+    def web_search_available(self) -> bool:
+        """Есть ли хотя бы один сконфигурированный живой источник."""
+        if not self.web_search_enabled:
+            return False
+        return bool(self.serpapi_api_key or self.product_feed_url or (self.google_cse_api_key and self.google_cse_cx))
+
+    def to_rub(self, amount: float, currency: str) -> float | None:
+        """Пересчитать цену источника в рубли; None, если валюта неизвестна."""
+        rate = (self.fx_rates or {}).get((currency or "RUB").upper())
+        if rate is None:
+            return None
+        return round(float(amount) * float(rate), 2)
 
 
 @lru_cache

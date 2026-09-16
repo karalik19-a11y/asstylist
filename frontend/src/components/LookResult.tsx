@@ -80,6 +80,13 @@ export function LookResult({
 
         <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.55 }}>{look.summary}</p>
 
+        {look.personal_note ? (
+          <div className="personal-note">
+            <span className="tiny">Почему это ваш образ</span>
+            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.55 }}>{look.personal_note}</p>
+          </div>
+        ) : null}
+
         <div className="wrap" style={{ gap: 8 }}>
           <Badge>
             {itemsWord(look.items.length)} · {formatRub(look.total_rub)}
@@ -193,8 +200,32 @@ export function LookResult({
       {/* ---------- Палитра оттенков ---------- */}
       <section className="card stack" style={{ gap: 10 }}>
         <SectionTitle index="02" hint={`точность ${Math.round(look.palette.confidence * 100)}%`}>
-          Цветовая гамма · {look.palette.season_label}
+          {look.palette.source !== 'defaults' && look.palette.color_type_ru
+            ? `Цветотип · ${look.palette.color_type_ru}`
+            : `Цветовая гамма · ${look.palette.season_label}`}
         </SectionTitle>
+
+        {look.palette.source !== 'defaults' ? (
+          <div className="appearance-row">
+            {look.palette.skin_hex ? (
+              <span className="appearance-swatch" style={{ background: look.palette.skin_hex }} title="Тон кожи по фото" />
+            ) : null}
+            {look.palette.hair_hex ? (
+              <span className="appearance-swatch" style={{ background: look.palette.hair_hex }} title="Оттенок волос по фото" />
+            ) : null}
+            {look.palette.undertone_ru ? <Badge>подтон: {look.palette.undertone_ru}</Badge> : null}
+            {look.palette.contrast_ru ? <Badge>контраст: {look.palette.contrast_ru}</Badge> : null}
+            {look.palette.metal_ru ? <Badge>металл: {look.palette.metal_ru}</Badge> : null}
+          </div>
+        ) : null}
+
+        {look.palette.signals?.length ? (
+          <ul className="reasons">
+            {look.palette.signals.slice(0, 3).map((signal) => (
+              <li key={signal}>{signal}</li>
+            ))}
+          </ul>
+        ) : null}
 
         <div className="palette-dots">
           {look.palette.recommended.slice(0, 14).map((id) => (

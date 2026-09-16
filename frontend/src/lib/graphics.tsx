@@ -338,6 +338,12 @@ export const STYLE_BADGES: Record<string, { kanji: string; num: string; code: st
   grunge: { kanji: '破', num: '08', code: 'GRUNGE' },
   boho: { kanji: '風', num: '09', code: 'BOHO' },
   avantgarde: { kanji: '前', num: '10', code: 'AVANT' },
+  office_siren: { kanji: '室', num: '11', code: 'OFFICE' },
+  gorpcore: { kanji: '山', num: '12', code: 'GORP' },
+  y2k: { kanji: '零', num: '13', code: 'Y2K' },
+  indie_sleaze: { kanji: '夜', num: '14', code: 'SLEAZE' },
+  dark_academia: { kanji: '学', num: '15', code: 'ACADEMA' },
+  balletcore: { kanji: '舞', num: '16', code: 'BALLET' },
 }
 
 /** Roman / Japanese Stamp Badges for the 8 moods */

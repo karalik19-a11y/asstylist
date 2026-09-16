@@ -32,6 +32,13 @@ FEMININE_ITEMS = {
     "SH-006", "SH-008", "SH-012",          # ballet flats, heeled boots, pumps
     "TP-006", "TP-008",                    # bustier top, ruffle blouse
     "KN-008",
+    # трендовые позиции 2026
+    "BT-016", "BT-021",                    # pencil skirt, tulle midi
+    "TP-018", "TP-019",                    # pussy-bow blouse, baby tee
+    "SH-016", "SH-020",                    # slingbacks, ribbon ballet flats
+    "BG-013",                              # baguette bag
+    "AC-014", "AC-016",                    # fishnet tights, leg warmers
+    "KN-013",                              # wrap cardigan
 }
 
 BRAND_SOURCES: dict[str, tuple[str, str]] = {
@@ -157,6 +164,87 @@ _ROWS: list[tuple] = [
     ("AC-011", "accessory", "Носки набор 3 пары", "Cozy Line", 790, ["white", "grey"], ["athleisure", "streetwear"], ["cozy"], 1, "regular", ["all"], 4.0, 210),
 ]
 
+#: Дополнительные стилевые теги для позиций базового каталога: TikTok/Pinterest
+#: 2026 носятся с существующими базовыми вещами, поэтому трендовые эстетики
+#: добавлены к подходящим SKU без дублирования товаров.
+EXTRA_STYLES: dict[str, tuple[str, ...]] = {
+    # office_siren — острая офисная классика
+    "OW-007": ("office_siren",),
+    "TP-002": ("office_siren",),
+    "TP-003": ("office_siren",),
+    "BT-001": ("office_siren", "dark_academia"),
+    "BT-005": ("office_siren", "balletcore"),
+    "SH-002": ("office_siren",),
+    "SH-012": ("office_siren",),
+    # gorpcore — outdoor в городе
+    "OW-008": ("gorpcore",),
+    "OW-010": ("gorpcore",),
+    "TP-009": ("gorpcore",),
+    "BT-008": ("gorpcore",),
+    "SH-011": ("gorpcore",),
+    "BG-003": ("gorpcore",),
+    # y2k — нулевые
+    "OW-012": ("y2k",),
+    "TP-011": ("y2k",),
+    "TP-006": ("y2k",),
+    "BT-003": ("y2k",),
+    "SH-007": ("y2k", "indie_sleaze"),
+    "AC-003": ("y2k",),
+    "AC-006": ("y2k", "indie_sleaze"),
+    # indie_sleaze — вечериночный винтаж 2010-х
+    "OW-004": ("indie_sleaze",),
+    "TP-004": ("indie_sleaze",),
+    "TP-010": ("indie_sleaze",),
+    "BT-009": ("indie_sleaze",),
+    "SH-005": ("indie_sleaze",),
+    # dark_academia — библиотечная классика
+    "OW-001": ("dark_academia",),
+    "KN-003": ("dark_academia",),
+    "KN-007": ("dark_academia",),
+    "SH-013": ("dark_academia",),
+    "AC-001": ("dark_academia",),
+    # balletcore — мягкость пачки
+    "OW-009": ("balletcore",),
+    "KN-005": ("balletcore",),
+    "SH-006": ("balletcore",),
+}
+
+#: Трендовые позиции 2026 (TikTok/Pinterest): office siren / corpcore, gorpcore,
+#: Y2K, indie sleaze, dark academia, balletcore.
+# (sku, category, name, brand, price, colors, styles, moods, formality, fit, seasons, rating, reviews)
+_TREND_ROWS: list[tuple] = [
+    # --- office_siren ------------------------------------------------
+    ("TP-018", "top", "Блуза с завязками на вороте", "12 STOREEZ", 8990, ["ivory"], ["office_siren", "business_casual", "old_money"], ["elegant", "confident"], 3, "regular", ["all"], 4.5, 160),
+    ("BT-016", "bottom", "Юбка-карандаш миди", "Atelier No.5", 9990, ["black"], ["office_siren", "business_casual", "minimal"], ["confident", "elegant"], 3, "slim", ["all"], 4.5, 210),
+    ("SH-016", "shoes", "Слингбэки на каблуке", "Atelier No.5", 13900, ["black"], ["office_siren", "old_money", "business_casual"], ["elegant", "confident"], 3, "slim", ["all"], 4.5, 140),
+    ("AC-012", "accessory", "Очки «Байонетта»", "Avant Studio", 5990, ["black"], ["office_siren", "y2k"], ["bold", "confident"], 2, "regular", ["all"], 4.3, 190),
+    # --- gorpcore ----------------------------------------------------
+    ("OW-014", "outerwear", "Флиска техническая", "Techform", 7990, ["olive"], ["gorpcore", "techwear", "athleisure"], ["energetic", "cozy"], 1, "relaxed", ["autumn", "winter", "spring"], 4.4, 320),
+    ("BT-017", "bottom", "Брюки парашютные", "Techform", 9490, ["charcoal"], ["gorpcore", "techwear", "streetwear"], ["energetic", "confident"], 1, "relaxed", ["all"], 4.3, 260),
+    ("SH-017", "shoes", "Кроссовки трейловые", "Runform", 13900, ["grey"], ["gorpcore", "techwear", "athleisure"], ["energetic"], 1, "regular", ["all"], 4.5, 480),
+    ("BG-012", "bag", "Сумка поясная utility", "Techform", 5490, ["black"], ["gorpcore", "techwear", "streetwear"], ["energetic"], 1, "regular", ["all"], 4.2, 150),
+    # --- y2k ---------------------------------------------------------
+    ("TP-019", "top", "Беби-ти с принтом", "Street Lab", 2290, ["pink"], ["y2k", "streetwear"], ["playful", "bold"], 1, "slim", ["summer", "spring"], 4.1, 340),
+    ("BT-018", "bottom", "Джинсы baggy", "Street Lab", 6990, ["blue"], ["y2k", "streetwear"], ["energetic", "playful"], 1, "relaxed", ["all"], 4.3, 520),
+    ("BG-013", "bag", "Сумка-багет", "Atelier No.5", 11990, ["silver"], ["y2k", "office_siren"], ["playful", "bold"], 2, "regular", ["all"], 4.4, 150),
+    ("SH-018", "shoes", "Кроссовки chunky", "Street Lab", 8990, ["white"], ["y2k", "streetwear", "athleisure"], ["bold", "energetic"], 1, "relaxed", ["all"], 4.3, 610),
+    # --- indie_sleaze -------------------------------------------------
+    ("OW-015", "outerwear", "Кожаный тренч винтажный", "Avant Studio", 21900, ["black"], ["indie_sleaze", "grunge", "old_money"], ["mysterious", "bold"], 2, "regular", ["autumn", "winter"], 4.4, 86),
+    ("TP-020", "top", "Майка-алкоголичка", "Street Lab", 1490, ["white"], ["indie_sleaze", "athleisure", "y2k"], ["energetic", "bold"], 1, "slim", ["summer"], 4.0, 430),
+    ("AC-014", "accessory", "Колготки в сетку", "Atelier No.5", 1290, ["black"], ["indie_sleaze", "office_siren", "grunge"], ["bold", "mysterious"], 2, "regular", ["all"], 4.2, 260),
+    ("SH-019", "shoes", "Ботинки на платформе", "Street Lab", 14900, ["black"], ["indie_sleaze", "grunge", "avantgarde"], ["bold", "confident"], 2, "regular", ["all"], 4.3, 150),
+    # --- dark_academia ------------------------------------------------
+    ("OW-016", "outerwear", "Пиджак твидовый", "Old Money Club", 15900, ["brown"], ["dark_academia", "old_money", "business_casual"], ["calm", "elegant"], 2, "regular", ["autumn", "winter"], 4.5, 120),
+    ("KN-012", "knitwear", "Жилет аргайл", "Old Money Club", 6490, ["burgundy"], ["dark_academia", "old_money"], ["calm", "playful"], 2, "regular", ["autumn", "winter"], 4.3, 96),
+    ("BT-020", "bottom", "Брюки оксфорд с защипами", "Old Money Club", 10900, ["grey"], ["dark_academia", "business_casual", "minimal"], ["confident", "calm"], 2, "regular", ["all"], 4.4, 140),
+    ("AC-015", "accessory", "Галстук шерстяной", "Old Money Club", 3990, ["navy"], ["dark_academia", "business_casual"], ["confident", "elegant"], 3, "regular", ["all"], 4.2, 74),
+    # --- balletcore ---------------------------------------------------
+    ("KN-013", "knitwear", "Кардиган на запах", "Cozy Line", 6990, ["blush"], ["balletcore", "romantic", "minimal"], ["cozy", "playful"], 2, "relaxed", ["all"], 4.4, 210),
+    ("BT-021", "bottom", "Юбка миди из тюля", "Atelier No.5", 8990, ["ivory"], ["balletcore", "romantic"], ["playful", "elegant"], 2, "regular", ["spring", "summer", "all"], 4.3, 130),
+    ("SH-020", "shoes", "Балетки с лентами", "Atelier No.5", 9990, ["blush"], ["balletcore", "romantic"], ["playful", "elegant"], 2, "regular", ["all"], 4.4, 190),
+    ("AC-016", "accessory", "Гетры трикотажные", "Cozy Line", 1990, ["light_grey"], ["balletcore", "athleisure"], ["cozy", "playful"], 1, "regular", ["winter", "autumn"], 4.1, 150),
+]
+
 #: Deliberately broken rows — the verification layer must reject these.
 _BROKEN_ROWS: list[dict[str, Any]] = [
     {
@@ -233,6 +321,7 @@ _BROKEN_ROWS: list[dict[str, Any]] = [
 def _build(row: tuple) -> dict[str, Any]:
     (sku, category, name, brand, price, colors, styles, moods, formality, fit, seasons, rating, reviews) = row
     source_id, base_url = BRAND_SOURCES.get(brand, FALLBACK_SOURCE)
+    merged_styles = list(dict.fromkeys(list(styles) + list(EXTRA_STYLES.get(sku, ()))))
     return {
         "sku": sku,
         "category": category,
@@ -243,13 +332,15 @@ def _build(row: tuple) -> dict[str, Any]:
         "fit": fit,
         "formality": int(formality),
         "colors": list(colors),
-        "styles": list(styles),
+        "styles": merged_styles,
         "moods": list(moods),
         "silhouettes": ["all"],
         "seasons": list(seasons),
         "sizes": list(CATEGORY_SIZES.get(category, ONE_SIZE)),
         "materials": [],
         "url": f"{base_url}/p/{sku.lower()}",
+        # Фото у локальных позиций нет: живые фото приходят от движка
+        # (web-search) в реальном времени; пусто — UI рисует цветной плейсхолдер.
         "image_url": "",
         "source": source_id,
         "gendered": ["feminine"] if sku in FEMININE_ITEMS else [],
@@ -260,11 +351,15 @@ def _build(row: tuple) -> dict[str, Any]:
 
 def seed_products() -> list[dict[str, Any]]:
     """All catalog rows (valid + intentionally broken) as plain dicts."""
-    return [_build(row) for row in _ROWS] + [dict(row) for row in _BROKEN_ROWS]
+    return (
+        [_build(row) for row in _ROWS]
+        + [_build(row) for row in _TREND_ROWS]
+        + [dict(row) for row in _BROKEN_ROWS]
+    )
 
 
 def valid_products() -> list[dict[str, Any]]:
-    return [_build(row) for row in _ROWS]
+    return [_build(row) for row in _ROWS] + [_build(row) for row in _TREND_ROWS]
 
 
 def catalog_stats() -> dict[str, int]:
