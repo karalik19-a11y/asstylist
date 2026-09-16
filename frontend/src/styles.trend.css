@@ -6,10 +6,6 @@
   --r-lg: 22px;
 }
 
-/* ==========================================================================
-   TREND 2026 LAYER — mobile polish, motion, identity preserved
-   ========================================================================== */
-
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -20,10 +16,8 @@ body {
   touch-action: manipulation;
 }
 
-/* Screen shell: cross-fade + soft lift on every route change */
-.screen-shell {
+.app.screen-flash {
   animation: screenSwap 0.42s var(--ease-spring) both;
-  transform-origin: 50% 12%;
 }
 
 @keyframes screenSwap {
@@ -39,7 +33,6 @@ body {
   }
 }
 
-/* Soft ambient mesh on hero */
 .hero {
   position: relative;
 }
@@ -62,7 +55,6 @@ body {
   to { opacity: 1; transform: scale(1.04); }
 }
 
-/* Primary CTA pulse (subtle, once after mount via animation) */
 .btn-primary.btn-xl {
   animation: ctaSettle 0.7s var(--ease-spring) both;
 }
@@ -73,7 +65,6 @@ body {
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* Press feedback for all interactive surfaces */
 .btn,
 .chip,
 .stamp-tile,
@@ -84,7 +75,6 @@ body {
   touch-action: manipulation;
 }
 
-/* Cards: deeper glass, smoother hover on capable pointers */
 @media (hover: hover) and (pointer: fine) {
   .card:hover,
   .stamp-card:hover {
@@ -99,7 +89,6 @@ body {
   transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease, border-color 0.2s ease;
 }
 
-/* Style pills: horizontal scroll without ugly scrollbar on mobile */
 .style-pills-row {
   display: flex;
   gap: 8px;
@@ -143,7 +132,6 @@ body {
   box-shadow: var(--glass-inner), 0 12px 28px rgba(23, 68, 99, 0.1);
 }
 
-/* Index rows: clearer touch targets */
 .index-row {
   min-height: 64px;
   transition: background-color 0.2s ease, transform 0.2s var(--ease-spring);
@@ -153,7 +141,6 @@ body {
   transform: scale(0.985);
 }
 
-/* Progress bar shimmer */
 .progress span {
   position: relative;
   overflow: hidden;
@@ -173,7 +160,6 @@ body {
   100% { transform: translateX(100%); }
 }
 
-/* Sticky action bar: stronger glass + spring */
 .action-bar {
   backdrop-filter: saturate(180%) blur(22px);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
@@ -185,7 +171,6 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Score ring subtle breathe */
 .score-ring {
   animation: scoreIn 0.55s var(--ease-spring) both;
 }
@@ -195,7 +180,6 @@ body {
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Item cards stagger-friendly */
 .item-card {
   transition: transform 0.3s var(--ease-spring), box-shadow 0.3s ease;
 }
@@ -204,7 +188,6 @@ body {
   transform: scale(0.99);
 }
 
-/* Safe area padding boost for notched phones */
 @supports (padding: max(0px)) {
   .app {
     padding-left: max(16px, env(safe-area-inset-left));
@@ -212,7 +195,6 @@ body {
   }
 }
 
-/* Mobile density: tighter vertical rhythm, larger primary */
 @media (max-width: 480px) {
   .app {
     gap: 22px;
@@ -228,7 +210,6 @@ body {
     min-height: 58px;
     border-radius: 18px;
     font-size: 16.5px;
-    letter-spacing: 0.01em;
   }
 
   .home-actions-grid .btn {
@@ -240,7 +221,6 @@ body {
   }
 }
 
-/* Dark theme: richer noir glass */
 [data-theme='noir'] {
   --page-bg: linear-gradient(165deg, #0c1824 0%, #132536 40%, #1a2030 70%, #241828 100%);
 }
@@ -250,7 +230,6 @@ body {
     radial-gradient(ellipse at 80% 20%, rgba(47, 127, 193, 0.2), transparent 50%);
 }
 
-/* Link button underline animation */
 .link-btn {
   position: relative;
   transition: color 0.2s ease;
@@ -275,7 +254,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen-shell,
+  .app.screen-flash,
   .page-transition,
   .page-transition > * {
     animation: none !important;
