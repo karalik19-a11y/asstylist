@@ -6,37 +6,16 @@
   --ease-ui: cubic-bezier(.2,.8,.2,1);
   --touch-size: 46px;
 }
-
 body, button, input, textarea, select { font-family: var(--font-body); }
 h1, h2, h3, h4, .result-title, .app-header-title, .stamp-tile-title, .brand-logo-tagline { font-family: var(--font-display); }
 button, .btn, .chip, .index-row, .stamp-tile, .tabbar button, .details-toggle, .link-btn { touch-action: manipulation; }
 .btn, .chip, .index-row, .tabbar button, .favorite-filter, .details-toggle { min-height: var(--touch-size); }
 .btn, .chip, .index-row, .stamp-tile, .details-toggle, .brand-logo { transition: transform .22s var(--ease-ui), background-color .22s ease, border-color .22s ease, box-shadow .22s ease, color .22s ease, opacity .22s ease; }
 .btn:active, .chip:active, .favorite-filter:active, .index-row:active, .stamp-tile:active, .details-toggle:active, .brand-logo:active { transform: scale(.975); }
-
-.grid-2 {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.stamp-tile {
-  width: 100%;
-  min-width: 0;
-  min-height: 132px;
-  padding: 20px 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  text-align: left;
-  overflow: hidden;
-}
-
+.grid-2 { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.stamp-tile { width: 100%; min-width: 0; min-height: 132px; padding: 20px 18px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left; overflow: hidden; }
 .stamp-tile-title { display: block; width: 100%; overflow-wrap: anywhere; line-height: 1.2; }
 .stamp-tile-desc { display: block; width: 100%; line-height: 1.4; }
-
 .archive-page { padding-bottom: 12px; }
 .archive-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px; border:1px solid var(--border); border-radius:var(--r-lg); background:var(--glass-bg); box-shadow:var(--card-shadow); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); }
 .archive-toolbar-copy { min-width:0; display:grid; gap:2px; }
@@ -61,16 +40,12 @@ button, .btn, .chip, .index-row, .stamp-tile, .tabbar button, .details-toggle, .
 .archive-empty-icon { width:52px; height:52px; display:grid; place-items:center; margin:0 auto 12px; border-radius:50%; background:var(--surface-2); color:var(--warn); }
 .archive-empty h3 { margin:0; }
 .archive-empty p { max-width:420px; margin:8px auto 0; }
-
 .favorite-action { border:1px solid var(--border-strong); background:var(--border-strong); color:var(--canvas); }
 .favorite-action.is-favorite { background:#f3c84b; border-color:#f3c84b; color:#17130a; box-shadow:0 10px 26px rgba(243,200,75,.22); }
 .favorite-action.is-favorite:hover { background:#ffd65e; border-color:#ffd65e; }
-
 .app { width:min(100%, 980px); margin-inline:auto; }
 .app-header { padding-top:max(12px, env(safe-area-inset-top)); }
 .tabbar { padding-bottom:max(10px, env(safe-area-inset-bottom)); }
-
-/* Compact, collision-proof header controls. */
 .header-main-row { width:100%; min-width:0; gap:10px; }
 .header-main-left { min-width:0; overflow:hidden; }
 .header-main-left .brand-logo { min-width:0; max-width:100%; }
@@ -80,16 +55,39 @@ button, .btn, .chip, .index-row, .stamp-tile, .tabbar button, .details-toggle, .
 .header-control svg { width:16px; height:16px; }
 .header-back { min-width:36px !important; width:36px !important; height:36px !important; min-height:36px !important; padding:0 !important; font-size:17px !important; flex:0 0 36px !important; }
 .header-kicker { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-/* Home hero controls share the same compact header geometry. */
 .home-hero-top { width:100%; min-width:0; gap:10px; align-items:flex-start; }
 .hero-top-controls { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 0 auto; flex-wrap:nowrap; }
 .hero-top-controls .badge { flex:0 0 auto; }
 .hero-top-controls .header-control { flex:0 0 34px !important; }
-
-/* The hero statement is intentionally larger and allowed to use the full content width. */
 .home-hero h1 { width:100%; max-width:960px; margin-inline:0; font-size:clamp(38px, 7vw, 76px); line-height:.98; letter-spacing:-.045em; text-wrap:balance; }
 .home-hero h1 em { display:inline; }
+
+/* Header must always occupy real layout space. Never let it overlay page controls/content. */
+.app > .app-header {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 20 !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+.app > .app-header + * {
+  position: relative;
+  z-index: 1;
+  margin-top: 0 !important;
+}
+.app > .app-header + .page-transition,
+.app > .app-header + .card,
+.app > .app-header + section,
+.app > .app-header + div {
+  clear: both;
+}
 
 @media (max-width:720px) {
   :root { --touch-size:48px; }
@@ -128,7 +126,6 @@ button, .btn, .chip, .index-row, .stamp-tile, .tabbar button, .details-toggle, .
   .hero-top-controls { gap:5px; }
   .hero-top-controls .badge { font-size:10px; padding-inline:8px; }
 }
-
 @media (max-width:420px) {
   .app { padding-inline:9px; }
   .archive-toolbar { gap:8px; }
@@ -144,7 +141,6 @@ button, .btn, .chip, .index-row, .stamp-tile, .tabbar button, .details-toggle, .
   .home-hero-top { gap:7px; }
   .hero-top-controls { gap:4px; }
 }
-
 @media (prefers-reduced-motion:reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
