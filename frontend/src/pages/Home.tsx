@@ -7,7 +7,6 @@ import { playClick, playTick } from '../lib/sound'
 export function Home({
   meta,
   onStart,
-  onOpenHistory,
   onOpenSearch,
   userName,
   theme,
@@ -15,7 +14,7 @@ export function Home({
 }: {
   meta: Meta | null
   onStart: () => void
-  onOpenHistory: () => void
+  onOpenHistory?: () => void
   onOpenSearch: () => void
   userName: string | null
   theme: 'noir' | 'parchment'
@@ -26,7 +25,7 @@ export function Home({
     meta?.styles.find((s) => s.id === activeStylePreview) ?? meta?.styles[0]
 
   return (
-    <div className="stack page-transition" style={{ gap: 30 }}>
+    <div className="stack page-transition" style={{ gap: 32 }}>
       <header className="hero">
         <div className="hero-top">
           <BrandLogo big tagline onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
@@ -38,7 +37,9 @@ export function Home({
         <h1>
           {userName ? `${userName}, ` : ''}соберём образ, <em>который вам идёт</em>
         </h1>
-        <p className="hero-sub">Пять коротких шагов — и гардероб под вашу фигуру, цвета и бюджет готов.</p>
+        <p className="hero-sub">
+          Пять коротких шагов — и гардероб под вашу фигуру, цвета и бюджет готов.
+        </p>
         {meta ? (
           <div className="wrap" style={{ gap: 8 }}>
             <Badge>{meta.styles.length} стилей</Badge>
@@ -50,22 +51,31 @@ export function Home({
         ) : null}
       </header>
 
-      <section className="stack" style={{ gap: 16 }}>
-        <button type="button" className="btn btn-primary btn-block btn-xl" onClick={() => { playClick(); onStart() }}>
+      <section className="stack" style={{ gap: 14 }}>
+        <button
+          type="button"
+          className="btn btn-primary btn-block btn-xl"
+          onClick={() => {
+            playClick()
+            onStart()
+          }}
+        >
           Собрать образ
         </button>
-        <div className="home-actions-grid">
-          <button type="button" className="btn btn-outline" onClick={() => { playClick(); onOpenHistory() }}>
-            Архив образов
-          </button>
-          <button type="button" className="btn btn-outline" onClick={() => { playClick(); onOpenSearch() }}>
-            Поиск вещей
-          </button>
-        </div>
+        <button
+          type="button"
+          className="btn btn-outline btn-block"
+          onClick={() => {
+            playClick()
+            onOpenSearch()
+          }}
+        >
+          Поиск вещей
+        </button>
       </section>
 
       {meta?.styles?.length ? (
-        <section className="card stack" style={{ gap: 14 }}>
+        <section className="card stack" style={{ gap: 16 }}>
           <SectionTitle hint="листайте">Направления стиля</SectionTitle>
           <div className="style-pills-row">
             {meta.styles.map((style) => (
@@ -74,14 +84,17 @@ export function Home({
                 type="button"
                 className="style-pill-btn chip"
                 data-active={activeStylePreview === style.id}
-                onClick={() => { playTick(); setActiveStylePreview(style.id) }}
+                onClick={() => {
+                  playTick()
+                  setActiveStylePreview(style.id)
+                }}
               >
                 {style.label}
               </button>
             ))}
           </div>
           {currentStyle ? (
-            <p className="muted" style={{ margin: 0, fontSize: 15, lineHeight: 1.5 }}>
+            <p className="muted" style={{ margin: 0, fontSize: 15.5, lineHeight: 1.55 }}>
               {currentStyle.description}
             </p>
           ) : null}
