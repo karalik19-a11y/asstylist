@@ -24,8 +24,6 @@ export function BrandLogo({
       aria-label="ASStylist — на главную"
       title="На главную"
     >
-      {/* Одно слово целиком: ASStylist. Никакой отдельной буквы «A» —
-          акцент держит вторая «S» и тонкая линия под надписью. */}
       <span className="brand-logo-text">
         <span className="brand-logo-word" aria-hidden="true">
           AS<em>Stylist</em>
@@ -88,7 +86,7 @@ export function Header({
           )}
         </div>
 
-        <div className="row" style={{ gap: 10 }}>
+        <div className="row" style={{ gap: 10, flexShrink: 0 }}>
           <button
             type="button"
             className="btn btn-sm btn-ghost"
@@ -103,7 +101,7 @@ export function Header({
         </div>
       </div>
 
-      <div style={{ paddingBottom: 2 }}>
+      <div style={{ paddingBottom: 2, minWidth: 0 }}>
         <h2 className="app-header-title">{title}</h2>
         {subtitle ? <div className="muted small" style={{ marginTop: 4 }}>{subtitle}</div> : null}
       </div>
@@ -235,7 +233,6 @@ export function verificationLabel(status: string): string {
   return status
 }
 
-/** True, если карточка вещи ведёт на Авито (живое объявление или подборка). */
 export function isAvitoUrl(url: string | undefined): boolean {
   if (!url) return false
   try {
@@ -259,8 +256,6 @@ export function ScoreRing({ score }: { score: number }) {
     <div
       className="score-ring"
       style={{
-        // Первый слой — затемнённый диск под цифру, второй — цветная дуга.
-        // Раньше цифра красилась в цвет дуги и пропадала на ней.
         background:
           `radial-gradient(circle at 50% 50%, rgba(8, 20, 31, 0.62) 0 57%, rgba(8, 20, 31, 0) 59%), ` +
           `conic-gradient(${color} ${clamped * 3.6}deg, var(--surface-2) 0deg)`,
@@ -304,7 +299,7 @@ export function SectionTitle({ children, hint, index }: { children: ReactNode; h
           children
         )}
       </h3>
-      {hint ? <span className="muted small" style={{ whiteSpace: 'nowrap' }}>{hint}</span> : null}
+      {hint ? <span className="section-head-hint muted small">{hint}</span> : null}
     </div>
   )
 }
