@@ -1,0 +1,7 @@
+{
+  "status": "blocked",
+  "listings": 5,
+  "captured_at": "2026-09-16",
+  "tail": "Traceback (most recent call last):\n  File \"/home/runner/work/asstylist/asstylist/backend/scripts/refresh_avito_snapshot.py\", line 36, in <module>\n    from app.config import settings  # noqa: E402\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/asstylist/asstylist/backend/app/config.py\", line 14, in <module>\n    from pydantic import Field, field_validator\nModuleNotFoundError: No module named 'pydantic'\n",
+  "captcha": false
+}
