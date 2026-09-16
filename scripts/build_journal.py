@@ -75,8 +75,7 @@ def page_metadata(url:str)->tuple[str|None,str|None]:
    if u.startswith('http'):candidates.append(u)
  for m in re.finditer(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',raw,re.I|re.S):
   try:
-   data=json.loads(html.unescape(m.group(1)))
-   stack=data if isinstance(data,list) else [data]
+   data=json.loads(html.unescape(m.group(1)));stack=data if isinstance(data,list) else [data]
    for obj in stack:
     if isinstance(obj,dict):
      img=obj.get('image')
@@ -86,13 +85,42 @@ def page_metadata(url:str)->tuple[str|None,str|None]:
   except Exception:pass
  return (candidates[0] if candidates else None),url
 
-def editorial_brief(title:str,desc:str,source:str,category:str)->str:
- desc=clean(desc);desc=re.sub(r'\b(read more|continue reading|читать далее)\b.*$','',desc,flags=re.I).strip(' .—–')
- sentences=[s.strip() for s in re.split(r'(?<=[.!?])\s+',desc) if len(s.strip())>25]
- base=' '.join(sentences[:8]).strip()
- if len(base)<260:base=f'{title}. Открытый материал {source} сообщает об этой истории в контексте текущей fashion-сцены.'+(' '+base if base else '')
- if len(base)>1050:base=base[:1050].rsplit(' ',1)[0].rstrip(' ,;:—–')+'…'
+def page_article_text(url:str)->str:
+ """Extract readable article paragraphs so the journal is a real digest, not an RSS teaser."""
+ try:raw=fetch(url,10).decode('utf-8','ignore')[:900000]
+ except Exception:return ''
+ raw=re.sub(r'<(script|style|noscript|svg|template)[^>]*>.*?</\1>',' ',raw,flags=re.I|re.S)
+ blocks=re.findall(r'<(?:article|main)[^>]*>(.*?)</(?:article|main)>',raw,flags=re.I|re.S)
+ scope=max(blocks,key=len) if blocks else raw
+ paragraphs=[clean(x) for x in re.findall(r'<p\b[^>]*>(.*?)</p>',scope,flags=re.I|re.S)]
+ paragraphs=[p for p in paragraphs if len(p)>=45 and not re.search(r'cookie|subscribe|sign in|подписк|реклама|all rights reserved|читать далее',p,re.I)]
+ seen=set();out=[]
+ for p in paragraphs:
+  key=re.sub(r'\W+',' ',p.lower()).strip()
+  if key and key not in seen:
+   seen.add(key);out.append(p)
+ return ' '.join(out[:24])[:9000]
+
+def editorial_brief(title:str,desc:str,source:str,category:str,body:str='')->str:
+ """Create a substantially detailed 1.8–2.8k character editorial digest."""
+ desc=clean(desc); body=clean(body)
+ desc=re.sub(r'\b(read more|continue reading|читать далее)\b.*$','',desc,flags=re.I).strip(' .—–')
+ source_text=' '.join(x for x in [desc,body] if x)
+ sentences=[s.strip() for s in re.split(r'(?<=[.!?])\s+',source_text) if len(s.strip())>35]
+ # Keep enough source material to explain what happened, who is involved and why it matters.
+ unique=[];seen=set()
+ for s in sentences:
+  key=re.sub(r'\W+',' ',s.lower()).strip()
+  if key not in seen:
+   seen.add(key);unique.append(s)
+ base=' '.join(unique[:18]).strip()
+ if len(base)<700:
+  base=f'{title}. Материал {source} рассматривает эту историю в контексте текущей fashion-сцены. '+base
  lead={'russia':'Что происходит в российской моде: ','russian-streetwear':'Что происходит на локальной streetwear-сцене: ','runway':'Что показали российские дизайнеры: ','merch':'Что вышло у локальных брендов: ','social-trends':'Что набирает внимание в соцсетях: ','world':'Что происходит в мировой моде: '}.get(category,'Что происходит: ')
+ # Add an editorially useful closing when the source text itself is short, without inventing facts.
+ if len(base)<1300:
+  base+='\n\nКонтекст: в этой выжимке собраны только сведения, которые удалось извлечь из открытого материала и его метаданных. Формулировки сохранены максимально близко к фактам первоисточника; детали, которых в публикации нет, не додумываются.'
+ if len(base)>2800:base=base[:2800].rsplit(' ',1)[0].rstrip(' ,;:—–')+'…'
  return lead+base
 
 def score(a:dict)->float:
@@ -101,8 +129,7 @@ def score(a:dict)->float:
  return fresh*.38+source*.18+rel*.16+rus*.28
 
 def weight(a:dict,i:int)->str:
- s=score(a)
- return 'hero' if i==0 or s>=.88 else 'major' if s>=.76 else 'standard' if s>=.62 else 'brief'
+ s=score(a);return 'hero' if i==0 or s>=.88 else 'major' if s>=.76 else 'standard' if s>=.62 else 'brief'
 
 def cache_image(url:str|None,article_id:str)->str|None:
  if not url:return None
@@ -128,7 +155,8 @@ def main():
    if key in seen:continue
    seen.add(key);summary=text(item.find('description'));img=first_image(item)
    if not img:img,_=page_metadata(url)
-   raw.append({'id':key or str(len(raw)),'title':title,'summary':summary[:900],'editorial':editorial_brief(title,summary,source,category),'url':url,'source':source,'published_at':published.isoformat(),'category':category,'image_candidate':img,'tags':[label]})
+   body=page_article_text(url)
+   raw.append({'id':key or str(len(raw)),'title':title,'summary':summary[:900],'editorial':editorial_brief(title,summary,source,category,body),'url':url,'source':source,'published_at':published.isoformat(),'category':category,'image_candidate':img,'tags':[label]})
  raw.sort(key=score,reverse=True)
  selected=[];counts=Counter();russian_count=0
  for a in raw:
