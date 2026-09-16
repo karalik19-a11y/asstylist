@@ -103,6 +103,21 @@ def api_root() -> dict[str, str]:
 # --- static SPA -------------------------------------------------------------
 DIST_DIR = os.path.abspath(settings.static_dir)
 ASSETS_DIR = os.path.join(DIST_DIR, "assets")
+
+# HTML responses deliberately use the strongest practical cache policy. This is
+# important for Telegram WebView, which can otherwise retain the previous SPA
+# shell even after Render has deployed a new Docker image.
+HTML_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Surrogate-Control": "no-store",
+    "CDN-Cache-Control": "no-store",
+    "Clear-Site-Data": '"cache"',
+    "Vary": "*",
+}
+ASSET_HEADERS = {"Cache-Control": "public, max-age=31536000, immutable"}
+
 if os.path.isdir(DIST_DIR):
     if os.path.isdir(ASSETS_DIR):
         app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
@@ -111,11 +126,7 @@ if os.path.isdir(DIST_DIR):
     def spa(full_path: str):
         candidate = os.path.abspath(os.path.join(DIST_DIR, full_path))
         if full_path and candidate.startswith(DIST_DIR) and os.path.isfile(candidate):
-            # Hashed Vite assets can be cached; HTML must never be pinned to an old build.
             if full_path.startswith("assets/"):
-                return FileResponse(candidate, headers={"Cache-Control": "public, max-age=31536000, immutable"})
-            return FileResponse(candidate, headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache"})
-        return FileResponse(
-            os.path.join(DIST_DIR, "index.html"),
-            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
-        )
+                return FileResponse(candidate, headers=ASSET_HEADERS)
+            return FileResponse(candidate, headers=HTML_HEADERS)
+        return FileResponse(os.path.join(DIST_DIR, "index.html"), headers=HTML_HEADERS)
