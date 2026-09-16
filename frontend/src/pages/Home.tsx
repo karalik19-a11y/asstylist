@@ -181,7 +181,7 @@ export function Home({
         </section>
       ) : null}
 
-      <div className="page-mark">Asstylist · 2026</div>
+      <div className="page-mark">ASStylist · 2026</div>
     </div>
   )
 }

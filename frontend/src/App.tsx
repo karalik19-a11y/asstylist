@@ -16,6 +16,8 @@ import {
 import { initialModel, wizardReducer } from './state/wizard'
 import { Home } from './pages/Home'
 import { Wizard } from './pages/Wizard'
+import type { BodyMemory } from './lib/profile'
+import { loadBodyMemory, markBodyUsed, saveBodyMemory } from './lib/profile'
 import { History } from './pages/History'
 import { Verification } from './pages/Verification'
 import { Search } from './pages/Search'
@@ -39,7 +41,7 @@ type VerificationReport = {
 }
 
 const SCREEN_TITLES: Record<Screen, string> = {
-  home: 'ASSTYLIST',
+  home: 'ASStylist',
   wizard: 'Новый гардероб',
   result: 'Персональная селекция',
   history: 'Архив образов',
@@ -65,6 +67,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [loadingList, setLoadingList] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
+  // Память о человеке: рост и вес, введённые в прошлый раз.
+  const [savedBody, setSavedBody] = useState<BodyMemory | null>(null)
   // По умолчанию — системная тема клиента Telegram, в браузере — светлая.
   const [theme, setTheme] = useState<'noir' | 'parchment'>(() =>
     telegramColorScheme() === 'dark' ? 'noir' : 'parchment',
@@ -111,6 +115,8 @@ export default function App() {
       .auth()
       .then((response) => setUserName(response.user.first_name ?? response.user.telegram_id))
       .catch(() => undefined)
+    // Память о росте и весе: сервер → локальная копия.
+    void loadBodyMemory().then(setSavedBody)
     void refreshHistory()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshHistory])
@@ -151,9 +157,39 @@ export default function App() {
   }, [screen])
 
   const startWizard = useCallback(() => {
-    dispatch({ type: 'reset' })
+    // Если рост и вес уже сохранены — сначала предлагаем выбор:
+    // «собрать по сохранённым» или «ввести новые».
+    if (savedBody) {
+      dispatch({
+        type: 'reset',
+        step: 'memory',
+        patch: { height_cm: savedBody.height_cm, weight_kg: savedBody.weight_kg },
+      })
+    } else {
+      dispatch({ type: 'reset' })
+    }
     setError(null)
     setScreen('wizard')
+  }, [savedBody])
+
+  const handleUseSavedBody = useCallback(() => {
+    if (!savedBody) return
+    void markBodyUsed()
+    dispatch({ type: 'patch', patch: { height_cm: savedBody.height_cm, weight_kg: savedBody.weight_kg } })
+    dispatch({ type: 'goTo', step: 'style' })
+  }, [savedBody])
+
+  const handleNewBody = useCallback(() => {
+    dispatch({ type: 'goTo', step: 'body' })
+  }, [])
+
+  const handleRestartAll = useCallback(() => {
+    dispatch({ type: 'reset' })
+  }, [])
+
+  /** После удачной сборки запоминаем рост и вес — в следующий раз спросим иначе. */
+  const rememberBody = useCallback((height: number, weight: number) => {
+    void saveBodyMemory(height, weight).then(setSavedBody)
   }, [])
 
   const handleGenerate = useCallback(async () => {
@@ -165,6 +201,7 @@ export default function App() {
       setScreen('result')
       haptic('success')
       playSuccess()
+      rememberBody(model.state.height_cm, model.state.weight_kg)
       void refreshHistory()
     } catch (caught) {
       setError(errorMessage(caught))
@@ -172,7 +209,7 @@ export default function App() {
     } finally {
       setGenerating(false)
     }
-  }, [model.state, refreshHistory])
+  }, [model.state, refreshHistory, rememberBody])
 
   /**
    * Сборка образа по запросу из экрана поиска: патч кладётся в состояние
@@ -190,6 +227,9 @@ export default function App() {
         setScreen('result')
         haptic('success')
         playSuccess()
+        // Рост и вес, с которыми собрали образ, запоминаем и здесь: при
+        // следующем входе спросим только «новые данные или сохранённые».
+        rememberBody(nextState.height_cm, nextState.weight_kg)
         void refreshHistory()
       } catch (caught) {
         setError(errorMessage(caught))
@@ -198,7 +238,7 @@ export default function App() {
         setGenerating(false)
       }
     },
-    [model.state, refreshHistory],
+    [model.state, refreshHistory, rememberBody],
   )
 
   const handleSwap = useCallback(
@@ -316,6 +356,10 @@ export default function App() {
           onNext={() => dispatch({ type: 'next' })}
           onGenerate={() => void handleGenerate()}
           onExit={goHome}
+          savedBody={savedBody}
+          onUseSavedBody={handleUseSavedBody}
+          onNewBody={handleNewBody}
+          onRestartAll={handleRestartAll}
         />
       ) : null}
 
@@ -348,7 +392,7 @@ export default function App() {
       ) : null}
 
       {screen === 'home' && !isTelegram() ? (
-        <footer className="page-mark">Asstylist · автономный режим браузера</footer>
+        <footer className="page-mark">ASStylist · автономный режим браузера</footer>
       ) : null}
     </div>
   )

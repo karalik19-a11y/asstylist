@@ -7,6 +7,16 @@ import { ExternalIcon, SwapIcon } from '../lib/graphics'
 import { Badge, isAvitoUrl, verificationLabel, verificationTone } from './ui'
 import { ItemPhoto } from './ItemPhoto'
 
+/** Короткая дата снимка выдачи: «16.09» или «16.09.2025». */
+function shortDate(value?: string | null): string {
+  if (!value) return ''
+  const iso = value.length >= 10 ? value.slice(0, 10) : value
+  const [year, month, day] = iso.split('-')
+  if (!year || !month || !day) return ''
+  const sameYear = year === String(new Date().getFullYear())
+  return sameYear ? `${day}.${month}` : `${day}.${month}.${year}`
+}
+
 const BREAKDOWN_LABELS: Record<string, string> = {
   style: 'стиль',
   mood: 'настроение',
@@ -32,6 +42,19 @@ export function ItemCard({
   swapping: boolean
 }) {
   const [open, setOpen] = useState(false)
+  // Адрес вещи: конкретное объявление (прямая ссылка, фото, город, состояние)
+  // или честно помеченная подборка Авито — последний резерв.
+  const listing = item.listing ?? null
+  const linkKind = item.link_kind ?? listing?.kind ?? 'listing'
+  const isListing = linkKind !== 'search'
+  const feed = item.feed ?? listing?.feed ?? null
+  const snapshotAt = item.snapshot_captured_at ?? listing?.captured_at ?? null
+  const listingFacts = [
+    listing?.city ? `город: ${listing.city}` : '',
+    listing?.condition ? `состояние: ${listing.condition}` : '',
+    listing?.sizes?.length ? `размер: ${listing.sizes.slice(0, 3).join(', ')}` : '',
+  ].filter(Boolean)
+
   const swatch =
     item.color_hexes.length > 0
       ? `linear-gradient(135deg, ${item.color_hexes.map((hex, index) => `${hex} ${index * 45}%`).join(', ')})`
@@ -42,11 +65,30 @@ export function ItemCard({
       {item.image_url ? (
         <ItemPhoto
           src={item.image_url}
-          alt={`${item.brand} — ${item.name}`}
+          alt={`${item.brand} — ${item.name} — фото объявления Авито`}
           swatch={swatch}
           className="item-photo-card"
         />
       ) : null}
+
+      {isListing ? (
+        <div className="listing-strip">
+          <span className="listing-strip-dot" aria-hidden="true" />
+          <span className="listing-strip-text">
+            {feed === 'snapshot'
+              ? `Конкретное объявление Авито${snapshotAt ? ` · снимок выдачи от ${shortDate(snapshotAt)}` : ''}`
+              : 'Конкретное объявление Авито'}
+            {listingFacts.length ? ` · ${listingFacts.join(' · ')}` : ''}
+          </span>
+        </div>
+      ) : (
+        <div className="listing-strip listing-strip-warn">
+          <span className="listing-strip-dot" aria-hidden="true" />
+          <span className="listing-strip-text">
+            Объявление недоступно — открывается подборка Авито по этой вещи, не конкретный лот
+          </span>
+        </div>
+      )}
       <div className="item-head">
         <div className="item-swatch" style={{ background: swatch }} aria-hidden="true">
           <span
@@ -75,7 +117,7 @@ export function ItemCard({
           </div>
           <div className="wrap" style={{ marginTop: 12, gap: 8 }}>
             {isAvitoUrl(item.url) || item.source === 'avito' ? (
-              <Badge tone="ok">Авито</Badge>
+              <Badge tone="ok">{feed === 'snapshot' ? 'Авито · снимок' : 'Авито'}</Badge>
             ) : null}
             <Badge tone={verificationTone(item.verification_status)}>
               {verificationLabel(item.verification_status)} · {Math.round(item.verification_score * 100)}%
@@ -120,7 +162,13 @@ export function ItemCard({
           }}
         >
           <ExternalIcon size={12} />
-          <span>{isAvitoUrl(item.url) || item.source === 'avito' ? 'На Авито' : 'В магазин'}</span>
+          <span>
+            {isAvitoUrl(item.url) || item.source === 'avito'
+              ? isListing
+                ? 'Открыть объявление'
+                : 'Поиск на Авито'
+              : 'В магазин'}
+          </span>
         </button>
 
         <button

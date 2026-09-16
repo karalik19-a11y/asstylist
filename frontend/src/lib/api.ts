@@ -138,6 +138,32 @@ export const api = {
       body: JSON.stringify({ limit: 8, ...params }),
     }),
 
+  /** Память о человеке: рост и вес, сохранённые между визитами. */
+  profile: () =>
+    request<{
+      saved: boolean
+      profile: { height_cm?: number; weight_kg?: number }
+      updated_at: string | null
+      used_count: number
+    }>(`/api/profile?${identityParams().toString()}`),
+
+  saveProfile: (payload: { height_cm?: number; weight_kg?: number }) =>
+    request<{
+      saved: boolean
+      profile: { height_cm?: number; weight_kg?: number }
+      updated_at: string | null
+      used_count: number
+      problems?: string[]
+    }>(`/api/profile?${identityParams().toString()}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  useProfile: () => request<{ used_count: number }>(`/api/profile/used?${identityParams().toString()}`, { method: 'POST' }),
+
+  forgetProfile: () => request<{ saved: boolean }>(`/api/profile/reset?${identityParams().toString()}`, { method: 'POST' }),
+
   history: (limit = 20) =>
     request<{ items: HistoryEntry[] }>(`/api/looks?${identityParams().toString()}&limit=${limit}`),
 

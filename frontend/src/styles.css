@@ -1746,9 +1746,8 @@ input[type='range']::-moz-range-thumb {
 .brand-logo {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
-  padding: 6px 10px 6px 6px;
-  margin: -6px 0 -6px -6px;
+  padding: 5px 8px 5px 6px;
+  margin: -5px 0 -5px -6px;
   border-radius: 16px;
   text-decoration: none;
   user-select: none;
@@ -1774,54 +1773,65 @@ button.brand-logo {
   outline-offset: 2px;
 }
 
-.brand-logo-mark {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 15px;
-  background: linear-gradient(135deg, #ff5a68 0%, var(--accent-leopard) 55%, var(--accent-leopard-dark) 100%);
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: 0;
-  box-shadow: 0 8px 20px rgba(238, 56, 80, 0.35), var(--glass-inner);
+/* Надпись-логотип: одно слово ASStylist, без отдельного знака «A». */
+.brand-logo-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
 }
 
 .brand-logo-word {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 23px;
+  font-size: 24px;
   line-height: 1;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.015em;
   color: var(--text-main);
   white-space: nowrap;
 }
 
 .brand-logo-word em {
   font-style: normal;
+  font-weight: 800;
+  background: linear-gradient(95deg, var(--accent-leopard) 0%, #ff5a68 52%, var(--accent-leopard-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: var(--accent-leopard);
+}
+
+/* Тонкая «леопардовая» черта под надписью — единственный графический акцент. */
+.brand-logo-rule {
+  display: block;
+  width: 100%;
+  min-width: 74px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-leopard) 0%, var(--accent-leopard-dark) 62%, rgba(238, 56, 80, 0) 100%);
+  opacity: 0.9;
+  transition: opacity 0.18s ease;
+}
+
+.brand-logo:hover .brand-logo-rule {
+  opacity: 1;
 }
 
 /* Крупный логотип hero-экрана */
 .brand-logo-big {
-  gap: 14px;
-  padding: 8px 14px 8px 8px;
+  padding: 8px 10px 8px 8px;
   margin: -8px 0 -8px -8px;
 }
 
-.brand-logo-big .brand-logo-mark {
-  width: 54px;
-  height: 54px;
-  border-radius: 19px;
-  font-size: 26px;
+.brand-logo-big .brand-logo-word {
+  font-size: clamp(31px, 9.2vw, 42px);
+  letter-spacing: -0.02em;
 }
 
-.brand-logo-big .brand-logo-word {
-  font-size: clamp(29px, 8.6vw, 38px);
+.brand-logo-big .brand-logo-rule {
+  height: 4px;
+  margin-top: 2px;
 }
 
 .brand-logo-tagline {
@@ -1958,17 +1968,24 @@ button,
   }
 }
 
-/* В шапке внутренних экранов на телефоне — только марка логотипа. */
+/* В шапке внутренних экранов на телефоне логотип остаётся, но компактнее. */
 @media (max-width: 520px) {
-  .app-header .brand-logo-word,
   .app-header .brand-logo-tagline {
     display: none;
   }
 
   .app-header .brand-logo {
-    gap: 0;
     padding: 4px;
     margin: -4px 0 -4px -4px;
+  }
+
+  .app-header .brand-logo-word {
+    font-size: 19px;
+  }
+
+  .app-header .brand-logo-rule {
+    min-width: 56px;
+    height: 2.5px;
   }
 }
 
@@ -2131,13 +2148,11 @@ button,
   }
 
   .brand-logo-word {
-    font-size: 20px;
+    font-size: 21px;
   }
 
-  .brand-logo-mark {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
+  .brand-logo-rule {
+    min-width: 62px;
   }
 }
 

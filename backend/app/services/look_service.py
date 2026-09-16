@@ -257,7 +257,7 @@ def serialize_look(look: Look) -> dict[str, Any]:
         # Атрибуты движка хранятся внутри того же JSON, чтобы не менять схему БД:
         # см. fashion_engine_service._engine_item_meta.
         breakdown = dict(row.breakdown())
-        engine_meta = breakdown.pop("engineAttributes", None)
+        engine_meta = dict(breakdown.pop("engineAttributes", None) or {})
         items.append(
             {
                 "position": row.position,
@@ -279,7 +279,12 @@ def serialize_look(look: Look) -> dict[str, Any]:
                 "reasons": row.reasons(),
                 "verification_status": row.verification_status,
                 "verification_score": round(row.verification_score, 3),
-                "source": "",
+                "source": "avito" if engine_meta.get("listing") else "",
+                # Куда ведёт вещь: конкретное объявление или подборка Авито.
+                "feed": engine_meta.get("feed"),
+                "link_kind": engine_meta.get("link_kind"),
+                "listing": engine_meta.get("listing"),
+                "snapshot_captured_at": (engine_meta.get("listing") or {}).get("captured_at"),
                 "alternatives": row.alternatives(),
             }
         )

@@ -108,6 +108,14 @@ export interface LookEngine {
   aesthetic?: string
   /** Эстетика по-русски: тезис + доминирующий оттенок образа. */
   aesthetic_ru?: string
+  /** Сколько вещей дала живая выдача Авито, а сколько — снимок выдачи. */
+  feeds?: { live?: number; snapshot?: number }
+  /** Пояснения к источникам вещей (например, дата снимка выдачи). */
+  feed_notes?: string[]
+  /** Почему не пустили живой поиск: капча, сеть и т. п. */
+  live_error?: string | null
+  /** Дата снимка выдачи Авито, из которого взяты вещи. */
+  snapshot_captured_at?: string | null
   outfit_score?: number
   app_score?: number
   final_score?: number
@@ -160,6 +168,13 @@ export interface EngineSearchItem {
   verification_score: number
   /** web-search (онлайн-нахождение), mock-real-catalog (архетип), каталог приложения. */
   source?: string
+  /** Откуда вещь: живая выдача Авито или снимок реальных объявлений. */
+  feed?: 'live' | 'snapshot' | 'search' | string | null
+  /** Куда ведёт ссылка: конкретное объявление или подборка Авито. */
+  link_kind?: 'listing' | 'search' | string | null
+  /** Паспорт объявления — город, состояние, размер, дата снимка. */
+  listing?: ListingInfo | null
+  snapshot_captured_at?: string | null
 }
 
 export interface EngineSearchResult {
@@ -181,6 +196,25 @@ export interface EngineSearchResult {
     weight_kg: number
     niche_level: number
   }
+}
+
+/** Паспорт конкретного объявления Авито: город, состояние, размеры, дата снимка. */
+export interface ListingInfo {
+  /** Куда ведёт ссылка: `listing` — конкретное объявление, `search` — подборка. */
+  kind?: 'listing' | 'search' | string
+  /** Живая выдача или снимок реальных объявлений. */
+  feed?: 'live' | 'snapshot' | string
+  avito_id?: string
+  city?: string
+  condition?: string
+  sizes?: string[]
+  captured_at?: string
+  /** Совпадение по внешнему виду: оттенки, силуэт, состояние, фото. */
+  appearance_score?: number
+  appearance_components?: Record<string, number>
+  /** Разбирали ли фото объявления (Pillow) — тогда есть и его оттенки. */
+  photo_analyzed?: boolean
+  colors_hex?: string[]
 }
 
 export interface LookItem {
@@ -205,6 +239,13 @@ export interface LookItem {
   verification_status: 'verified' | 'warning' | 'failed' | string
   verification_score: number
   source: string
+  /** Откуда вещь: живая выдача Авито или снимок реальных объявлений. */
+  feed?: 'live' | 'snapshot' | 'search' | string | null
+  /** Куда ведёт ссылка: конкретное объявление или подборка Авито. */
+  link_kind?: 'listing' | 'search' | string | null
+  /** Паспорт объявления — город, состояние, размер, дата снимка. */
+  listing?: ListingInfo | null
+  snapshot_captured_at?: string | null
   alternatives: Alternative[]
 }
 

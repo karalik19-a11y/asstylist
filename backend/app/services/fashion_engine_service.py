@@ -68,9 +68,17 @@ from ..fashion_engine import (
     lexicon,
 )
 from ..fashion_engine import keywords as engine_keywords
+from ..fashion_engine.search.listing_intel import (
+    analyze_listing,
+    appearance_match,
+    looks_like_listing_url,
+)
 from ..fashion_engine.search.multi_pass_search import DiscoveryResult
 from ..fashion_engine.search.provider import SearchContext
+from ..fashion_engine.search.providers.avito_provider import _extract_brand
+from ..fashion_engine.search.providers.avito_snapshot_provider import AvitoSnapshotProvider
 from ..fashion_engine.types import OutfitResult
+from ..vision import photo_traits as photo_traits_module
 
 PIPELINE = "asstylist-fashion-engine"
 
@@ -404,6 +412,7 @@ OCCASION_FORMALITY: dict[str, int] = {
 }
 
 _AVITO_PROVIDER: AvitoSearchProvider | None = None
+_AVITO_SNAPSHOT_PROVIDER: AvitoSnapshotProvider | None = None
 
 
 def avito_provider() -> AvitoSearchProvider:
@@ -421,9 +430,11 @@ def avito_provider() -> AvitoSearchProvider:
 
 
 def reset_avito_provider() -> None:
-    """Сбросить синглтон (нужно тестам при смене настроек)."""
-    global _AVITO_PROVIDER
+    """Сбросить синглтоны (нужно тестам при смене настроек)."""
+    global _AVITO_PROVIDER, _AVITO_SNAPSHOT_PROVIDER
     _AVITO_PROVIDER = None
+    _AVITO_SNAPSHOT_PROVIDER = None
+    photo_traits_module.clear_cache()
 
 
 def is_avito_url(url: str) -> bool:
@@ -438,7 +449,12 @@ def is_avito_url(url: str) -> bool:
 
 def ensure_avito_links(result: LookResult) -> LookResult:
     """Страховка «только Авито»: любая не-авито ссылка заменяется честным
-    дип-линком на подборку Авито по этой вещи. Живые объявления не трогаем."""
+    дип-линком на подборку Авито по этой вещи. Объявления не трогаем.
+
+    Каждая вещь получает ``link_kind``: ``listing`` — ссылка ведёт на
+    конкретное объявление (фото и цена которого показаны), ``search`` —
+    резерв, подборка по этой вещи. Интерфейс честно различает эти два случая.
+    """
     if not settings.avito_enabled:
         return result
     provider = avito_provider()
@@ -446,10 +462,13 @@ def ensure_avito_links(result: LookResult) -> LookResult:
         url = str(item.get("url") or "")
         if url and is_avito_url(url):
             item["source"] = "avito"
+            item["link_kind"] = listing_url_kind(url)
             continue
         text = f"{item.get('brand') or ''} {item.get('name') or ''}".strip() or "одежда"
         item["url"] = provider.search_url_for(text)
         item["source"] = "avito"
+        item["link_kind"] = "search"
+        item["feed"] = "search"
         reasons = list(item.get("reasons") or [])
         note = "Ссылка ведёт на подборку Авито по этой вещи — там живые объявления с фото и ценами."
         if note not in reasons:
@@ -596,7 +615,7 @@ def avito_card_to_catalog_item(
         sku=sku,
         category=app_category,
         name=card.name or "Вещь с Авито",
-        brand=card.brand or "Авито",
+        brand=card.brand or _extract_brand(card.name) or "Без бренда",
         price_rub=float(card.price or 0),
         url=card.source_url,
         image_url=card.image or "",
@@ -605,7 +624,11 @@ def avito_card_to_catalog_item(
         styles=[request.style or "minimal"],
         moods=[request.mood or "calm"],
         silhouettes=[],
-        gendered=[],
+        # Кому адресована вещь по объявлению («женское», «мужское»):
+        # ранжировщик приложения отсекает заведомо не своё.
+        gendered=[str((card.meta or {}).get("gender") or "").strip()]
+        if str((card.meta or {}).get("gender") or "").strip()
+        else [],
         seasons=["all"] if (request.season or "all") == "all" else [request.season],
         sizes=_avito_sizes(card, app_category),
         fit=_avito_fit(card),
@@ -856,8 +879,14 @@ def _providers(
     """
     use_live = settings.avito_enabled if live is None else bool(live and settings.avito_enabled)
     if use_live:
-        return [avito_provider()]
-    providers: list[Any] = [CatalogSearchProvider(cards, min_score=min_score)]
+        providers: list[Any] = [avito_provider()]
+        # Снимок выдачи идёт вторым источником: пока живая выдача отвечает,
+        # он ничего не добавляет, но как только Авито закрылся капчей или
+        # отдал пустой список — в образе остаются конкретные объявления.
+        if settings.avito_snapshot_enabled:
+            providers.append(avito_snapshot_provider())
+        return providers
+    providers = [CatalogSearchProvider(cards, min_score=min_score)]
     if not include_external:
         return providers
     web = _web_provider()
@@ -878,6 +907,12 @@ class EngineRun:
     outfit: OutfitResult
     cards: dict[str, ProductItem] = field(default_factory=dict)
     providers: list[str] = field(default_factory=list)
+    #: Сколько вещей пришло из живой выдачи Авито, а сколько — из снимка.
+    feeds: dict[str, int] = field(default_factory=dict)
+    #: Человеческие пояснения к источникам («живых объявлений: 6»).
+    feed_notes: list[str] = field(default_factory=list)
+    live_error: str | None = None
+    snapshot_captured_at: str = ""
 
     @property
     def ordered_skus(self) -> list[str]:
@@ -919,6 +954,8 @@ def run_engine(
         engine = FashionEngine(providers=providers, options=options)
         discovery = engine.discover(query, profile)
         outfit = engine.create_outfit(query, profile, preloaded=discovery)
+        _rate_appearance(discovery.products, request, profile)
+        snapshot = avito_snapshot_provider()
         return EngineRun(
             query=query,
             profile=profile,
@@ -926,6 +963,9 @@ def run_engine(
             outfit=outfit,
             cards={card.sku or card.id: card for card in discovery.products},
             providers=[provider.name for provider in providers],
+            feeds=_feed_counts(discovery.products),
+            live_error=avito_provider().last_error,
+            snapshot_captured_at=snapshot.captured_at.isoformat() if snapshot.captured_at else "",
         )
 
     if cards is None:
@@ -1169,6 +1209,11 @@ def _engine_block(
         "repair": repair,
         "fallback": fallback,
         "providers": list(run.providers),
+        # Откуда пришли конкретные объявления: живая выдача и/или снимок.
+        "feeds": dict(run.feeds),
+        "feed_notes": list(run.feed_notes),
+        "live_error": run.live_error,
+        "snapshot_captured_at": run.snapshot_captured_at,
     }
 
 
@@ -1222,6 +1267,239 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
     return _assemble_look(prepared, request, run)
 
 
+# ─── пул реальных объявлений: живая выдача + снимок выдачи ────────────────────
+
+#: Источник карточки: живая выдача Авито или сохранённый снимок реальных объявлений.
+FEED_LIVE = "live"
+FEED_SNAPSHOT = "snapshot"
+
+
+def avito_snapshot_provider() -> AvitoSnapshotProvider:
+    """Синглтон провайдера-снимка: реальные объявления, сохранённые в поставке."""
+    global _AVITO_SNAPSHOT_PROVIDER
+    if _AVITO_SNAPSHOT_PROVIDER is None:
+        _AVITO_SNAPSHOT_PROVIDER = AvitoSnapshotProvider(
+            settings.avito_snapshot_path or None,
+            max_results=max(8, settings.avito_max_results),
+            max_age_days=settings.avito_snapshot_max_age_days,
+        )
+    return _AVITO_SNAPSHOT_PROVIDER
+
+
+def feed_of(card: ProductItem) -> str:
+    """Живое объявление или позиция из снимка выдачи."""
+    return FEED_SNAPSHOT if (card.meta or {}).get("snapshot") else FEED_LIVE
+
+
+def listing_url_kind(url: str) -> str:
+    """``listing`` — ссылка на конкретное объявление, ``search`` — подборка."""
+    return "listing" if looks_like_listing_url(url) else "search"
+
+
+def _snapshot_cards_for_slot(
+    request: LookRequest,
+    slot: str,
+    profile: UserStyleProfile,
+    *,
+    limit: int,
+    exclude: set[str] | None = None,
+) -> list[ProductItem]:
+    """Реальные объявления из снимка выдачи под конкретный слот."""
+    if not settings.avito_snapshot_enabled or limit <= 0:
+        return []
+    provider = avito_snapshot_provider()
+    try:
+        cards = provider.search(
+            ru_slot_query(request, slot),
+            SearchContext(
+                user_profile=profile,
+                limit=max(limit, 4),
+                categories=list(SLOT_ENGINE_CATEGORIES.get(slot, [])),
+            ),
+        )
+    except Exception:
+        return []
+    taken = exclude or set()
+    return [card for card in cards if str(card.sku or card.id) not in taken][:limit]
+
+
+def _top_up_with_snapshot(
+    cards: list[ProductItem],
+    request: LookRequest,
+    slots: list[str],
+    profile: UserStyleProfile,
+) -> list[ProductItem]:
+    """Добрать слоты реальными объявлениями из снимка, если живая выдача тонка.
+
+    Пользователь должен видеть конкретную вещь с фото и ссылкой на объявление
+    в каждом слоте образа — независимо от того, пустил ли Авито живой запрос.
+    """
+    if not settings.avito_snapshot_enabled:
+        return []
+    per_slot = max(1, int(settings.avito_snapshot_per_slot))
+    live_by_slot: dict[str, int] = {}
+    for card in cards:
+        if feed_of(card) != FEED_LIVE:
+            continue
+        slot = ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory")
+        live_by_slot[slot] = live_by_slot.get(slot, 0) + 1
+
+    taken = {str(card.sku or card.id) for card in cards}
+    added: list[ProductItem] = []
+    for slot in slots:
+        missing = per_slot - live_by_slot.get(slot, 0)
+        if missing <= 0:
+            continue
+        for card in _snapshot_cards_for_slot(
+            request, slot, profile, limit=missing, exclude=taken
+        ):
+            taken.add(str(card.sku or card.id))
+            added.append(card)
+    return added
+
+
+def _apply_appearance(
+    cards: list[ProductItem],
+    request: LookRequest,
+    profile: UserStyleProfile,
+    *,
+    with_photos: bool = True,
+) -> None:
+    """Оценить внешний вид каждой вещи: описание + фотография объявления.
+
+    Ключевые слова дают релевантность, а этот слой отвечает на вопрос «та ли
+    это вещь»: оттенок, фактура, силуэт, состояние, подача и то, что видно на
+    снимке (при доступности CDN Авито — измеренные признаки фотографии).
+    """
+    photo_budget = max(0, int(settings.avito_photo_max_per_look)) if (
+        with_photos and settings.avito_photo_analysis
+    ) else 0
+    for card in cards:
+        image = str(card.image or "")
+        existing = dict((card.meta or {}).get("photo_traits") or {})
+        photo: dict[str, Any] | None = None
+        if photo_budget > 0 and image and not existing:
+            photo = photo_traits_module.traits_for_url(
+                image, timeout=settings.avito_photo_timeout_sec
+            )
+            photo_budget -= 1
+        traits = analyze_listing(
+            card.name,
+            card.description or "",
+            "",
+            image,
+            photo_traits=photo or existing or None,
+        )
+        if photo:
+            # Оттенки со снимка приходят как id палитры приложения — переводим
+            # в слова движка, чтобы сравнивать с палитрой пользователя.
+            engine_words = [
+                APP_COLOR_TO_ENGINE[color_id]
+                for color_id in (photo.get("colors") or [])
+                if color_id in APP_COLOR_TO_ENGINE
+            ]
+            for word in engine_words:
+                if word not in traits.colors:
+                    traits.colors.append(word)
+        match = appearance_match(
+            traits,
+            preferred_colors=list(profile.colors),
+            avoid_colors=[word for word in profile.disliked_items if word],
+            silhouette_preference=(profile.preferred_silhouette or [None])[0],
+            style=request.style,
+            season=request.season,
+            presentation=request.presentation,
+            budget=float(request.budget_rub or 0),
+            price=float(card.price or 0),
+            size=request.size,
+        )
+        meta = card.meta if isinstance(card.meta, dict) else {}
+        meta["appearance"] = match.to_dict()
+        meta["traits"] = traits.to_dict()
+        meta["appearance_reasons"] = _appearance_reasons(traits, match)
+        meta["photo_traits"] = photo or existing or {}
+        meta["feed"] = feed_of(card)
+        meta["link_kind"] = listing_url_kind(card.source_url)
+        card.meta = meta
+        # Уверенность растёт вместе с совпадением по внешнему виду и описанию.
+        card.confidence = round(
+            min(0.97, max(0.55, 0.5 * float(card.confidence or 0.6) + 0.5 * (0.6 + 0.4 * match.score))),
+            3,
+        )
+
+
+def _rate_appearance(
+    cards: list[ProductItem],
+    request: LookRequest,
+    profile: UserStyleProfile,
+    *,
+    with_photos: bool = True,
+) -> None:
+    """Учесть внешний вид вещи в её итоговой оценке (один раз на вещь).
+
+    Оценка движка отвечает за вкус и архитектуру образа, а этот слой — за то,
+    подходит ли конкретная вещь: оттенок, фактура, силуэт, состояние и фото.
+    """
+    missing = [card for card in cards if not (card.meta or {}).get("appearance")]
+    if missing:
+        _apply_appearance(missing, request, profile, with_photos=with_photos)
+    for card in cards:
+        meta = card.meta if isinstance(card.meta, dict) else {}
+        if meta.get("appearance_blended"):
+            continue
+        appearance = float((meta.get("appearance") or {}).get("score") or 0.0)
+        engine_score = float(card.fashion_score or 0)
+        meta["engine_fashion_score"] = int(engine_score)
+        meta["appearance_blended"] = True
+        card.meta = meta
+        blended = int(round(0.68 * engine_score + 32.0 * appearance))
+        if meta.get("presentation_conflict"):
+            # Вещь другого адресата («мужской» свитер для женского образа):
+            # не выбрасываем — вдруг это единственное, что нашлось, но вперёд
+            # пускаем то, что человеку действительно подходит.
+            blended = max(0, blended - 6)
+        card.fashion_score = blended
+
+
+def _feed_counts(cards: list[ProductItem]) -> dict[str, int]:
+    """Сколько вещей пришло живой выдачей, а сколько — снимком."""
+    counts = {FEED_LIVE: 0, FEED_SNAPSHOT: 0}
+    for card in cards:
+        feed = feed_of(card)
+        counts[feed] = counts.get(feed, 0) + 1
+    return counts
+
+
+def _appearance_reasons(traits: Any, match: Any) -> list[str]:
+    """Человеческие причины выбора вещи: что видно на фото и в описании."""
+    reasons: list[str] = []
+    if traits.colors:
+        labels = [COLORS[color].ru for color in traits.colors[:2] if color in COLORS]
+        if labels:
+            reasons.append(f"Оттенок: {', '.join(labels)} — согласуется с палитрой образа.")
+    if traits.materials:
+        materials = [lexicon.material_label_ru(term) for term in traits.materials[:2]]
+        reasons.append(f"Фактура по описанию: {', '.join(materials)}.")
+    if traits.silhouettes:
+        silhouettes = [lexicon.silhouette_label_ru(term) for term in traits.silhouettes[:2]]
+        reasons.append(f"Силуэт: {', '.join(silhouettes)}.")
+    if traits.condition:
+        reasons.append(f"Состояние по объявлению: {traits.condition}.")
+    if traits.photo_traits:
+        photo = traits.photo_traits
+        if photo.get("colors_hex"):
+            tone = "тёмный" if photo.get("brightness", 0.5) < 0.35 else "светлый"
+            studio = "студийный кадр" if photo.get("background_flat") else "живое фото"
+            reasons.append(f"На фото: {tone} кадр, {studio} — снимок проверен.")
+        else:
+            reasons.append("Фото объявления проверено: вещь видна на снимке.")
+    elif traits.photo_quality:
+        reasons.append("Есть фото объявления с CDN Авито — вещь видно целиком.")
+    if match.components.get("presentation", 1.0) < 0.5:
+        reasons.append("Внимание: подача объявления (муж/жен) отличается от вашей — проверьте крой.")
+    return reasons[:4]
+
+
 def _fetch_avito_pool(
     request: LookRequest,
     *,
@@ -1229,10 +1507,12 @@ def _fetch_avito_pool(
     palette: PaletteProfile | None = None,
     slots: list[str] | None = None,
 ) -> tuple[list[ProductItem], list[str]]:
-    """Живой пул объявлений Авито: по короткому запросу на каждый слот.
+    """Пул реальных объявлений: живой Авито + снимок выдачи.
 
-    Запросы идут параллельно (каждый со своим таймаутом провайдера).
-    Возвращает (карточки без дублей, запросы слотов).
+    Каждый слот получает свой короткий русский запрос; живая выдача идёт
+    параллельно, а недостающие слоты добираются реальными объявлениями из
+    снимка — пустой или «дефолтной» выдачи не бывает. Возвращает
+    (карточки без дублей, запросы слотов).
     """
     target_slots = list(slots) if slots else list(SLOT_CATEGORIES)
     profile = build_profile(request, palette=palette, body=body)
@@ -1268,7 +1548,22 @@ def _fetch_avito_pool(
         if key in seen:
             continue
         seen.add(key)
+        meta = card.meta if isinstance(card.meta, dict) else {}
+        meta["feed"] = FEED_LIVE
+        meta["link_kind"] = listing_url_kind(card.source_url)
+        card.meta = meta
         unique.append(card)
+
+    unique.extend(_top_up_with_snapshot(unique, request, target_slots, profile))
+    _apply_appearance(unique, request, profile)
+    # Порядок: сначала лучшее совпадение по словам и внешнему виду.
+    unique.sort(
+        key=lambda card: (
+            -float((card.meta or {}).get("appearance", {}).get("score") or 0),
+            -float((card.meta or {}).get("query_match") or (card.meta or {}).get("selection_score") or 0),
+            card.id,
+        )
+    )
     return unique, [slot_queries[slot] for slot in target_slots]
 
 
@@ -1325,12 +1620,21 @@ def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> Lo
     covered = {
         ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory") for card in raw_cards
     }
+    live_cards = [card for card in raw_cards if feed_of(card) == FEED_LIVE]
+    snapshot_cards = [card for card in raw_cards if feed_of(card) == FEED_SNAPSHOT]
+    live_error = avito_provider().last_error
+    snapshot = avito_snapshot_provider()
+    snapshot_at = snapshot.captured_at.isoformat() if snapshot.captured_at else ""
     if len(raw_cards) < 3 or len(covered & set(target_slots)) < 2:
-        live_error = avito_provider().last_error or "живая выдача пуста"
+        # Ни живой выдачи, ни снимка реальных объявлений — только тогда прежний
+        # каталог. Это последний резерв, и ссылки в нём честно помечены как
+        # подборки Авито, а не как объявления.
         return _fallback_catalog_as_avito(
             products,
             request,
-            f"Авито временно недоступен ({live_error}) — подобрали вещи и дали ссылки на Авито.",
+            "Объявления Авито недоступны"
+            + (f" ({live_error})" if live_error else "")
+            + " и снимок выдачи пуст — подобрали вещи по каталогу и дали ссылки на подборки Авито.",
         )
 
     profile = build_profile(request, palette=reference.palette, body=reference.body)
@@ -1343,6 +1647,9 @@ def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> Lo
         ),
     )
     enriched = engine.enrich(raw_cards, profile)
+    # Оценка движка (вкус, ниша, архитектура) складывается с оценкой внешнего
+    # вида конкретной вещи: оттенок, фактура, силуэт, состояние и фото.
+    _rate_appearance(enriched, request, profile, with_photos=False)
     enriched.sort(key=lambda card: (-float(card.fashion_score or 0), card.id))
     products_capped = enriched[: settings.fashion_engine_max_products]
     for card in products_capped:
@@ -1364,6 +1671,17 @@ def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> Lo
             request,
             "Объявления Авито не прошли отбор движка — подобрали вещи и дали ссылки на Авито.",
         )
+    feed_notes: list[str] = []
+    if live_cards:
+        feed_notes.append(f"живых объявлений Авито в пуле: {len(live_cards)}")
+    if snapshot_cards:
+        note = f"объявлений из снимка выдачи: {len(snapshot_cards)}"
+        if snapshot_at:
+            note += f" (снимок от {snapshot_at})"
+        feed_notes.append(note)
+    if live_error and live_cards:
+        feed_notes.append(f"часть запросов Авито отдала не полностью: {live_error}")
+
     run = EngineRun(
         query=main_query,
         profile=profile,
@@ -1371,6 +1689,10 @@ def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> Lo
         outfit=outfit,
         cards={card.sku or card.id: card for card in products_capped},
         providers=["avito"],
+        feeds={FEED_LIVE: len(live_cards), FEED_SNAPSHOT: len(snapshot_cards)},
+        feed_notes=feed_notes,
+        live_error=live_error,
+        snapshot_captured_at=snapshot_at,
     )
 
     avito_pool = [avito_card_to_catalog_item(card, request, index) for index, card in enumerate(products_capped)]
@@ -1386,6 +1708,28 @@ def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> Lo
         return _fallback_catalog_as_avito(
             products, request, "Из объявлений Авито не сложился полный образ — подобрали вещи и дали ссылки на Авито."
         )
+
+
+def _listing_block(card: ProductItem | None, item: CatalogItem) -> dict[str, Any]:
+    """Паспорт конкретного объявления для карточки вещи в интерфейсе."""
+    meta = dict(card.meta or {}) if card is not None else {}
+    traits = dict(meta.get("traits") or {})
+    appearance = dict(meta.get("appearance") or {})
+    photo = dict(meta.get("photo_traits") or {})
+    feed = meta.get("feed") or ("snapshot" if meta.get("snapshot") else "live")
+    return {
+        "kind": meta.get("link_kind") or listing_url_kind(item.url),
+        "feed": feed,
+        "avito_id": str(meta.get("avito_id") or ""),
+        "city": str(meta.get("city") or ""),
+        "condition": str(meta.get("condition") or traits.get("condition") or ""),
+        "sizes": list(meta.get("sizes") or traits.get("sizes") or []),
+        "captured_at": str(meta.get("captured_at") or meta.get("snapshot_captured_at") or ""),
+        "appearance_score": round(float(appearance.get("score") or 0.0), 3),
+        "appearance_components": dict(appearance.get("components") or {}),
+        "photo_analyzed": bool(photo),
+        "colors_hex": list(photo.get("colors_hex") or []),
+    }
 
 
 def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun) -> LookResult:
@@ -1460,13 +1804,26 @@ def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun)
         in_engine_outfit = scored.sku in roles
         role = roles.get(scored.sku)
         meta = _engine_item_meta(card, slot, role=role, in_engine_outfit=in_engine_outfit)
+        card_meta = card.meta if card is not None and isinstance(card.meta, dict) else {}
+        # Адрес вещи: конкретное объявление (прямая ссылка + фото) и откуда оно
+        # взялось — живая выдача или снимок. Эти поля переживают сохранение в БД.
+        meta["feed"] = card_meta.get("feed") or ("snapshot" if card_meta.get("snapshot") else "live")
+        meta["link_kind"] = card_meta.get("link_kind") or listing_url_kind(scored.item.url)
+        meta["listing"] = _listing_block(card, scored.item)
         breakdown: dict[str, Any] = dict(scored.breakdown)
         breakdown["engineAttributes"] = meta
         if meta.get("fashion_score"):
             breakdown["engine"] = round(meta["fashion_score"] / 100, 3)
             breakdown["trend"] = meta.get("trend_relevance", 0.4)
             breakdown["uniqueness"] = meta.get("uniqueness", 0.5)
-        reasons = _engine_reasons(card, run, role=role) + item_reasons(scored, ctx_info)
+        card_meta = card.meta if card is not None and isinstance(card.meta, dict) else {}
+        reasons = (
+            _engine_reasons(card, run, role=role)
+            # Что видно на фото и в описании объявления: оттенок, фактура,
+            # силуэт, состояние — чтобы выбор вещи был объяснён, а не «так решил ИИ».
+            + [str(note) for note in (card_meta.get("appearance_reasons") or [])]
+            + item_reasons(scored, ctx_info)
+        )
         unique_reasons: list[str] = []
         for reason in reasons:
             if reason not in unique_reasons:
@@ -1495,6 +1852,11 @@ def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun)
                 "verification_status": scored.item.verification_status,
                 "verification_score": round(scored.item.verification_score, 3),
                 "source": scored.item.source,
+                # Конкретное объявление: живое или из снимка выдачи, но всегда
+                # с прямой ссылкой, фото и ценой именно этой вещи.
+                "feed": meta.get("feed"),
+                "link_kind": meta.get("link_kind"),
+                "listing": meta.get("listing"),
                 "alternatives": _alternatives(prepared, run, slot, taken),
             }
         )
@@ -1603,15 +1965,29 @@ def rerank_for_slot_avito(
             ),
         )
     except Exception:
-        return []
+        cards = []
     # Только честные попадания в слот: категория объявления должна совпасть.
     cards = [
         card
         for card in cards
         if ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory") == slot
     ]
+    # Мало живых объявлений (или сайт закрыт капчей) — добираем реальными
+    # объявлениями из снимка выдачи, чтобы замена была конкретной вещью.
+    if len(cards) < max(4, settings.avito_max_results // 2):
+        taken = {str(card.sku or card.id) for card in cards}
+        cards.extend(
+            _snapshot_cards_for_slot(
+                request,
+                slot,
+                profile,
+                limit=max(4, settings.avito_max_results - len(cards)),
+                exclude=taken,
+            )
+        )
     if not cards:
         return []
+    _apply_appearance(cards, request, profile)
     engine = FashionEngine(
         providers=[avito_provider()],
         options=EngineOptions(
@@ -1767,6 +2143,84 @@ def _external_item_payload(card: ProductItem, run: EngineRun) -> dict[str, Any] 
     }
 
 
+def _snapshot_search_items(
+    request: LookRequest,
+    prepared: PreparedPool,
+    *,
+    query: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Реальные объявления из снимка выдачи для экрана «Поиск вещей»."""
+    if not settings.avito_snapshot_enabled:
+        return []
+    provider = avito_snapshot_provider()
+    profile = build_profile(request, palette=prepared.palette, body=prepared.body)
+    try:
+        cards = provider.search(
+            query,
+            SearchContext(user_profile=profile, limit=max(limit * 2, 8)),
+        )
+    except Exception:
+        return []
+    if not cards:
+        return []
+    _apply_appearance(cards, request, profile)
+    cards.sort(
+        key=lambda card: (
+            -float((card.meta or {}).get("selection_score") or 0.0),
+            -float((card.meta or {}).get("appearance", {}).get("score") or 0.0),
+            card.id,
+        )
+    )
+    captured = provider.captured_at.isoformat() if provider.captured_at else ""
+    ctx_info = {
+        "style": request.style,
+        "mood": request.mood,
+        "palette_label": prepared.palette.season_label,
+        "silhouette_ru": prepared.body.silhouette_ru,
+    }
+    items: list[dict[str, Any]] = []
+    for index, card in enumerate(cards[: max(1, limit)]):
+        catalog_item = avito_card_to_catalog_item(card, request, index)
+        app_scored = score_item(catalog_item, prepared.ctx)
+        slot = ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory")
+        meta = _engine_item_meta(card, slot)
+        head = "Реальное объявление Авито с фото, ценой и ссылкой"
+        if captured:
+            head += f" (снимок выдачи от {captured})"
+        reasons = (
+            [head + "."]
+            + [str(note) for note in ((card.meta or {}).get("appearance_reasons") or [])]
+            + item_reasons(app_scored, ctx_info, limit=2)
+        )
+        items.append(
+            {
+                "sku": catalog_item.sku,
+                "name": catalog_item.name,
+                "brand": catalog_item.brand,
+                "category": catalog_item.category,
+                "slot": slot,
+                "slot_label": SLOT_LABELS.get(slot, slot),
+                "price_rub": catalog_item.price_rub,
+                "price_note": "",
+                "url": catalog_item.url,
+                "image_url": catalog_item.image_url,
+                "colors": list(catalog_item.colors),
+                "color_hexes": list(catalog_item.color_hexes),
+                "score": round(float(app_scored.score), 4),
+                "engine": meta,
+                "reasons": list(dict.fromkeys(reasons))[:5],
+                "verification_status": "verified",
+                "verification_score": round(float(card.confidence or 0.7), 3),
+                "source": "avito",
+                "feed": FEED_SNAPSHOT,
+                "link_kind": "listing",
+                "listing": _listing_block(card, catalog_item),
+            }
+        )
+    return items
+
+
 def search_avito(
     request: LookRequest,
     prepared: PreparedPool,
@@ -1833,11 +2287,22 @@ def search_avito(
                 "verification_status": "verified",
                 "verification_score": round(float(card.confidence or 0.7), 3),
                 "source": "avito",
+                "feed": feed_of(card),
+                "link_kind": (card.meta or {}).get("link_kind") or listing_url_kind(card.source_url),
+                "listing": _listing_block(card, catalog_item),
             }
         )
 
     fallback = None
     fallback_reason = None
+    if not items:
+        # Живая выдача не дала результата — показываем реальные объявления из
+        # снимка выдачи. Это по-прежнему конкретные вещи с фото, ценой и
+        # ссылкой на объявление, просто найденные раньше.
+        items = _snapshot_search_items(request, prepared, query=query, limit=limit)
+        if items:
+            fallback = "avito-snapshot"
+            fallback_reason = avito_provider().last_error or "живая выдача Авито пуста"
     if not items:
         fallback = "avito-unreachable"
         fallback_reason = avito_provider().last_error or "живая выдача Авито пуста"
@@ -1866,6 +2331,10 @@ def search_avito(
                     "verification_status": scored.item.verification_status,
                     "verification_score": round(scored.item.verification_score, 3),
                     "source": "avito",
+                    # Последний резерв: это не объявление, а подборка Авито.
+                    "feed": "search",
+                    "link_kind": "search",
+                    "listing": _listing_block(None, scored.item),
                 }
             )
 
@@ -1902,6 +2371,11 @@ def search_avito(
             "fallback_reason": fallback_reason,
             "providers": ["avito"],
             "web_sources": ["avito"],
+            # Откуда пришли вещи: живая выдача или снимок реальных объявлений.
+            "feeds": dict(run.feeds),
+            "feed_notes": list(run.feed_notes),
+            "live_error": run.live_error,
+            "snapshot_captured_at": run.snapshot_captured_at,
         },
         "thesis_options": [theses.get(name, name) for name in (run.outfit.meta or {}).get("theses", [])],
         "items": items,

@@ -43,6 +43,27 @@ class User(Base):
     looks: Mapped[list["Look"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
+class UserMemory(_JSONMixin, Base):
+    """Память о пользователе: рост, вес и настройки подбора.
+
+    Человек вводит данные один раз; в следующий раз сервис предлагает выбор —
+    собрать образ по сохранённым параметрам, поправить только рост и вес или
+    пройти настройку заново (``POST /api/profile/reset``).
+    """
+
+    __tablename__ = "user_memory"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    payload: Mapped[str] = mapped_column(Text, default="{}")
+    used_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    def data(self) -> dict:
+        return self.loads(self.payload, {})
+
+
 class Product(_JSONMixin, Base):
     """A verified fashion product offered by a source (marketplace/brand/demo)."""
 

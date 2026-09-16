@@ -34,6 +34,9 @@ connect-tg:  ## подключить бота: make connect-tg BOT_TOKEN=123:ABC
 	@test -n "$(WEB_APP_URL)" || (echo "Нужен WEB_APP_URL (публичный https-адрес)" && exit 1)
 	$(PY) backend/scripts/connect_bot.py --token "$(BOT_TOKEN)" --url "$(WEB_APP_URL)"
 
+refresh-avito:  ## обновить снимок реальной выдачи Авито (нужна сеть до avito.ru)
+	$(PY) backend/scripts/refresh_avito_snapshot.py --per-query 5 --delay 4
+
 seed:  ## re-seed and re-verify the demo catalog
 	$(PY) -c "import sys; sys.path.insert(0,'backend'); from app.db import SessionLocal, init_db; from app.services.catalog_service import seed_catalog; init_db(); s=SessionLocal(); print(seed_catalog(s, force=True)); s.close()"
 

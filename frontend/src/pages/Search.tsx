@@ -50,6 +50,9 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
         <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2, lineHeight: 1.25 }}>{item.name}</div>
         <div className="muted small" style={{ marginTop: 2 }}>
           {item.brand}
+          {item.listing?.city ? ` · ${item.listing.city}` : ''}
+          {item.listing?.condition ? ` · ${item.listing.condition}` : ''}
+          {item.listing?.sizes?.length ? ` · размер ${item.listing.sizes.slice(0, 2).join(', ')}` : ''}
         </div>
         <div className="wrap" style={{ gap: 5, marginTop: 6 }}>
           {item.source && SOURCE_LABELS[item.source] ? (
@@ -58,6 +61,7 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
           {item.engine.taste_label ? <Badge>{item.engine.taste_label}</Badge> : null}
           {item.engine.fashion_score ? <Badge tone="ok">fashion {item.engine.fashion_score}/100</Badge> : null}
           {item.engine.role_label ? <Badge>{item.engine.role_label}</Badge> : null}
+          {(item.feed ?? item.listing?.feed) === 'snapshot' ? <Badge tone="neutral">снимок выдачи</Badge> : null}
           <Badge>селекция {Math.round(item.score * 100)}%</Badge>
         </div>
         {item.reasons.length ? (
@@ -77,7 +81,11 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
               openExternal(item.url)
             }}
           >
-            {isAvitoUrl(item.url) ? 'Открыть на Авито ↗' : 'Открыть в источнике ↗'}
+            {isAvitoUrl(item.url)
+              ? (item.link_kind ?? item.listing?.kind) === 'search'
+                ? 'Открыть подборку Авито ↗'
+                : 'Открыть объявление на Авито ↗'
+              : 'Открыть в источнике ↗'}
           </button>
         ) : null}
       </div>

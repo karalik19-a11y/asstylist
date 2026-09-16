@@ -1,0 +1,105 @@
+name: Avito snapshot
+
+# Снимок реальной выдачи Авито: конкретные объявления (название, цена, ссылка,
+# фото). Приложение подбирает образ по живой выдаче, а этот снимок гарантирует,
+# что вещи остаются настоящими, даже когда Авито закрыт капчей для IP сервера.
+#
+# Раннер GitHub имеет «чистый» IP, поэтому обновление здесь может пройти там,
+# где дата-центр приложения уже заблокирован. Запуск: вручную
+# (Actions → Avito snapshot → Run workflow), по расписанию и при изменении
+# самого скрипта. Если Авито не отдал данные, шаг не ломает сборку: отчёт
+# с причиной записывается в backend/app/catalog/avito_refresh_report.json,
+# а снимок остаётся прежним.
+
+on:
+  workflow_dispatch:
+    inputs:
+      per_query:
+        description: "Сколько объявлений брать на один запрос"
+        default: "5"
+      delay:
+        description: "Пауза между запросами, сек"
+        default: "4"
+  schedule:
+    - cron: "0 4 * * *"   # раз в сутки, ночью
+  push:
+    paths:
+      - "backend/scripts/refresh_avito_snapshot.py"
+      - ".github/workflows/avito-snapshot.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # нужны pydantic/pydantic-settings: скрипт берёт настройки приложения
+          python -m pip install -r requirements.txt
+
+      - name: Refresh snapshot
+        id: refresh
+        continue-on-error: true
+        run: |
+          set +e
+          python backend/scripts/refresh_avito_snapshot.py \
+            --per-query "${{ github.event.inputs.per_query || '6' }}" \
+            --delay "${{ github.event.inputs.delay || '6' }}" 2>&1 | tee /tmp/refresh.log
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Report
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib, re
+          log = pathlib.Path("/tmp/refresh.log")
+          text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
+          snapshot = pathlib.Path("backend/app/catalog/avito_listings.json")
+          try:
+              data = json.loads(snapshot.read_text(encoding="utf-8"))
+          except Exception:
+              data = {}
+          listings = data.get("listings", [])
+          report = {
+              # «ok» — только если скрипт действительно записал свежие находки.
+              "status": "ok" if "записано:" in text else "blocked",
+              "listings": len(listings),
+              "captured_at": data.get("captured_at", ""),
+              "queries": len(data.get("queries", [])),
+              "captcha": bool(re.search(r"captcha|доступ ограничен|робот|проверка безопасности", text, re.I)),
+              "tail": text[-2000:],
+          }
+          pathlib.Path("backend/app/catalog/avito_refresh_report.json").write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps({k: v for k, v in report.items() if k != "tail"}, ensure_ascii=False))
+          PY
+
+      - name: Upload snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avito-listings
+          path: backend/app/catalog/avito_listings.json
+
+      - name: Commit refreshed snapshot
+        run: |
+          if [ -z "$(git status --porcelain backend/app/catalog)" ]; then
+            echo "Изменений нет — коммит не нужен."
+            exit 0
+          fi
+          git config user.name "asstylist-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add backend/app/catalog
+          git commit -m "Авито: обновлён снимок выдачи (реальные объявления)"
+          git push

@@ -37,6 +37,9 @@ uploads/
 Thumbs.db
 *.swp
 
+# --- поисковые картинки/скретч ---
+image-search/
+
 # --- build artifacts ---
 dist/
 build/
