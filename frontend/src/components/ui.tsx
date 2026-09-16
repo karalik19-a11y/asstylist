@@ -90,15 +90,7 @@ export function Header({
         </div>
 
         <div className="row header-controls">
-          <button
-            type="button"
-            className="header-control header-control-icon"
-            onClick={handleSoundToggle}
-            aria-label={soundOn ? 'Выключить звук' : 'Включить звук'}
-            title={soundOn ? 'Звук: включён' : 'Звук: выключен'}
-          >
-            <SoundIcon enabled={soundOn} size={16} />
-          </button>
+          <SoundToggle />
           {right}
         </div>
       </div>
@@ -110,6 +102,22 @@ export function Header({
         </div>
       ) : null}
     </header>
+  )
+}
+
+export function SoundToggle() {
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
+
+  return (
+    <button
+      type="button"
+      className="header-control header-control-icon"
+      onClick={() => setSoundOn(toggleSound())}
+      aria-label={soundOn ? 'Выключить звук' : 'Включить звук'}
+      title={soundOn ? 'Звук: включён' : 'Звук: выключен'}
+    >
+      <SoundIcon enabled={soundOn} size={16} />
+    </button>
   )
 }
 
