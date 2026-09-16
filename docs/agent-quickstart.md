@@ -1,16 +1,17 @@
 # Agent quickstart (5 minutes)
 
-1. Read [AGENTS.md](../AGENTS.md)
-2. Skim [architecture.md](./architecture.md)
-3. Run:
+1. Skim [CHEATSHEET.md](../CHEATSHEET.md) (1 page)
+2. Read [AGENTS.md](../AGENTS.md) if you change code
+3. Optional: [architecture.md](./architecture.md), [cheatsheets/](./cheatsheets/)
+4. Run:
 
 ```bash
 make setup
-make test-backend
+make test-engine   # or make test-backend
 ```
 
-4. Pick a **safe zone** task (engine provider, docs, tests)
-5. If changing defaults or API → write ADR first under `docs/adr/`
-6. Open PR with risk label: `docs` | `safe-core` | `api` | `ui` | `deploy`
+5. Pick a **safe zone** task (engine provider, docs, tests) — see [cheatsheets/tasks.md](./cheatsheets/tasks.md)
+6. If changing defaults or API → write ADR first under `docs/adr/`
+7. Open PR with risk label: `docs` | `safe-core` | `api` | `ui` | `deploy`
 
-Do not start with deploy files or Telegram auth.
+Do not start with deploy files or Telegram auth. See [cheatsheets/do-not.md](./cheatsheets/do-not.md).
