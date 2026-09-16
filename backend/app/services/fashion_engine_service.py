@@ -624,7 +624,11 @@ def avito_card_to_catalog_item(
         styles=[request.style or "minimal"],
         moods=[request.mood or "calm"],
         silhouettes=[],
-        gendered=[],
+        # Кому адресована вещь по объявлению («женское», «мужское»):
+        # ранжировщик приложения отсекает заведомо не своё.
+        gendered=[str((card.meta or {}).get("gender") or "").strip()]
+        if str((card.meta or {}).get("gender") or "").strip()
+        else [],
         seasons=["all"] if (request.season or "all") == "all" else [request.season],
         sizes=_avito_sizes(card, app_category),
         fit=_avito_fit(card),
@@ -1448,7 +1452,13 @@ def _rate_appearance(
         meta["engine_fashion_score"] = int(engine_score)
         meta["appearance_blended"] = True
         card.meta = meta
-        card.fashion_score = int(round(0.68 * engine_score + 32.0 * appearance))
+        blended = int(round(0.68 * engine_score + 32.0 * appearance))
+        if meta.get("presentation_conflict"):
+            # Вещь другого адресата («мужской» свитер для женского образа):
+            # не выбрасываем — вдруг это единственное, что нашлось, но вперёд
+            # пускаем то, что человеку действительно подходит.
+            blended = max(0, blended - 6)
+        card.fashion_score = blended
 
 
 def _feed_counts(cards: list[ProductItem]) -> dict[str, int]:

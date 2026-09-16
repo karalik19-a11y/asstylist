@@ -273,6 +273,16 @@ class AvitoSnapshotProvider(SearchProvider):
         # Итоговый отбор: слова весят больше, внешний вид и описание — решают
         # между близкими по словам объявлениями.
         selection = lexical + 34.0 * match.score * 2.0
+
+        # Подача пользователя: женское объявление для feminine-запроса и
+        # наоборот. Штраф мягкий — если подходящего больше нет, вещь остаётся
+        # (fail-open), но вперёд выходят вещи «своего» адреса.
+        opposite = {"feminine": "masculine", "masculine": "feminine"}.get(
+            str(getattr(profile, "gender", "") or "").lower()
+        )
+        gender_conflict = bool(opposite) and traits.gendered == opposite
+        if gender_conflict:
+            selection *= 0.72
         if traits.photo_quality > 0:
             selection += traits.photo_quality
         if hits:
@@ -327,6 +337,8 @@ class AvitoSnapshotProvider(SearchProvider):
                 "photo_score": round(traits.photo_quality, 1),
                 "description_score": round(traits.text_richness, 1),
                 "condition": traits.condition,
+                "gender": traits.gendered,
+                "presentation_conflict": gender_conflict,
                 "sizes": traits.size_tokens,
                 "city": entry.get("city") or "",
                 "source_domain": "avito.ru",
