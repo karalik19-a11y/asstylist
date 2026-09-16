@@ -1,15 +1,4 @@
-"""Память пользователя: рост и вес вводятся один раз.
-
-Эндпоинты:
-
-* ``GET /api/profile`` — что сервис помнит (``saved: false``, если данных нет);
-* ``PUT /api/profile`` — сохранить или обновить рост и вес;
-* ``POST /api/profile/used`` — отметить, что сохранёнными данными воспользовались;
-* ``POST /api/profile/reset`` (и ``DELETE /api/profile``) — «забыть мои данные».
-
-Идентификация та же, что у образов: подписанный ``init_data`` мини-приложения
-Telegram или демо-идентификатор клиента.
-"""
+"""Память пользователя: рост и вес вводятся один раз."""
 
 from __future__ import annotations
 
@@ -67,30 +56,38 @@ def read_profile(request: Request, session: Session = Depends(get_session)) -> d
 
 @router.put("")
 async def write_profile(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
-    """Сохранить рост и вес. В теле — ``height_cm`` и/или ``weight_kg``."""
     payload = await _body_payload(request)
     user = _resolve_user(session, {**_query_payload(request), **payload})
-    profile, problems = profile_service.save_profile(session, user, payload)
-    return {**profile, "problems": problems}
+    return profile_service.save_profile(session, user, payload)
 
 
 @router.post("/used")
-def mark_used(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
-    user = _resolve_user(session, _query_payload(request))
-    profile_service.mark_used(session, user)
-    return profile_service.get_profile(session, user)
+async def mark_used(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
+    payload = await _body_payload(request)
+    user = _resolve_user(session, {**_query_payload(request), **payload})
+    return profile_service.mark_used(session, user)
 
 
 @router.post("/reset")
-def reset(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
-    user = _resolve_user(session, _query_payload(request))
+async def reset_profile(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
+    payload = await _body_payload(request)
+    user = _resolve_user(session, {**_query_payload(request), **payload})
     return profile_service.forget_profile(session, user)
 
 
 @router.delete("")
-def forget(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
-    user = _resolve_user(session, _query_payload(request))
+async def delete_profile(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
+    payload = await _body_payload(request)
+    user = _resolve_user(session, {**_query_payload(request), **payload})
     return profile_service.forget_profile(session, user)
+
+
+@router.post("/register")
+async def register_profile(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
+    """Assign immutable signature colour (personal ID). Idempotent."""
+    payload = await _body_payload(request)
+    user = _resolve_user(session, {**_query_payload(request), **payload})
+    return profile_service.register_signature(session, user)
 
 
 __all__ = ["router"]
