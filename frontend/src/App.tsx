@@ -25,6 +25,7 @@ import { LookResult } from './components/LookResult'
 import { Header, ThemeToggle } from './components/ui'
 import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
+import { BUILD_STAMP, formatBuildLabel } from './lib/build'
 
 type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification' | 'search'
 
@@ -376,9 +377,10 @@ export default function App() {
         <Verification report={report} loading={loadingList && !report} error={error} />
       ) : null}
 
-      {screen === 'home' && !isTelegram() ? (
-        <footer className="page-mark">ASStylist · автономный режим браузера</footer>
-      ) : null}
+      <footer className="build-stamp" title="Идентификатор сборки фронтенда">
+        {screen === 'home' && !isTelegram() ? 'ASStylist · браузер · ' : ''}
+        <code>{formatBuildLabel(BUILD_STAMP)}</code>
+      </footer>
     </div>
   )
 }
