@@ -163,6 +163,11 @@ class AvitoSnapshotProvider(SearchProvider):
             "image": str(entry.get("image") or "").strip(),
             "description": description,
             "params": params,
+            # Бренд и подача записаны в снимке при сборе выдачи: если их
+            # потерять, карточка возьмёт «бренд» из первого латинского слова
+            # заголовка («Forte» вместо «Forte Couture»).
+            "brand": str(entry.get("brand") or "").strip(),
+            "gender": str(entry.get("gender") or "").strip(),
             "city": city,
             "query": str(entry.get("query") or "").strip(),
             "captured_at": entry.get("captured_at") or (
@@ -241,6 +246,11 @@ class AvitoSnapshotProvider(SearchProvider):
         full_text = f"{title} {params} {description}".strip()
 
         traits = analyze_listing(title, description, params, str(entry.get("image") or ""))
+        # Подача вещи записана при сборе выдачи («женское», «мужское»): если по
+        # тексту не понять, кому она адресована, берём это из объявления.
+        recorded_gender = str(entry.get("gender") or "").strip().lower()
+        if traits.gendered == "unisex" and recorded_gender in ("feminine", "masculine"):
+            traits.gendered = recorded_gender
         profile = context.user_profile
         match = appearance_match(
             traits,

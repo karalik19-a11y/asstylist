@@ -87,6 +87,18 @@ def test_snapshot_search_finds_jeans_with_photo_and_link(snapshot):
     assert any("джинс" in card.name.lower() for card in cards)
 
 
+def test_snapshot_keeps_brand_from_file(snapshot):
+    """Бренд берём из снимка целиком, а не из первого слова заголовка."""
+    cards = snapshot.search("джинсовая куртка", SearchContext(user_profile=_profile(), limit=6))
+    brands = {card.name: card.brand for card in cards}
+    forte = next((brand for name, brand in brands.items() if "Forte Couture" in name), None)
+    assert forte == "Forte Couture", brands
+
+    boots = snapshot.search("ботинки", SearchContext(user_profile=_profile(), limit=6))
+    karl = next((card.brand for card in boots if "Karl Lagerfeld" in card.name), None)
+    assert karl == "Karl Lagerfeld", [card.brand for card in boots]
+
+
 def test_snapshot_search_matches_keywords_not_categories(snapshot):
     """Поиск идёт по словам и описанию: «кашемир» не обязан быть категорией."""
     cards = snapshot.search("шерстяное пальто", SearchContext(user_profile=_profile(), limit=5))
