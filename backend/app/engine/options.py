@@ -79,6 +79,49 @@ STYLE_OPTIONS: list[dict[str, Any]] = [
         "description": "Архитектурный крой, асимметрия, чёрный как главный цвет.",
         "palette_hint": ["black", "charcoal", "white", "silver"],
     },
+    # --- актуальное из TikTok/Pinterest (2026) -------------------------
+    {
+        "id": "office_siren",
+        "label": "Офис-сирена",
+        "emoji": "🗂️",
+        "description": "Корпкор: острая офисная классика — жакет, юбка-карандаш, очки «Байонетта».",
+        "palette_hint": ["black", "grey", "white", "navy", "burgundy"],
+    },
+    {
+        "id": "gorpcore",
+        "label": "Горпкор",
+        "emoji": "🏔️",
+        "description": "Outdoor-функциональность в городе: флиска, парашютные брюки, трейловая обувь.",
+        "palette_hint": ["olive", "khaki", "black", "grey", "orange"],
+    },
+    {
+        "id": "y2k",
+        "label": "Y2K",
+        "emoji": "💿",
+        "description": "Нулевые вернулись: baggy-джинсы, беби-ти, блеск и акрил.",
+        "palette_hint": ["pink", "silver", "blue", "white", "lavender"],
+    },
+    {
+        "id": "indie_sleaze",
+        "label": "Инди-слиз",
+        "emoji": "📸",
+        "description": "Вечериночный винтаж 2010-х: кожа, майки, вспышка и шум.",
+        "palette_hint": ["black", "white", "red", "grey", "burgundy"],
+    },
+    {
+        "id": "dark_academia",
+        "label": "Тёмная академия",
+        "emoji": "📚",
+        "description": "Твид, оксфорд, свитера и библиотечная палитра.",
+        "palette_hint": ["brown", "chocolate", "burgundy", "grey", "navy"],
+    },
+    {
+        "id": "balletcore",
+        "label": "Балеткор",
+        "emoji": "🩰",
+        "description": "Мягкость пачки: кардиганы на запах, гетры, балетки, ленты.",
+        "palette_hint": ["blush", "ivory", "pink", "light_grey", "lavender"],
+    },
 ]
 
 MOOD_OPTIONS: list[dict[str, Any]] = [

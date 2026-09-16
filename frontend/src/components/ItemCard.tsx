@@ -5,6 +5,7 @@ import { openExternal } from '../lib/telegram'
 import { playClick, playTick } from '../lib/sound'
 import { ExternalIcon, SwapIcon } from '../lib/graphics'
 import { Badge, verificationLabel, verificationTone } from './ui'
+import { ItemPhoto } from './ItemPhoto'
 
 const BREAKDOWN_LABELS: Record<string, string> = {
   style: 'стиль',
@@ -38,6 +39,14 @@ export function ItemCard({
 
   return (
     <article className="item-card">
+      {item.image_url ? (
+        <ItemPhoto
+          src={item.image_url}
+          alt={`${item.brand} — ${item.name}`}
+          swatch={swatch}
+          className="item-photo-card"
+        />
+      ) : null}
       <div className="item-head">
         <div className="item-swatch" style={{ background: swatch }} aria-hidden="true">
           <span

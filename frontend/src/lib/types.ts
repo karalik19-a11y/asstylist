@@ -133,6 +133,9 @@ export interface LookEngine {
   repair?: string | null
   fallback?: string | null
   fallback_reason?: string
+  /** Задействованные провайдеры поиска и настроенные живые источники. */
+  providers?: string[]
+  web_sources?: string[]
 }
 
 /** Вещь из свободного поиска по движку (/api/engine/search). */
@@ -144,7 +147,10 @@ export interface EngineSearchItem {
   slot: string
   slot_label: string
   price_rub: number
+  /** Например «420 EUR» — исходная цена для позиций в валюте, не в ₽. */
+  price_note?: string
   url: string
+  image_url?: string
   colors: string[]
   color_hexes: string[]
   score: number
@@ -152,6 +158,8 @@ export interface EngineSearchItem {
   reasons: string[]
   verification_status: string
   verification_score: number
+  /** web-search (онлайн-нахождение), mock-real-catalog (архетип), каталог приложения. */
+  source?: string
 }
 
 export interface EngineSearchResult {
@@ -227,6 +235,18 @@ export interface PaletteProfile {
   source: string
   dominant_colors: string[]
   signals: string[]
+  /** Разбор внешности по фото: цветотип, подтон, контраст, свой металл. */
+  color_type?: string
+  color_type_ru?: string
+  undertone?: string
+  undertone_ru?: string
+  contrast?: string
+  contrast_ru?: string
+  metal?: string
+  metal_ru?: string
+  hair_depth?: string | null
+  skin_hex?: string | null
+  hair_hex?: string | null
 }
 
 export interface Look {
@@ -247,6 +267,8 @@ export interface Look {
   verdict: { grade: string; title: string; note: string }
   cohesion: Record<string, number>
   summary: string
+  /** Короткое объяснение, почему образ собран именно для этого пользователя. */
+  personal_note: string
   tips: string[]
   body: BodyProfile
   palette: PaletteProfile

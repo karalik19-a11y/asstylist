@@ -52,12 +52,13 @@ export function Wizard({
       {step === 'photo' ? (
         <div className="stack" style={{ gap: 16 }}>
           <p className="muted" style={{ margin: 0, fontSize: 15.5 }}>
-            Фото помогает точнее определить пропорции и оттенки. Снимок обрабатывается локально и не сохраняется.
+            По фото определим цветотип, подтон кожи, контраст внешности и пропорции — и подберём оттенки и
+            крой под вас, а не «в среднем». Снимок анализируется при формировании образа и не сохраняется.
           </p>
           <PhotoUploader dataUrl={state.photoDataUrl} onSelect={onPhoto} onClear={onClearPhoto} />
           {state.photoDataUrl ? (
             <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
-              Снимок прикреплён — анализ запустится при формировании гардероба.
+              Снимок прикреплён — разбор внешности (цветотип, подтон, контраст) запустится при формировании гардероба.
             </div>
           ) : null}
         </div>

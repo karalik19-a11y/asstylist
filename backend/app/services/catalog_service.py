@@ -86,12 +86,32 @@ def verify_and_persist(session: Session, payload: dict[str, Any], *, commit: boo
 
 
 def seed_catalog(session: Session, *, force: bool = False) -> dict[str, int]:
-    """Seed the demo catalog (idempotent) and verify every row."""
+    """Seed the demo catalog and keep it in sync, verifying every row.
+
+    Идемпотентно: при повторных запусках обновляет сид-позиции (стили, фото,
+    цены) до актуальных из ``catalog/products.py`` — так трендовые теги и
+    локальные изображения доезжают и в уже созданные базы. Пользовательские
+    товары (другие ``sku``/``source``) не трогаем.
+    """
     existing = session.execute(select(func.count(Product.id))).scalar_one()
     if existing and not force:
-        return {"total": int(existing), "seeded": 0}
+        # Быстрый путь: набор SKU совпал и payload не менялся — ничего не делаем.
+        rows = seed_products()
+        known = set(session.execute(select(Product.sku)).scalars().all())
+        missing = [row for row in rows if row["sku"] not in known]
+        stale = 0
+        if not missing:
+            for row in rows:
+                product = session.execute(
+                    select(Product).where(Product.sku == row["sku"], Product.source == row["source"])
+                ).scalar_one_or_none()
+                if product is None or product.image_url != (row.get("image_url") or "") or product.styles_list() != row["styles"]:
+                    stale += 1
+        if not missing and stale == 0:
+            return {"total": int(existing), "seeded": 0}
+    else:
+        rows = seed_products()
 
-    rows = seed_products()
     for payload in rows:
         verify_and_persist(session, payload, commit=False)
     session.commit()

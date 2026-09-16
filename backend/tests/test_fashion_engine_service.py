@@ -231,11 +231,20 @@ def test_search_returns_engine_payload(items):
     assert payload["items"], "поиск должен вернуть вещи каталога"
     assert len(payload["items"]) <= 6
     skus = {item.sku for item in items}
+    catalog_hits = 0
     for entry in payload["items"]:
-        assert entry["sku"] in skus
-        assert entry["score"] > 0
-        assert entry["engine"]["taste_category"]
-        assert entry["reasons"]
+        if entry["sku"] in skus:
+            catalog_hits += 1
+            assert entry["verification_status"] != "external"
+            assert entry["score"] > 0
+            assert entry["engine"]["taste_category"]
+            assert entry["reasons"]
+        else:
+            # Живые находки и справочные архетипы идут с особым статусом.
+            assert entry["verification_status"] == "external"
+            assert entry["source"]
+            assert "image_url" in entry
+    assert catalog_hits, "каталог не должен теряться в выдаче"
     assert payload["suggested_request"]["niche_level"] == engine["niche_level"]
 
 

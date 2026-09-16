@@ -3,7 +3,16 @@ import type { EngineSearchItem, EngineSearchResult, Meta, WizardState } from '..
 import { api } from '../lib/api'
 import { formatRub } from '../lib/format'
 import { Badge, Chip, RangeField, SectionTitle, Spinner } from '../components/ui'
+import { ItemPhoto } from '../components/ItemPhoto'
+import { openExternal } from '../lib/telegram'
 import { playClick, playSuccess, playTick } from '../lib/sound'
+
+/** Человекочитаемые пометки источников позиций выдачи. */
+const SOURCE_LABELS: Record<string, string> = {
+  'web-search': 'онлайн-находка',
+  'partner-feed': 'партнёрский магазин',
+  'mock-real-catalog': 'архетип дизайнера',
+}
 
 const PRESETS: { label: string; query: string; style: string; niche: number }[] = [
   { label: 'Индустриальная романтика', query: 'индустриальный образ с прозрачным верхом и кожаной курткой', style: 'grunge', niche: 82 },
@@ -21,17 +30,30 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
       : 'var(--surface-2)'
   return (
     <div className="engine-item">
-      <span className="engine-item-swatch" style={{ background: swatch }} aria-hidden="true" />
+      <ItemPhoto
+        src={item.image_url}
+        alt={`${item.brand} — ${item.name}`}
+        swatch={swatch}
+        className="engine-item-photo"
+      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="row-between" style={{ gap: 8 }}>
           <span className="tiny">{item.slot_label}</span>
-          <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatRub(item.price_rub)}</strong>
+          <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {formatRub(item.price_rub)}
+            {item.price_note ? (
+              <span className="muted small" style={{ fontWeight: 400 }}> · {item.price_note}</span>
+            ) : null}
+          </strong>
         </div>
         <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2, lineHeight: 1.25 }}>{item.name}</div>
         <div className="muted small" style={{ marginTop: 2 }}>
           {item.brand}
         </div>
         <div className="wrap" style={{ gap: 5, marginTop: 6 }}>
+          {item.source && SOURCE_LABELS[item.source] ? (
+            <Badge tone="neutral">{SOURCE_LABELS[item.source]}</Badge>
+          ) : null}
           {item.engine.taste_label ? <Badge>{item.engine.taste_label}</Badge> : null}
           {item.engine.fashion_score ? <Badge tone="ok">fashion {item.engine.fashion_score}/100</Badge> : null}
           {item.engine.role_label ? <Badge>{item.engine.role_label}</Badge> : null}
@@ -43,6 +65,19 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
               <li key={reason}>{reason}</li>
             ))}
           </ul>
+        ) : null}
+        {item.url ? (
+          <button
+            type="button"
+            className="link-btn small"
+            style={{ marginTop: 6, padding: 0 }}
+            onClick={() => {
+              playClick()
+              openExternal(item.url)
+            }}
+          >
+            Открыть в источнике ↗
+          </button>
         ) : null}
       </div>
     </div>

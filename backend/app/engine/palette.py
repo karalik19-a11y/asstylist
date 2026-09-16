@@ -18,6 +18,31 @@ SEASON_LABELS = {
     ("neutral", "deep"): "Глубокая нейтральная зима",
 }
 
+CONTRAST_RU = {
+    "low": "низкий",
+    "medium": "средний",
+    "high": "высокий",
+}
+
+METAL_RU = {
+    "gold": "золото",
+    "silver": "серебро",
+    "both": "золото и серебро",
+}
+
+UNDERTONE_RU = {
+    "warm": "тёплый",
+    "cool": "холодный",
+    "neutral": "нейтральный",
+}
+
+#: Советы по сочетаниям для уровня контраста внешности.
+CONTRAST_TIPS = {
+    "low": "Внешность неконтрастная: собирайте образ тон в тон и избегайте резких чёрно-белых переходов у лица.",
+    "medium": "Контраст средний: держите 1–2 акцента и мягкие переходы оттенков.",
+    "high": "Внешность контрастная: вам идут чистые цвета и чёткие контрастные сочетания.",
+}
+
 
 @dataclass(frozen=True)
 class PaletteProfile:
@@ -31,6 +56,15 @@ class PaletteProfile:
     source: str
     dominant_colors: tuple[str, ...] = field(default_factory=tuple)
     signals: list[str] = field(default_factory=list)
+    #: Расширенный разбор внешности (по фото): цветотип, подтон, контраст,
+    #: «свой» металл. Без фото — нейтральные значения и низкая уверенность.
+    color_type: str = "neutral_medium"
+    undertone: str = "neutral"
+    contrast: str = "medium"
+    metal: str = "both"
+    hair_depth: str | None = None
+    skin_hex: str | None = None
+    hair_hex: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -38,6 +72,10 @@ class PaletteProfile:
         data["avoid"] = list(self.avoid)
         data["dominant_colors"] = list(self.dominant_colors)
         data["signals"] = list(self.signals)
+        data["color_type_ru"] = self.season_label
+        data["undertone_ru"] = UNDERTONE_RU.get(self.undertone, self.undertone)
+        data["contrast_ru"] = CONTRAST_RU.get(self.contrast, self.contrast)
+        data["metal_ru"] = METAL_RU.get(self.metal, self.metal)
         return data
 
 
@@ -71,8 +109,21 @@ def analyze_palette(
         confidence = float(vision.get("palette_confidence", 0.6))
         source = vision.get("source", "photo")
         dominant = tuple(vision.get("dominant_colors", []))
-        signals.append(f"Фото: доминирующие оттенки — {', '.join(dominant[:4])}")
-        signals.append(f"Определён подтон: {temperature}, глубина: {depth}, насыщенность: {chroma}")
+        appearance_used = bool(vision.get("appearance_used"))
+        if appearance_used:
+            signals.append("Фото: анализ внешности — подтон кожи, глубина волос, контраст")
+            undertone = str(vision.get("undertone") or temperature)
+            hair = {"light": "светлые", "medium": "русые/средние", "deep": "тёмные"}.get(
+                str(vision.get("hair_depth") or ""), None
+            )
+            signals.append(
+                f"Подтон кожи — {UNDERTONE_RU.get(undertone, undertone)}"
+                + (f", волосы — {hair}" if hair else "")
+                + f", контраст — {CONTRAST_RU.get(str(vision.get('contrast') or 'medium'), 'средний')}"
+            )
+        else:
+            signals.append(f"Фото: доминирующие оттенки — {', '.join(dominant[:4])}")
+            signals.append(f"Определён подтон: {temperature}, глубина: {depth}, насыщенность: {chroma}")
     else:
         temperature, depth, chroma = "neutral", "medium", "soft"
         confidence = 0.25
@@ -100,6 +151,12 @@ def analyze_palette(
 
     label = SEASON_LABELS.get((temperature, depth), SEASON_LABELS.get((temperature, "medium"), "Универсальная палитра"))
 
+    contrast = str((vision or {}).get("contrast") or ("high" if chroma == "clear" else "medium"))
+    metal = str((vision or {}).get("metal") or ("gold" if temperature == "warm" else "silver" if temperature == "cool" else "both"))
+    if vision and vision.get("appearance_used") and CONTRAST_TIPS.get(contrast):
+        signals.append(CONTRAST_TIPS[contrast])
+        signals.append(f"Украшения и фурнитура: ваш металл — {METAL_RU.get(metal, metal)}")
+
     return PaletteProfile(
         temperature=temperature,
         depth=depth,
@@ -111,6 +168,13 @@ def analyze_palette(
         source=source,
         dominant_colors=dominant[:6],
         signals=signals,
+        color_type=f"{temperature}_{depth}",
+        undertone=str((vision or {}).get("undertone") or temperature),
+        contrast=contrast,
+        metal=metal,
+        hair_depth=(vision or {}).get("hair_depth"),
+        skin_hex=(vision or {}).get("skin_hex"),
+        hair_hex=(vision or {}).get("hair_hex"),
     )
 
 
@@ -127,4 +191,11 @@ def palette_from_dict(data: dict[str, Any]) -> PaletteProfile:
         source=str(data.get("source", "defaults")),
         dominant_colors=tuple(data.get("dominant_colors", ())),
         signals=list(data.get("signals", [])),
+        color_type=str(data.get("color_type", "neutral_medium")),
+        undertone=str(data.get("undertone", "neutral")),
+        contrast=str(data.get("contrast", "medium")),
+        metal=str(data.get("metal", "both")),
+        hair_depth=data.get("hair_depth"),
+        skin_hex=data.get("skin_hex"),
+        hair_hex=data.get("hair_hex"),
     )

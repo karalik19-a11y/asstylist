@@ -179,7 +179,7 @@ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'ok' 
 
 export function verificationTone(status: string): 'ok' | 'warn' | 'bad' {
   if (status === 'verified') return 'ok'
-  if (status === 'warning') return 'warn'
+  if (status === 'warning' || status === 'external') return 'warn'
   return 'bad'
 }
 
@@ -187,6 +187,7 @@ export function verificationLabel(status: string): string {
   if (status === 'verified') return 'проверено'
   if (status === 'warning') return 'внимание'
   if (status === 'failed') return 'не проверено'
+  if (status === 'external') return 'внешний источник'
   return status
 }
 

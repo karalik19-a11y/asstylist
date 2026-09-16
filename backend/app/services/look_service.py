@@ -61,6 +61,22 @@ def get_or_create_user(session: Session, identity: TelegramUser) -> User:
     return user
 
 
+def _weights_for_vision(vision: dict[str, Any] | None) -> dict[str, float]:
+    """Веса скоринга с учётом фото: когда есть разбор внешности, цвет и
+    силуэт (факторы, которые фото реально измеряет) получают больше влияния,
+    а доля стиля слегка сглаживается. Сумма весов всегда 1.0."""
+    weights = settings.resolved_ranking_weights()
+    if not vision or not vision.get("person_detected"):
+        return weights
+    factor = 1.45 if vision.get("appearance_used") else 1.2
+    boosted = dict(weights)
+    boosted["color"] = boosted.get("color", 0.0) * factor
+    boosted["silhouette"] = boosted.get("silhouette", 0.0) * (1.3 if vision.get("appearance_used") else 1.15)
+    boosted["style"] = boosted.get("style", 0.0) * 0.9
+    total = sum(boosted.values()) or 1.0
+    return {key: value / total for key, value in boosted.items()}
+
+
 def to_engine_request(payload: dict[str, Any], vision: dict[str, Any] | None) -> LookRequest:
     budget = float(payload.get("budget_rub", 50_000))
     budget = max(settings.budget_min_rub, min(settings.budget_max_rub, budget))
@@ -87,8 +103,9 @@ def to_engine_request(payload: dict[str, Any], vision: dict[str, Any] | None) ->
         query=str(query).strip() if isinstance(query, str) and query.strip() else None,
         niche_level=niche_level,
         # Without explicit weights the engine would score everything 0.0 and
-        # silently degrade to "cheapest item per slot".
-        weights=settings.resolved_ranking_weights(),
+        # silently degrade to "cheapest item per slot". С фото веса цвета и
+        # силуэта усиливаются — снимок их реально измеряет.
+        weights=_weights_for_vision(vision),
     )
 
 
@@ -162,6 +179,7 @@ def generate_and_save(
                 "verdict": result.verdict,
                 "diagnostics": result.diagnostics,
                 "engine": result.diagnostics.get("engine"),
+                "personal_note": result.personal_note,
                 "query": engine_request.query,
                 "weights": engine_request.weights or settings.resolved_ranking_weights(),
                 "preferred_colors": engine_request.preferred_colors,
@@ -281,6 +299,7 @@ def serialize_look(look: Look) -> dict[str, Any]:
         "verdict": ranking.get("verdict", {}),
         "cohesion": ranking.get("cohesion", {}),
         "summary": look.summary,
+        "personal_note": ranking.get("personal_note", ""),
         "tips": look.loads(look.tips_json, []),
         "body": body,
         "palette": palette,

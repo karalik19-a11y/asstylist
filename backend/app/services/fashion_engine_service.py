@@ -26,7 +26,7 @@ from ..config import settings
 from ..engine.body import BodyProfile
 from ..engine.budget import build_look
 from ..engine.colors import COLORS
-from ..engine.explain import item_reasons, look_summary, look_tips
+from ..engine.explain import item_reasons, look_summary, look_tips, personal_note
 from ..engine.look_builder import (
     LookGenerationError,
     LookRequest,
@@ -52,6 +52,7 @@ from ..fashion_engine import (
     MockRealProductProvider,
     ProductItem,
     UserStyleProfile,
+    WebSearchProvider,
     lexicon,
 )
 from ..fashion_engine import keywords as engine_keywords
@@ -225,6 +226,37 @@ STYLE_ENGINE: dict[str, dict[str, Any]] = {
         "niche": 85,
         "aesthetics": ["avantgarde", "gothic"],
         "keywords": "avant garde deconstructed asymmetric architectural black sculptural",
+    },
+    # --- актуальные эстетики TikTok/Pinterest (2026) -------------------
+    "office_siren": {
+        "niche": 64,
+        "aesthetics": ["minimal"],
+        "keywords": "corpcore tailored blazer pencil skirt sharp office slingback polished",
+    },
+    "gorpcore": {
+        "niche": 74,
+        "aesthetics": ["industrial", "street"],
+        "keywords": "gorpcore outdoor technical fleece utility trail functional",
+    },
+    "y2k": {
+        "niche": 68,
+        "aesthetics": ["street"],
+        "keywords": "y2k baggy denim baby tee metallic playful 2000s",
+    },
+    "indie_sleaze": {
+        "niche": 78,
+        "aesthetics": ["archive", "gothic"],
+        "keywords": "indie sleaze vintage flash party leather skinny messy",
+    },
+    "dark_academia": {
+        "niche": 70,
+        "aesthetics": ["archive", "romantic"],
+        "keywords": "dark academia tweed oxford wool collegiate classic",
+    },
+    "balletcore": {
+        "niche": 62,
+        "aesthetics": ["romantic"],
+        "keywords": "balletcore wrap cardigan tulle delicate ribbons soft",
     },
 }
 
@@ -476,6 +508,47 @@ def _request_from_look(look: Any) -> LookRequest:
 # ─── запуск движка ──────────────────────────────────────────────────────────
 
 
+def _web_provider() -> WebSearchProvider | None:
+    """Живой провайдер из настроек; None, если источники не сконфигурированы."""
+    if not settings.web_search_enabled:
+        return None
+    provider = WebSearchProvider(
+        serpapi_key=settings.serpapi_api_key,
+        google_key=settings.google_cse_api_key,
+        google_cx=settings.google_cse_cx,
+        feed_url=settings.product_feed_url,
+        fx_rates=settings.fx_rates,
+        timeout=settings.web_search_timeout_sec,
+        max_results=settings.web_search_max_results,
+    )
+    return provider if provider.available() else None
+
+
+def _providers(
+    cards: list[ProductItem],
+    *,
+    min_score: float = 8.0,
+    include_external: bool = False,
+) -> list[Any]:
+    """Провайдеры движка.
+
+    Внешние источники (живой web-поиск, мок-архетипы) подключаются только в
+    поисковой выдаче (``include_external=True``). При генерации образов движок
+    работает строго с верифицированным каталогом приложения: внешние архетипы —
+    вдохновение/находки для поиска, образ же должен собираться из
+    покупаемых вещей asStylist.
+    """
+    providers: list[Any] = [CatalogSearchProvider(cards, min_score=min_score)]
+    if not include_external:
+        return providers
+    web = _web_provider()
+    if web is not None:
+        providers.append(web)
+    if settings.fashion_engine_enable_mock:
+        providers.append(MockRealProductProvider())
+    return providers
+
+
 @dataclass
 class EngineRun:
     """Результат прогона движка по каталогу приложения."""
@@ -485,6 +558,7 @@ class EngineRun:
     discovery: DiscoveryResult
     outfit: OutfitResult
     cards: dict[str, ProductItem] = field(default_factory=dict)
+    providers: list[str] = field(default_factory=list)
 
     @property
     def ordered_skus(self) -> list[str]:
@@ -502,15 +576,18 @@ def run_engine(
     request: LookRequest,
     *,
     cards: list[ProductItem] | None = None,
+    include_external: bool = False,
 ) -> EngineRun:
-    """Прогнать пайплайн движка по пулу кандидатов приложения."""
+    """Прогнать пайплайн движка по пулу кандидатов приложения.
+
+    ``include_external=True`` (поисковый экран) добавляет в discovery живой
+    web-поиск и мок-архетипы; генерация образов бежит по каталогу приложения.
+    """
     if cards is None:
         cards = [to_engine_card(scored.item) for scored in prepared.ranked]
     cards = cards[: max(1, settings.fashion_engine_max_cards)]
 
-    providers: list[Any] = [CatalogSearchProvider(cards)]
-    if settings.fashion_engine_enable_mock:
-        providers.append(MockRealProductProvider())
+    providers = _providers(cards, include_external=include_external)
 
     options = EngineOptions(
         max_products=settings.fashion_engine_max_products,
@@ -529,6 +606,7 @@ def run_engine(
         discovery=discovery,
         outfit=outfit,
         cards={card.sku or card.id: card for card in cards},
+        providers=[provider.name for provider in providers],
     )
 
 
@@ -949,6 +1027,16 @@ def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResu
         palette=prepared.palette,
         plan=prepared.plan_id,
         diagnostics=diagnostics,
+        personal_note=personal_note(
+            style=request.style,
+            mood=request.mood,
+            occasion=request.occasion,
+            palette=prepared.palette,
+            body=prepared.body,
+            picked=chosen_scored,
+            total_rub=budget_info["total_rub"],
+            budget_rub=request.budget_rub,
+        ),
     )
 
 
@@ -987,9 +1075,7 @@ def rerank_for_slot(
         extra=SLOT_QUERY_HINTS.get(slot, slot),
     )
     cards = [to_engine_card(scored.item) for scored in ranked]
-    providers: list[Any] = [CatalogSearchProvider(cards, min_score=0.0)]
-    if settings.fashion_engine_enable_mock:
-        providers.append(MockRealProductProvider())
+    providers = _providers(cards, min_score=0.0)
     engine = FashionEngine(
         providers=providers,
         options=EngineOptions(
@@ -1033,6 +1119,59 @@ def rerank_for_slot(
 # ─── поиск (для экрана «Поиск» и API движка) ────────────────────────────────
 
 
+#: Человекочитаемая пометка источника для позиций не из каталога приложения.
+SOURCE_LABELS_RU: dict[str, str] = {
+    "web-search": "онлайн-находка",
+    "mock-real-catalog": "архетипный дизайнер",
+    "partner-feed": "партнёрский магазин",
+}
+
+
+def _external_item_payload(card: ProductItem, run: EngineRun) -> dict[str, Any] | None:
+    """Карточка живой/справочной находки для выдачи поиска.
+
+    Это реальные вещи из интернета/справочника архетипов: у них есть ссылка,
+    фото и цена, но они не проходили слой верификации asStylist — поэтому у
+    них особый статус и они не попадают в образ, только в поисковую выдачу.
+    """
+    if not card.source_url:
+        return None
+    sku = card.sku or card.id
+    if (card.currency or "RUB").upper() == "RUB":
+        price_rub = float(card.price or 0)
+        price_note = ""
+    else:
+        price_rub = settings.to_rub(float(card.price or 0), card.currency or "EUR")
+        if price_rub is None:
+            return None
+        price_note = f"{card.price:g} {card.currency}"
+    slot = ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory")
+    meta = _engine_item_meta(card, slot)
+    source_label = SOURCE_LABELS_RU.get(card.provider or card.source_type, card.provider or card.source_type)
+    reasons = _engine_reasons(card, run, limit=2)
+    reasons.append(f"Источник: {source_label} · {str((card.meta or {}).get('source_domain') or 'внешний каталог')}")
+    return {
+        "sku": sku,
+        "name": card.name,
+        "brand": card.brand,
+        "category": card.category,
+        "slot": slot,
+        "slot_label": SLOT_LABELS.get(slot, slot),
+        "price_rub": price_rub,
+        "price_note": price_note,
+        "url": card.source_url,
+        "image_url": card.image or "",
+        "colors": [card.color] if card.color else [],
+        "color_hexes": [],
+        "score": _search_position(0.5, card, run.rank_index(sku), len(run.discovery.products)),
+        "engine": meta,
+        "reasons": reasons[:4],
+        "verification_status": "external",
+        "verification_score": round(float(card.confidence or 0.6), 3),
+        "source": card.provider or card.source_type,
+    }
+
+
 def search(
     payload: dict[str, Any],
     products: list[CatalogItem],
@@ -1061,7 +1200,10 @@ def search(
         weights=settings.resolved_ranking_weights(),
     )
     prepared = prepare_pool(products, request)
-    run = run_engine(prepared, request)
+    run = run_engine(prepared, request, include_external=True)
+    run_providers = run.providers
+    web = _web_provider()
+    web_sources = web.configured_sources() if web is not None else []
 
     theses = engine_keywords.THESIS_LABELS_RU
     thesis = run.outfit.styling_thesis
@@ -1083,6 +1225,10 @@ def search(
         sku = card.sku or card.id
         scored = by_sku.get(sku)
         if scored is None:
+            # Живые находки и справочные архетипы: не из каталога приложения.
+            external = _external_item_payload(card, run)
+            if external is not None:
+                items.append(external)
             continue
         slot = slot_for_item(scored.item, card.category)
         meta = _engine_item_meta(card, slot)
@@ -1096,7 +1242,9 @@ def search(
                 "slot": slot,
                 "slot_label": SLOT_LABELS.get(slot, slot),
                 "price_rub": scored.item.price_rub,
+                "price_note": "",
                 "url": scored.item.url,
+                "image_url": scored.item.image_url,
                 "colors": list(scored.item.colors),
                 "color_hexes": list(scored.item.color_hexes),
                 "score": _search_position(
@@ -1116,6 +1264,7 @@ def search(
                 ),
                 "verification_status": scored.item.verification_status,
                 "verification_score": round(scored.item.verification_score, 3),
+                "source": scored.item.source,
             }
         )
 
@@ -1133,7 +1282,9 @@ def search(
                     "slot": slot,
                     "slot_label": SLOT_LABELS.get(slot, slot),
                     "price_rub": scored.item.price_rub,
+                    "price_note": "",
                     "url": scored.item.url,
+                    "image_url": scored.item.image_url,
                     "colors": list(scored.item.colors),
                     "color_hexes": list(scored.item.color_hexes),
                     "score": scored.score,
@@ -1180,6 +1331,8 @@ def search(
             "taste_mix": _taste_mix(run),
             "alternatives": list(run.outfit.alternatives),
             "fallback": fallback,
+            "providers": list(run_providers),
+            "web_sources": web_sources,
         },
         "thesis_options": [theses.get(name, name) for name in (run.outfit.meta or {}).get("theses", [])],
         "items": items,

@@ -17,12 +17,15 @@ from ..config import settings
 from .analyzer import analyze_photo
 
 PROMPT = (
-    "Ты fashion-аналитик. По фото определи: person_detected (bool), "
-    "temperature (warm|cool|neutral), depth (light|medium|deep), chroma (soft|clear), "
-    "dominant_colors (до 5 цветов из списка: black, charcoal, grey, light_grey, white, ivory, "
-    "beige, sand, camel, brown, chocolate, terracotta, burgundy, red, coral, pink, blush, lavender, "
-    "violet, blue, navy, sky, teal, emerald, olive, khaki, green, mustard, yellow, orange, silver, gold). "
-    "Ответь строго JSON без пояснений."
+    "Ты fashion-аналитик и колорист. По фото человека определи: person_detected (bool), "
+    "temperature (warm|cool|neutral) — подтон кожи, depth (light|medium|deep), chroma (soft|clear), "
+    "undertone (warm|cool|neutral) — подтон кожи (золотистый/розовый/нейтральный), "
+    "contrast (low|medium|high) — контраст между тоном кожи и волос, "
+    "hair_depth (light|medium|deep) — глубина цвета волос, "
+    "dominant_colors (до 5 цветов кожи, волос и одежды из списка: black, charcoal, grey, light_grey, "
+    "white, ivory, beige, sand, camel, brown, chocolate, terracotta, burgundy, red, coral, pink, blush, "
+    "lavender, violet, blue, navy, sky, teal, emerald, olive, khaki, green, mustard, yellow, orange, "
+    "silver, gold). Ответь строго JSON без пояснений."
 )
 
 
@@ -35,6 +38,9 @@ def _merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
     merged["source"] = extra.get("source", base.get("source", "local"))
     if extra.get("ok"):
         merged["palette_confidence"] = min(0.95, float(extra.get("palette_confidence", 0.75)))
+    if extra.get("undertone"):
+        # Удалённая модель отдала подтон/контраст — это полноценный разбор внешности.
+        merged["appearance_used"] = True
     return merged
 
 
