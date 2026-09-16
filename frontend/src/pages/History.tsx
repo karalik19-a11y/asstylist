@@ -24,9 +24,7 @@ export function History({
     return (
       <div className="stack page-transition" style={{ gap: 10 }}>
         <div className="archive-toolbar skeleton" style={{ height: 58 }} />
-        {[0, 1, 2, 3].map((index) => (
-          <div key={index} className="skeleton" style={{ height: 92 }} />
-        ))}
+        {[0, 1, 2, 3].map((index) => <div key={index} className="skeleton" style={{ height: 92 }} />)}
       </div>
     )
   }
@@ -38,15 +36,7 @@ export function History({
           <span className="tiny muted">Фильтр</span>
           <strong>{favoriteOnly ? 'Только избранное' : 'Все образы'}</strong>
         </div>
-        <button
-          type="button"
-          className={`favorite-filter ${favoriteOnly ? 'is-on' : ''}`}
-          aria-pressed={favoriteOnly}
-          onClick={() => {
-            playClick()
-            onToggleFavoriteOnly()
-          }}
-        >
+        <button type="button" className={`favorite-filter ${favoriteOnly ? 'is-on' : ''}`} aria-pressed={favoriteOnly} onClick={() => { playClick(); onToggleFavoriteOnly() }}>
           <span className="favorite-filter-star"><StarIcon filled={favoriteOnly} size={15} /></span>
           <span>Избранное</span>
           <span className="favorite-filter-state">{favoriteOnly ? 'ВКЛ' : 'ВЫКЛ'}</span>
@@ -57,11 +47,7 @@ export function History({
         <div className="card archive-empty">
           <div className="archive-empty-icon"><StarIcon filled={favoriteOnly} size={22} /></div>
           <h3>{favoriteOnly ? 'Избранных образов пока нет' : 'Архив пока пуст'}</h3>
-          <p className="muted small">
-            {favoriteOnly
-              ? 'Добавляйте понравившиеся образы в избранное — они появятся здесь.'
-              : 'Соберите первый персональный гардероб — он сохранится здесь для быстрого доступа.'}
-          </p>
+          <p className="muted small">{favoriteOnly ? 'Добавляйте понравившиеся образы в избранное — они появятся здесь.' : 'Соберите первый персональный гардероб — он сохранится здесь для быстрого доступа.'}</p>
         </div>
       ) : (
         <div className="card index-list archive-list">
@@ -73,10 +59,7 @@ export function History({
               onPointerDown={() => setPressingId(entry.id)}
               onPointerCancel={() => setPressingId(null)}
               onPointerUp={() => setPressingId(null)}
-              onClick={() => {
-                playClick()
-                onOpen(entry.id)
-              }}
+              onClick={() => { playClick(); onOpen(entry.id) }}
             >
               <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
               <span className="stack archive-row-main" style={{ flex: 1, minWidth: 0, gap: 5 }}>
@@ -84,16 +67,10 @@ export function History({
                   <strong>{entry.style} · {entry.mood}</strong>
                   <span className="archive-price">{formatRub(entry.total_rub)}</span>
                 </span>
-                <span className="muted small archive-meta">
-                  {itemsWord(entry.items_count)} · {relativeTime(entry.created_at)} · бюджет {formatRub(entry.budget_rub)}
-                </span>
+                <span className="muted small archive-meta">{itemsWord(entry.items_count)} · {relativeTime(entry.created_at)} · бюджет {formatRub(entry.budget_rub)}</span>
                 <span className="wrap archive-badges" style={{ gap: 6 }}>
                   <Badge tone={entry.score >= 80 ? 'ok' : 'warn'}>индекс {Math.round(entry.score)}</Badge>
-                  {entry.is_favorite ? (
-                    <Badge tone="favorite">
-                      <StarIcon filled size={11} /> избранное
-                    </Badge>
-                  ) : null}
+                  {entry.is_favorite ? <Badge tone="ok"><StarIcon filled size={11} /> избранное</Badge> : null}
                 </span>
               </span>
               <span className="archive-chevron" aria-hidden="true">›</span>
