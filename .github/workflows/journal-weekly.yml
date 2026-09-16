@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - 'scripts/build_journal.py'
+      - 'scripts/build_first_journal.py'
       - '.github/workflows/journal-weekly.yml'
 
 permissions:
@@ -21,8 +22,31 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Build weekly issue and cache images
+      - name: Build launch issue with guaranteed image pipeline
+        if: github.event_name == 'push'
+        run: python3 scripts/build_first_journal.py
+
+      - name: Build weekly issue
+        if: github.event_name != 'push'
         run: python3 scripts/build_journal.py
+
+      - name: Validate issue before publishing
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          p=Path('frontend/public/journal.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          articles=data.get('articles', [])
+          images=sum(bool(a.get('image_url')) for a in articles)
+          print(f'articles={len(articles)} images={images}')
+          if len(articles) < 8:
+              print('Journal build rejected: fewer than 8 articles. Keeping previous issue.')
+              sys.exit(1)
+          if images / len(articles) < 0.70:
+              print('Journal build rejected: fewer than 70% of articles have cached images. Keeping previous issue.')
+              sys.exit(1)
+          PY
 
       - name: Commit issue and images
         run: |
