@@ -14,7 +14,7 @@ from ..config import settings
 from ..db import get_session
 from ..engine.look_builder import LookGenerationError
 from ..schemas import LookRequest
-from ..services import look_service
+from ..services import look_service, profile_service
 from ..telegram.auth import TelegramAuthError, authenticate
 from ..vision import ai as vision_ai
 from ..vision.analyzer import VisionError
@@ -144,7 +144,16 @@ async def generate(request: Request, session: Session = Depends(get_session)) ->
     except LookGenerationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return look_service.serialize_look(look)
+    # Рост и вес запоминаем автоматически: в следующий раз их не придётся
+    # вводить заново — сервис предложит выбор «сохранённые / новые».
+    profile_service.remember_body(
+        session, user, validated.get("height_cm"), validated.get("weight_kg")
+    )
+
+    payload_out = look_service.serialize_look(look)
+    memory = profile_service.get_profile(session, user)
+    payload_out["profile"] = memory
+    return payload_out
 
 
 @router.get("")

@@ -247,15 +247,36 @@ def translate_query_to_ru(query: str) -> str:
     return " ".join(deduped) if deduped else "одежда"
 
 
+#: Токены заголовка, которые брендом не являются (размеры, состояния, служебное).
+_BRAND_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "new", "vintage", "sale", "original", "or", "and", "the", "set", "lot",
+        "l", "m", "s", "xl", "xxl", "xs", "xxs", "us", "eu", "it", "fr", "cm",
+        "мм", "см", "р", "руб", "руб.", "г.", "детск", "муж", "жен",
+    }
+)
+_BRAND_TOKEN_RE = re.compile(r"\b([A-Z][A-Za-z&'’.\-]{1,22})\b")
+
+
 def _extract_brand(title: str) -> str:
+    """Бренд из заголовка объявления.
+
+    Сначала ищем известную марку, затем — латинский токен вида ``LGB``/``Nike``
+    (кириллица брендом не считается). Если ничего не нашли, возвращаем пустую
+    строку: подставлять слово «Авито» вместо бренда нельзя — это не марка.
+    """
     lowered = f" {title.lower()} "
     for brand in _KNOWN_BRANDS:
-        if brand and f" {brand} " in lowered or lowered.startswith(brand + " "):
+        brand = brand.strip().lower()
+        if brand and (f" {brand} " in lowered or lowered.startswith(brand + " ")):
             return " ".join(part.capitalize() for part in brand.split(" "))
-    match = re.search(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b", title)
-    if match and len(match.group(1)) >= 3:
-        return match.group(1)
-    return "Авито"
+    for token in _BRAND_TOKEN_RE.findall(title):
+        if token.lower() in _BRAND_STOPWORDS:
+            continue
+        if token.isupper() and len(token) < 2:
+            continue
+        return token
+    return ""
 
 
 class AvitoSearchProvider(SearchProvider):
@@ -656,7 +677,7 @@ class AvitoSearchProvider(SearchProvider):
                 terms
                 + colors
                 + [stem for stem in lexicon.tokenize(title) if len(stem) >= 4][:12]
-                + ([brand.lower()] if brand != "Авито" else [])
+                + ([brand.lower()] if brand else [])
             )
         )
 

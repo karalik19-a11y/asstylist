@@ -1,6 +1,8 @@
 import type { Meta } from '../lib/types'
 import type { WizardModel, WizardStep } from '../state/wizard'
 import { LIMITS, STEP_ORDER, STEP_TITLES, validateStep } from '../state/wizard'
+import type { BodyMemory } from '../lib/profile'
+import { bodyLabel, bodyUpdatedLabel } from '../lib/profile'
 import { formatRub } from '../lib/format'
 import { Chip, Header, ProgressBar, RangeField, SectionTitle, Spinner, Tile } from '../components/ui'
 import { PhotoUploader } from '../components/PhotoUploader'
@@ -21,6 +23,10 @@ export function Wizard({
   onExit,
   generating,
   error,
+  savedBody = null,
+  onUseSavedBody,
+  onNewBody,
+  onRestartAll,
 }: {
   model: WizardModel
   meta: Meta | null
@@ -34,6 +40,11 @@ export function Wizard({
   onExit: () => void
   generating: boolean
   error: string | null
+  /** Сохранённые рост и вес: предлагаем выбор «сохранённые или новые». */
+  savedBody?: BodyMemory | null
+  onUseSavedBody?: () => void
+  onNewBody?: () => void
+  onRestartAll?: () => void
 }) {
   const { step, state } = model
   const blocker = validateStep(step, state)
@@ -44,11 +55,61 @@ export function Wizard({
     <div className="stack page-transition" style={{ gap: 16 }}>
       <Header
         title={STEP_TITLES[step]}
-        subtitle={`Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length}`}
-        onBack={isTelegram() ? undefined : step === 'photo' ? onExit : onBack}
+        subtitle={
+          step === 'memory' ? 'рост и вес уже сохранены' : `Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length}`
+        }
+        onBack={isTelegram() || step === 'photo' || step === 'memory' ? undefined : onBack}
         onHome={onExit}
       />
-      <ProgressBar value={(STEP_ORDER.indexOf(step) + 1) / STEP_ORDER.length} />
+      {step === 'memory' ? null : <ProgressBar value={(STEP_ORDER.indexOf(step) + 1) / STEP_ORDER.length} />}
+
+      {step === 'memory' ? (
+        <div className="stack" style={{ gap: 16 }}>
+          <p className="muted" style={{ margin: 0, fontSize: 15.5 }}>
+            Вы уже называли рост и вес — сервис помнит их и предлагает выбор. Данные хранятся только для
+            подбора посадки: рост и вес, ничего лишнего.
+          </p>
+          <div className="card stack memory-card" style={{ gap: 14 }}>
+            <div>
+              <div className="tiny muted">Сохранённые параметры</div>
+              <div className="memory-value">{bodyLabel(savedBody)}</div>
+              {bodyUpdatedLabel(savedBody) ? (
+                <div className="muted small">обновлено {bodyUpdatedLabel(savedBody)}</div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                playClick()
+                onUseSavedBody?.()
+              }}
+            >
+              Собрать по сохранённым данным
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                playClick()
+                onNewBody?.()
+              }}
+            >
+              Ввести новые рост и вес
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                playClick()
+                onRestartAll?.()
+              }}
+            >
+              Пройти настройку полностью заново
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {step === 'photo' ? (
         <div className="stack" style={{ gap: 16 }}>
@@ -70,6 +131,12 @@ export function Wizard({
 
       {step === 'body' ? (
         <div className="stack" style={{ gap: 16 }}>
+          {savedBody ? (
+            <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
+              Сохранено: {bodyLabel(savedBody)}. Меняйте, если что-то изменилось — новые значения запомним
+              снова.
+            </div>
+          ) : null}
           <div className="card stack" style={{ gap: 22 }}>
             <RangeField
               label="Рост"

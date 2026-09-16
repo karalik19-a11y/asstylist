@@ -324,6 +324,40 @@ def test_ru_slot_query_is_short_and_russian():
     assert all(not word.isascii() or word in ("zara",) for word in query.split())
 
 
+def test_extract_brand_reads_title_and_never_returns_avito():
+    """Бренд берётся из заголовка объявления; «Авито» брендом не считается."""
+    from app.fashion_engine.search.providers.avito_provider import _extract_brand
+
+    assert _extract_brand("Кроссовки Nike Air Force 1 черные") == "Nike"
+    assert _extract_brand("Джинсы Zara bootcut клеш") == "Zara"
+    assert _extract_brand("Кроп пальто LGB archive") == "LGB"
+    assert _extract_brand("Свитер мужской без горла") == ""
+
+
+def test_avito_card_without_brand_becomes_bez_brenda():
+    """Пустой бренд не роняет сборку образа (регрессия NameError)."""
+    from app.fashion_engine.types import ProductItem
+    from app.engine.look_builder import LookRequest
+
+    card = ProductItem(
+        id="avito_1",
+        sku="avito_1",
+        name="Пальто женское шерстяное",
+        brand="",
+        category="outerwear",
+        price=12500.0,
+        currency="RUB",
+        image="https://10.img.avito.st/image/1/1.example",
+        source_url="https://www.avito.ru/moskva/odezhda_obuv_aksessuary/palto_1234567890",
+        source_type="avito",
+        availability="in_stock",
+        confidence=0.9,
+    )
+    request = LookRequest(style="minimal", mood="calm", height_cm=174, weight_kg=64, budget_rub=60_000)
+    item = fashion_engine_service.avito_card_to_catalog_item(card, request)
+    assert item.brand and item.brand != "Авито"
+
+
 def test_avito_card_to_catalog_item_keeps_link_photo_price():
     provider = AvitoSearchProvider()
     card = _product(
@@ -369,9 +403,42 @@ def _look_request(**overrides):
     return LookRequest(**params)
 
 
-def test_search_avito_fallback_has_only_avito_links(items, monkeypatch):
-    """Авито недоступен → резервный режим: подбор есть, все ссылки — Авито."""
+def test_search_avito_unreachable_uses_snapshot_listings(items, monkeypatch):
+    """Живой Авито не отвечает → берём конкретные объявления из снимка выдачи.
+
+    Каждая вещь обязана остаться настоящим объявлением: прямая ссылка, фото,
+    город — поэтому резервный режим «по каталогу» здесь не включается.
+    """
     monkeypatch.setattr(settings, "avito_enabled", True)
+    fashion_engine_service.reset_avito_provider()
+    monkeypatch.setattr(
+        AvitoSearchProvider, "_fetch_html", lambda self, ru_query: ""
+    )
+    try:
+        result = fashion_engine_service.search({"query": "кожаная куртка"}, items, limit=5)
+    finally:
+        fashion_engine_service.reset_avito_provider()
+    assert result["items"], "резервный режим не должен давать пустую выдачу"
+    assert result["engine"]["fallback"] is None
+    assert result["engine"]["providers"] == ["avito"]
+    assert result["engine"]["feeds"]["snapshot"] > 0
+    feeds = set()
+    for item in result["items"]:
+        assert fashion_engine_service.is_avito_url(item["url"]), item["url"]
+        assert item["source"] == "avito"
+        # Ссылка ведёт на конкретное объявление, а не на поиск по словам.
+        assert item["link_kind"] == "listing", item["url"]
+        assert fashion_engine_service.looks_like_listing_url(item["url"]), item["url"]
+        listing = item["listing"]
+        assert listing and listing["kind"] == "listing"
+        feeds.add(item["feed"])
+    assert feeds == {"snapshot"}, feeds
+
+
+def test_search_avito_last_resort_marks_search_links(items, monkeypatch):
+    """Ни живой выдачи, ни снимка → подбор по каталогу с честной пометкой."""
+    monkeypatch.setattr(settings, "avito_enabled", True)
+    monkeypatch.setattr(settings, "avito_snapshot_enabled", False)
     fashion_engine_service.reset_avito_provider()
     monkeypatch.setattr(
         AvitoSearchProvider, "_fetch_html", lambda self, ru_query: ""
@@ -386,6 +453,10 @@ def test_search_avito_fallback_has_only_avito_links(items, monkeypatch):
     for item in result["items"]:
         assert fashion_engine_service.is_avito_url(item["url"]), item["url"]
         assert item["source"] == "avito"
+        # Это последний резерв: ссылка — подборка Авито, и это прямо помечено.
+        assert item["link_kind"] == "search"
+        assert item["feed"] == "search"
+        assert item["listing"]["kind"] == "search"
 
 
 def test_search_avito_live_path(items, monkeypatch):
@@ -410,7 +481,8 @@ def test_search_avito_live_path(items, monkeypatch):
     assert any(item["image_url"] for item in result["items"])
 
 
-def test_generate_look_avito_fallback_never_empty(items, monkeypatch):
+def test_generate_look_snapshot_items_are_concrete_listings(items, monkeypatch):
+    """Образ при недоступном живом Авито собирается из объявлений снимка."""
     monkeypatch.setattr(settings, "avito_enabled", True)
     fashion_engine_service.reset_avito_provider()
     monkeypatch.setattr(AvitoSearchProvider, "_fetch_html", lambda self, ru_query: "")
@@ -420,10 +492,40 @@ def test_generate_look_avito_fallback_never_empty(items, monkeypatch):
         fashion_engine_service.reset_avito_provider()
     assert len(result.items) >= 3
     assert result.total_rub <= 60_000
+    engine = result.diagnostics["engine"]
+    assert engine["fallback"] is None
+    assert engine["feeds"]["snapshot"] >= len(result.items)
     for item in result.items:
         assert fashion_engine_service.is_avito_url(item["url"]), item["url"]
+        # Пользователь открывает конкретное объявление, а не поиск по словам.
+        assert item["link_kind"] == "listing", item["url"]
+        assert fashion_engine_service.looks_like_listing_url(item["url"]), item["url"]
+        assert item["feed"] == "snapshot"
+        assert item["image_url"], "у объявления из снимка обязано быть фото"
+        listing = item["listing"]
+        assert listing and listing["kind"] == "listing"
+        assert listing["avito_id"]
+        assert listing["captured_at"]
+
+
+def test_generate_look_last_resort_catalog_marks_search_links(items, monkeypatch):
+    """Совсем без объявлений: подбор по каталогу, но с честной пометкой ссылок."""
+    monkeypatch.setattr(settings, "avito_enabled", True)
+    monkeypatch.setattr(settings, "avito_snapshot_enabled", False)
+    fashion_engine_service.reset_avito_provider()
+    monkeypatch.setattr(AvitoSearchProvider, "_fetch_html", lambda self, ru_query: "")
+    try:
+        result = fashion_engine_service.generate_look(items, _look_request())
+    finally:
+        fashion_engine_service.reset_avito_provider()
+    assert len(result.items) >= 3
+    assert result.total_rub <= 60_000
     engine = result.diagnostics["engine"]
     assert engine["fallback"] == "avito-unreachable"
+    for item in result.items:
+        assert fashion_engine_service.is_avito_url(item["url"]), item["url"]
+        assert item["link_kind"] == "search"
+        assert item["feed"] == "search"
 
 
 def test_generate_look_avito_live_builds_outfit(items, monkeypatch):

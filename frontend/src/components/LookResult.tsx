@@ -42,6 +42,18 @@ export function LookResult({
   const tasteMix = Object.entries(engine?.taste_mix ?? {})
   const hexById = new Map(colors.map((entry) => [entry.id, entry.hex]))
 
+  // Что именно открывается по кнопке у каждой вещи: конкретное объявление или
+  // (в крайнем случае) подборка Авито. Пользователь должен видеть разницу.
+  const listingKinds = look.items.map((item) => item.link_kind ?? item.listing?.kind ?? 'listing')
+  const concreteListings = listingKinds.filter((kind) => kind !== 'search').length
+  const searchFallbacks = listingKinds.length - concreteListings
+  const snapshotAt =
+    look.items.find((item) => item.snapshot_captured_at)?.snapshot_captured_at ??
+    engine?.snapshot_captured_at ??
+    null
+  const fromSnapshot = look.items.filter((item) => (item.feed ?? item.listing?.feed) === 'snapshot').length
+  const feedNotes = engine?.feed_notes ?? []
+
   const handleSealStamp = () => {
     playStamp()
     setStampActive(true)
@@ -71,7 +83,7 @@ export function LookResult({
           </div>
 
           <PostalCancellationStamp
-            text="ASSTYLIST · 2026"
+            text="ASStylist · 2026"
             sub="VERIFIED SELECTION"
             active={stampActive}
             onClick={handleSealStamp}
@@ -266,6 +278,25 @@ export function LookResult({
         <SectionTitle index="03" hint={`структура: ${look.plan}`}>
           Предметы селекции
         </SectionTitle>
+
+        <div className={`listing-summary ${searchFallbacks > 0 ? 'listing-summary-warn' : ''}`}>
+          <strong>
+            {concreteListings} из {look.items.length} вещей — конкретные объявления Авито
+          </strong>
+          <div className="muted small" style={{ marginTop: 4 }}>
+            {fromSnapshot > 0 && snapshotAt
+              ? `Фото, цена и ссылка — из снимка выдачи от ${snapshotAt}. Открывается страница самого объявления, а не поиск по словам.`
+              : 'Фото, цена и ссылка ведут на страницу самого объявления Авито.'}
+          </div>
+          {searchFallbacks > 0 ? (
+            <div className="small" style={{ marginTop: 6 }}>
+              {searchFallbacks} вещ. — без доступа к объявлению: кнопка ведёт на подборку Авито и помечена предупреждением.
+            </div>
+          ) : null}
+          {feedNotes.length ? (
+            <div className="muted small" style={{ marginTop: 4 }}>{feedNotes.join(' · ')}</div>
+          ) : null}
+        </div>
         {look.items.map((item) => (
           <ItemCard key={`${item.slot}-${item.sku}`} item={item} onSwap={onSwap} swapping={swappingSlot === item.slot} />
         ))}

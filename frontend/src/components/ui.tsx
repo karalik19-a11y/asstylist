@@ -21,19 +21,19 @@ export function BrandLogo({
         playClick()
         onHome()
       }}
-      aria-label="ASSTYLIST — на главную"
+      aria-label="ASStylist — на главную"
       title="На главную"
     >
-      <span className="brand-logo-mark" aria-hidden="true">
-        A
-      </span>
-      <span>
+      {/* Одно слово целиком: ASStylist. Никакой отдельной буквы «A» —
+          акцент держит вторая «S» и тонкая линия под надписью. */}
+      <span className="brand-logo-text">
         <span className="brand-logo-word" aria-hidden="true">
-          AS<em>STYLIST</em>
+          AS<em>Stylist</em>
         </span>
+        <span className="brand-logo-rule" aria-hidden="true" />
         {tagline ? (
           <span className="brand-logo-tagline" aria-hidden="true">
-            персональный стилист
+            персональный стилист из настоящих вещей
           </span>
         ) : null}
       </span>
@@ -83,7 +83,7 @@ export function Header({
             <BrandLogo onHome={onHome} />
           ) : (
             <div className="kicker" style={{ flexShrink: 0 }}>
-              ASSTYLIST
+              ASStylist
             </div>
           )}
         </div>

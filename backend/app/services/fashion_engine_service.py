@@ -75,6 +75,7 @@ from ..fashion_engine.search.listing_intel import (
 )
 from ..fashion_engine.search.multi_pass_search import DiscoveryResult
 from ..fashion_engine.search.provider import SearchContext
+from ..fashion_engine.search.providers.avito_provider import _extract_brand
 from ..fashion_engine.search.providers.avito_snapshot_provider import AvitoSnapshotProvider
 from ..fashion_engine.types import OutfitResult
 from ..vision import photo_traits as photo_traits_module
@@ -614,7 +615,7 @@ def avito_card_to_catalog_item(
         sku=sku,
         category=app_category,
         name=card.name or "Вещь с Авито",
-        brand=card.brand or "Авито",
+        brand=card.brand or _extract_brand(card.name) or "Без бренда",
         price_rub=float(card.price or 0),
         url=card.source_url,
         image_url=card.image or "",
@@ -1793,13 +1794,19 @@ def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun)
         in_engine_outfit = scored.sku in roles
         role = roles.get(scored.sku)
         meta = _engine_item_meta(card, slot, role=role, in_engine_outfit=in_engine_outfit)
+        card_meta = card.meta if card is not None and isinstance(card.meta, dict) else {}
+        # Адрес вещи: конкретное объявление (прямая ссылка + фото) и откуда оно
+        # взялось — живая выдача или снимок. Эти поля переживают сохранение в БД.
+        meta["feed"] = card_meta.get("feed") or ("snapshot" if card_meta.get("snapshot") else "live")
+        meta["link_kind"] = card_meta.get("link_kind") or listing_url_kind(scored.item.url)
+        meta["listing"] = _listing_block(card, scored.item)
         breakdown: dict[str, Any] = dict(scored.breakdown)
         breakdown["engineAttributes"] = meta
         if meta.get("fashion_score"):
             breakdown["engine"] = round(meta["fashion_score"] / 100, 3)
             breakdown["trend"] = meta.get("trend_relevance", 0.4)
             breakdown["uniqueness"] = meta.get("uniqueness", 0.5)
-        card_meta = card.meta if isinstance(card.meta, dict) else {}
+        card_meta = card.meta if card is not None and isinstance(card.meta, dict) else {}
         reasons = (
             _engine_reasons(card, run, role=role)
             # Что видно на фото и в описании объявления: оттенок, фактура,
@@ -1837,9 +1844,9 @@ def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun)
                 "source": scored.item.source,
                 # Конкретное объявление: живое или из снимка выдачи, но всегда
                 # с прямой ссылкой, фото и ценой именно этой вещи.
-                "feed": card_meta.get("feed") or ("snapshot" if card_meta.get("snapshot") else "live"),
-                "link_kind": card_meta.get("link_kind") or listing_url_kind(scored.item.url),
-                "listing": _listing_block(card, scored.item),
+                "feed": meta.get("feed"),
+                "link_kind": meta.get("link_kind"),
+                "listing": meta.get("listing"),
                 "alternatives": _alternatives(prepared, run, slot, taken),
             }
         )
@@ -2270,7 +2277,7 @@ def search_avito(
                 "verification_status": "verified",
                 "verification_score": round(float(card.confidence or 0.7), 3),
                 "source": "avito",
-                "feed": (card.meta or {}).get("feed") or "live",
+                "feed": feed_of(card),
                 "link_kind": (card.meta or {}).get("link_kind") or listing_url_kind(card.source_url),
                 "listing": _listing_block(card, catalog_item),
             }
@@ -2354,6 +2361,11 @@ def search_avito(
             "fallback_reason": fallback_reason,
             "providers": ["avito"],
             "web_sources": ["avito"],
+            # Откуда пришли вещи: живая выдача или снимок реальных объявлений.
+            "feeds": dict(run.feeds),
+            "feed_notes": list(run.feed_notes),
+            "live_error": run.live_error,
+            "snapshot_captured_at": run.snapshot_captured_at,
         },
         "thesis_options": [theses.get(name, name) for name in (run.outfit.meta or {}).get("theses", [])],
         "items": items,

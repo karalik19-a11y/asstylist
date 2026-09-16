@@ -1,10 +1,12 @@
 import type { WizardState } from '../lib/types'
 
-export type WizardStep = 'photo' | 'body' | 'style' | 'mood' | 'tune' | 'review'
+export type WizardStep = 'memory' | 'photo' | 'body' | 'style' | 'mood' | 'tune' | 'review'
 
+/** Шаги образа. ``memory`` — шаг выбора «сохранённые данные или новые». */
 export const STEP_ORDER: WizardStep[] = ['photo', 'body', 'style', 'mood', 'tune', 'review']
 
 export const STEP_TITLES: Record<WizardStep, string> = {
+  memory: 'С возвращением',
   photo: 'Фото',
   body: 'Параметры',
   style: 'Стиль',
@@ -41,7 +43,8 @@ export type WizardAction =
   | { type: 'patch'; patch: Partial<WizardState> }
   | { type: 'toggleColor'; id: string; field: 'preferred_colors' | 'avoid_colors' }
   | { type: 'setPhoto'; dataUrl: string | null; file: File | null }
-  | { type: 'reset' }
+  | { type: 'reset'; step?: WizardStep; patch?: Partial<WizardState> }
+  | { type: 'goTo'; step: WizardStep }
   | { type: 'next' }
   | { type: 'back' }
 
@@ -92,7 +95,11 @@ export function wizardReducer(model: WizardModel, action: WizardAction): WizardM
     case 'setPhoto':
       return { ...model, state: { ...model.state, photoDataUrl: action.dataUrl, photoFile: action.file } }
     case 'reset':
-      return { step: 'photo', state: initialState }
+      // Возврат к мастеру: по умолчанию — с начала, но можно попросить
+      // начать с выбора «сохранённые данные или новые».
+      return { step: action.step ?? 'photo', state: { ...initialState, ...(action.patch ?? {}) } }
+    case 'goTo':
+      return { ...model, step: action.step }
     case 'next': {
       const index = STEP_ORDER.indexOf(model.step)
       if (index === -1 || index === STEP_ORDER.length - 1) return model

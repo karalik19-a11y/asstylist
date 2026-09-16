@@ -3,16 +3,14 @@
   "source": "avito.ru",
   "note": "Снимок реальной выдачи Авито: конкретные объявления с фото, ценами и ссылками. Обновляется скриптом backend/scripts/refresh_avito_snapshot.py.",
   "queries": [
-    {
-      "query": "пальто женское",
-      "url": "https://www.avito.ru/all/odezhda_obuv_aksessuary?q=%D0%BF%D0%B0%D0%BB%D1%8C%D1%82%D0%BE+%D0%B6%D0%B5%D0%BD%D1%81%D0%BA%D0%BE%D0%B5",
-      "captured_at": "2026-09-16"
-    },
-    {
-      "query": "свитер",
-      "url": "https://www.avito.ru/all/odezhda_obuv_aksessuary?q=%D1%81%D0%B2%D0%B8%D1%82%D0%B5%D1%80",
-      "captured_at": "2026-09-16"
-    }
+    "ботинки",
+    "джинсы",
+    "джинсы женские",
+    "кроссовки",
+    "пальто женское",
+    "платье",
+    "свитер",
+    "футболка"
   ],
   "listings": [
     {
@@ -37,7 +35,7 @@
       "image": "https://70.img.avito.st/image/1/1.Fh-JebaAuvaf2Rj3qX0mRqTZuPI7zr72O6nb8jt6u1Q82r7sn9kY9z8.yds6UKOwV4h84uHL0FF9Bw5w07CKOFxADjOyWEn53PY",
       "params": "Новое с биркой · 46 (M) · L.G.B.",
       "description": "Укороченное пальто LGB archive. В наличии размеры S, M, L. Состояние: новое. Укороченный крой. Плотная шерстяная ткань. Подчеркнутый силуэт.",
-      "brand": "L.G.B.",
+      "brand": "LGB archive",
       "city": "Москва",
       "gender": "unisex",
       "captured_at": "2026-09-16",
@@ -56,6 +54,48 @@
       "gender": "feminine",
       "captured_at": "2026-09-16",
       "query": "пальто женское"
+    },
+    {
+      "id": "8294528216",
+      "title": "Пальто шерстяное, драп (Arbat Mod)",
+      "price": 12990,
+      "url": "https://www.avito.ru/sankt-peterburg/odezhda_obuv_aksessuary/palto_8294528216",
+      "image": "https://40.img.avito.st/image/1/1.pNmEEraACDCSsqoxwHSnuZuyCjQ2pQwwNsJpNDYRCZIxsQwqkrKqMTI.qWnSUKGSS8WpX3jKItMRjN0Vsx9lr0Bs01mK949zfZA",
+      "params": "Новое с биркой · 42 (S)",
+      "description": "Шикарное тёплое пальто из шерсти и драпа, магазин стильной женской одежды. Размерный ряд от 40 до 48. Плотная шерстяная ткань, классический крой.",
+      "brand": "Arbat Mod",
+      "city": "Санкт-Петербург",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "пальто женское"
+    },
+    {
+      "id": "4005755273",
+      "title": "Karl Lagerfeld ботинки замшевые оригинал",
+      "price": 15300,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/karl_lagerfeld_botinki_original_4005755273",
+      "image": "https://10.img.avito.st/image/1/1.ijqaB7aAJtOMp4TSghmFOumlJNcosCLTKNdH1ygEJ3EvpCLJjKeE0iw.BMf9Edu01v6wuPC8fqBZkHVpaEg5vkt2HlQ6vfzHOfM",
+      "params": "Новое с биркой · Karl Lagerfeld",
+      "description": "Оригинальные ботинки Karl Lagerfeld, привезены из Америки. Элегантные замшевые ботинки — высокое качество материалов и безупречное исполнение.",
+      "brand": "Karl Lagerfeld",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "ботинки"
+    },
+    {
+      "id": "4472114499",
+      "title": "Ботинки женские Louis Vuitton",
+      "price": 90000,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/botinki_zhenskie_4472114499",
+      "image": "https://60.img.avito.st/image/1/1.1ZHvGLaAeXj5uNt5yRPrwci5e3xdr314XcgYfF0beNpau31i-bjbeVk.xQq31Gy9KRZSuipbAI0hnsUnRX_wH3os3RYgdzhPhu8",
+      "params": "Отличное · 39 · Louis Vuitton",
+      "description": "Ботинки в идеальном состоянии, 39 размер, Louis Vuitton. Онлайн-показ, реквизиты проверены.",
+      "brand": "Louis Vuitton",
+      "city": "Москва",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "ботинки"
     },
     {
       "id": "7352297856",
@@ -84,6 +124,132 @@
       "gender": "masculine",
       "captured_at": "2026-09-16",
       "query": "свитер"
+    },
+    {
+      "id": "2965834211",
+      "title": "Платье вечернее шелковое Collette Dinnigan",
+      "price": 15000,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/plate_vechernee_2965834211",
+      "image": "https://00.img.avito.st/image/1/1.AkvTiLaArqLFKAyj25RXT-4qrKZhP6qiYVjPpmGLrwBmK6q4xSgMo2U.AsIdkD929jnlNHOS429zgXQZVswoaQIdseuTBaG_D4c",
+      "params": "Отличное · 42 (S)",
+      "description": "Платье шелковое, вышито стразами, надевалось один раз. Тонкий шёлк, вечерний силуэт.",
+      "brand": "Collette Dinnigan",
+      "city": "Москва",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "платье"
+    },
+    {
+      "id": "8092672618",
+      "title": "Чёрные джинсы Zara bootcut клёш",
+      "price": 1799,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/chernye_dzhinsy_zara_bootcut_klesh_zara_flared_8092672618",
+      "image": "https://90.img.avito.st/image/1/1.zyE3araAY8ghysHJJS2vUSHKYcyF3WfIhboCzIVpYmqCyWfSIcrByYE.RKWglHAvWhO4c-_3i9iGp9bbBwvtjAfftCyMzvZiTzA",
+      "params": "Новое с биркой · 48 (M) · Zara",
+      "description": "Чёрные джинсы клёш, унисекс, крой bootcut/flared: выразительный силуэт от колена, плотный деним.",
+      "brand": "Zara",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "джинсы"
+    },
+    {
+      "id": "4052381799",
+      "title": "Джинсы бананы мужские Zara",
+      "price": 2516,
+      "url": "https://www.avito.ru/krasnodar/odezhda_obuv_aksessuary/dzhinsy_banany_muzhskie_4052381799",
+      "image": "https://50.img.avito.st/image/1/1.AZXH6raArXzRSg99ybYBnr9Ir3h1Xal8dTrMeHXprN5ySalm0UoPfXE.BFSL7i7lyKq6s_LCu6h4towu-QzXkMpvSGdNnsMMh5Q",
+      "params": "Новое с биркой · Zara",
+      "description": "Джинсы Мужские Бананы, плотный джинс, бирки и фурнитура на месте. Отправляем из Краснодара Авитодоставкой.",
+      "brand": "Zara",
+      "city": "Краснодар",
+      "gender": "masculine",
+      "captured_at": "2026-09-16",
+      "query": "джинсы"
+    },
+    {
+      "id": "8188274658",
+      "title": "Джинсы рваные Rick Owens type клёш",
+      "price": 1799,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/dzhinsy_rvanye_rick_owens_type_klesh_8188274658",
+      "image": "https://00.img.avito.st/image/1/1.yHGC5LaAZJiURMaZnvfpM6tEZpwwU2CYMDQFnDDnZTo3R2CClETGmTQ.8b1gZTLz3WNdB-uGRNUB0rLKL55EsS2CAfoH4Z8D7rc",
+      "params": "Новое с биркой · 44 (S/M) · Rick Owens",
+      "description": "Джинсы рваные в духе Rick Owens, клёш, плотный деним с потёртостями. Размер 44, можно примерить.",
+      "brand": "Rick Owens",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "джинсы женские"
+    },
+    {
+      "id": "8144404324",
+      "title": "Джинсовая куртка Forte Couture",
+      "price": 25000,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/dzhinsovaya_kurtka_forte_couture_8144404324",
+      "image": "https://90.img.avito.st/image/1/1.B1n_wbaAq7DpYQmx_dFFb95hqbRNdq-wTRHKtE3CqhJKYq-q6WEJsUk.pS0x8iV5LjZViAWaFCpBqwpnanviYOOsqvPOt5vlvx8",
+      "params": "Отличное · 40 (XS) · Forte Dei Marmi Couture",
+      "description": "Голубая джинсовка оверсайз с надписями bad girl и follow me, куплена в ЦУМе, состояние отличное.",
+      "brand": "Forte Couture",
+      "city": "Москва",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "джинсы женские"
+    },
+    {
+      "id": "8181750880",
+      "title": "Футболка Dolce & Gabbana vintage stars",
+      "price": 1266,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/futbolka_dolce_gabbana_vintage_stars_8181750880",
+      "image": "https://20.img.avito.st/image/1/1.MNJ2nLaAnDtgPD46GtQw-Vw8nj_EK5g7xEz9P8SfnZnDP5ghYDw-OsA.Txp8Y6QEbDeWVS3H-Gn2r0FLZJv-dVPoQUUVeLgdiFk",
+      "params": "Новое с биркой · 48 (M) · Dolce & Gabbana",
+      "description": "Футболка Dolce & Gabbana vintage stars, 100% хлопок, аккуратные ровные швы, качественный принт. Размеры S–2XL в наличии.",
+      "brand": "Dolce & Gabbana",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "футболка"
+    },
+    {
+      "id": "8257273633",
+      "title": "Футболка Comme des Garçons CDG 2000 Ete",
+      "price": 1490,
+      "url": "https://www.avito.ru/nizhnekamsk/odezhda_obuv_aksessuary/futbolka_comme_des_garcons_cdg_2000_ete_8257273633",
+      "image": "https://30.img.avito.st/image/1/1.WZ4sPbaA9Xc6nVd2Ejxn9AGd93OeivF3nu2Uc54-9NWZnvFtOp1Xdpo.hwMjm28GQzQvnNYbQW0wSJCoCNrGXlWbL5Dbie0uFQ0",
+      "params": "Новое с биркой · 48 (M) · Comme des Garcons",
+      "description": "Футболка Comme des Garçons, хлопок 100%, плотность 240 г/м². Размеры XS–XL.",
+      "brand": "Comme des Garçons",
+      "city": "Нижнекамск",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "футболка"
+    },
+    {
+      "id": "8065219539",
+      "title": "Кроссовки Premiata",
+      "price": 3249,
+      "url": "https://www.avito.ru/balashiha/odezhda_obuv_aksessuary/krossovki_premiata_8065219539",
+      "image": "https://10.img.avito.st/image/1/1.v8xIQLaAEyVe4LEkOlrUn13gESH69xcl-pByIfpDEof94xc_XuCxJP4.n95KMp9-DRswUR_My2jjNdz9VnQbjXTf9uFbujCYf7s",
+      "params": "Новое с биркой · Premiata",
+      "description": "Кроссовки Premiata: премиальная классика с итальянским характером, размерная сетка 41–45.",
+      "brand": "Premiata",
+      "city": "Балашиха",
+      "gender": "masculine",
+      "captured_at": "2026-09-16",
+      "query": "кроссовки"
+    },
+    {
+      "id": "8353842654",
+      "title": "Кроссовки Nike Air Force 1 чёрные",
+      "price": 1590,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/krossovki_nike_air_force_1_chernye_lyuks_8353842654",
+      "image": "https://50.img.avito.st/image/1/1.3xIxPbaAc_snndH6AxrDCiOdcf-Dinf7g-0S_4M-clmEnnfhJ53R-oc.8H6rpJ3yelvA1tgxWHWID7azKk9L3hZc12WKAuh40zQ",
+      "params": "Новое с биркой · Nike",
+      "description": "Кроссовки Nike Air Force 1 Low, чёрные, размерный ряд 36–40+. Реальные фото товара.",
+      "brand": "Nike",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "кроссовки"
     }
   ]
 }
