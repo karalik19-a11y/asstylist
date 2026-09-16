@@ -25,7 +25,7 @@ export function BrandLogo({
     >
       <span className="brand-logo-text">
         <span className="brand-logo-word" aria-hidden="true">
-          AS<em>Stylist</em>
+          <span className="brand-logo-ass">ASS</span><em>tylist</em>
         </span>
         <span className="brand-logo-rule" aria-hidden="true" />
         {tagline ? (

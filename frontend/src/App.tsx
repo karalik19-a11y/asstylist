@@ -318,7 +318,6 @@ export default function App() {
       {screen === 'home' ? (
         <Home
           meta={meta}
-          history={history}
           userName={userName}
           theme={theme}
           onToggleTheme={toggleTheme}
@@ -326,7 +325,6 @@ export default function App() {
           onOpenHistory={openHistory}
           onOpenVerification={() => void openVerification()}
           onOpenSearch={openSearch}
-          onOpenLook={(id) => void openLook(id)}
         />
       ) : null}
 
@@ -387,10 +385,12 @@ export default function App() {
         />
       ) : null}
 
-      <footer className="build-stamp" title="Идентификатор сборки фронтенда">
-        {screen === 'home' && !isTelegram() ? 'ASStylist · браузер · ' : ''}
-        <code>{formatBuildLabel(BUILD_STAMP)}</code>
-      </footer>
+      {screen === 'home' ? (
+        <footer className="build-stamp" title="Идентификатор сборки фронтенда">
+          {!isTelegram() ? 'ASStylist · браузер · ' : ''}
+          <code>{formatBuildLabel(BUILD_STAMP)}</code>
+        </footer>
+      ) : null}
     </div>
   )
 }
