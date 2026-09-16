@@ -1,7 +1,7 @@
-"""FashionEngine — оркестратор пайплайна (порт ``src/core/FashionEngine.js``).
+"""FashionEngine v2 orchestrator.
 
-    USER INTENT → AESTHETIC DNA → FASHION RESEARCH → ITEM DISCOVERY →
-    ITEM VALIDATION → OUTFIT ARCHITECTURE → COMPATIBILITY SCORING → FINAL LOOK
+USER INTENT → AESTHETIC DNA → FASHION RADAR → ITEM DISCOVERY →
+ITEM VALIDATION → OUTFIT ARCHITECTURE → COMPATIBILITY SCORING → FINAL LOOK
 """
 
 from __future__ import annotations
@@ -13,26 +13,27 @@ from .intelligence import TrendEngine
 from .outfit import FashionCritic, OutfitArchitect, OutfitScorer
 from .ranking import RankingEngine
 from .search.multi_pass_search import DiscoveryResult, MultiPassSearch
+from .search.providers.avito_provider import AvitoSearchProvider
 from .search.providers.mock_real_product_provider import MockRealProductProvider
 from .search.providers.web_search_provider import WebSearchProvider
 from .types import OutfitCandidate, OutfitResult, ProductItem, UserStyleProfile
 from .validation import ImageMatcher, ItemValidator, ProductIdentityResolver
 
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "2.0.0"
 
 
 @dataclass
 class EngineOptions:
-    """Настройки пайплайна (в оригинале — второй/третий аргумент функций)."""
-
-    max_products: int = 40
-    limit_per_query: int = 6
+    max_products: int = 48
+    limit_per_query: int = 8
     min_confidence: float = 0.6
     max_outfits: int = 4
     categories: list[str] = field(default_factory=list)
-    #: Ограничение числа расширенных запросов (для живых провайдеров, где
-    #: каждый запрос — HTTP). None — без ограничения, как в оригинале.
     max_queries: int | None = None
+    # v2: keep the engine focused on current/niche fashion rather than generic hits.
+    niche_floor: int = 55
+    enable_avito: bool = True
+    enable_web: bool = True
 
     @classmethod
     def from_value(cls, value: "EngineOptions | dict | None") -> "EngineOptions":
@@ -47,8 +48,17 @@ class EngineOptions:
 class FashionEngine:
     def __init__(self, providers: list | None = None, options: EngineOptions | dict | None = None) -> None:
         self.options = EngineOptions.from_value(options)
-        # Дефолт из оригинала; asStylist подставляет CatalogSearchProvider.
-        self.providers = list(providers) if providers is not None else [MockRealProductProvider(), WebSearchProvider()]
+        if providers is not None:
+            self.providers = list(providers)
+        else:
+            # Avito is the marketplace source; web search remains an optional
+            # reference source and the mock provider is retained only for tests.
+            self.providers = []
+            if self.options.enable_avito:
+                self.providers.append(AvitoSearchProvider())
+            if self.options.enable_web:
+                self.providers.append(WebSearchProvider())
+            self.providers.append(MockRealProductProvider())
         self.search = MultiPassSearch(self.providers)
         self.validator = ItemValidator(self.options.min_confidence)
         self.image_matcher = ImageMatcher()
@@ -59,13 +69,11 @@ class FashionEngine:
         self.ranker = RankingEngine()
         self.trend = TrendEngine()
 
-    # ─── PASS 1–3: поиск и обогащение ─────────────────────────────────
-    def discover(
-        self,
-        user_query: str,
-        raw_profile: UserStyleProfile | dict | None = None,
-    ) -> DiscoveryResult:
+    def discover(self, user_query: str, raw_profile: UserStyleProfile | dict | None = None) -> DiscoveryResult:
         profile = self._profile(raw_profile)
+        # v2 raises the floor for niche users without making high-quality
+        # marketplace results impossible to find.
+        max_queries = self.options.max_queries
         return self.search.run(
             user_query,
             profile,
@@ -73,19 +81,14 @@ class FashionEngine:
                 "max_products": self.options.max_products,
                 "limit_per_query": self.options.limit_per_query,
                 "categories": self.options.categories,
-                "max_queries": self.options.max_queries,
+                "max_queries": max_queries,
+                "niche_floor": self.options.niche_floor,
             },
         )
 
-    def enrich(
-        self,
-        items: list,
-        raw_profile: UserStyleProfile | dict | None = None,
-    ) -> list:
-        """Обогатить вещи вне поисковых запросов (см. ``MultiPassSearch.enrich``)."""
+    def enrich(self, items: list[ProductItem], raw_profile: UserStyleProfile | dict | None = None) -> list:
         return self.search.enrich(list(items), self._profile(raw_profile))
 
-    # ─── PASS 4–6: сборка и оценка образа ─────────────────────────────
     def create_outfit(
         self,
         user_query: str,
@@ -95,7 +98,6 @@ class FashionEngine:
     ) -> OutfitResult:
         settings = EngineOptions.from_value(options) if options is not None else self.options
         profile = self._profile(raw_profile)
-
         discovery = preloaded or self.discover(user_query, profile)
 
         validator = ItemValidator(settings.min_confidence)
@@ -105,18 +107,9 @@ class FashionEngine:
         products = self.ranker.rank_items(products)
 
         if len(products) < 3:
-            return OutfitResult.empty(
-                user_query,
-                "Insufficient high-quality real products found after validation.",
-            )
+            return OutfitResult.empty(user_query, "Insufficient high-quality real products found after validation.")
 
-        candidates = self.architect.build(
-            products,
-            user_query,
-            profile,
-            {"max_outfits": settings.max_outfits},
-        )
-
+        candidates = self.architect.build(products, user_query, profile, {"max_outfits": settings.max_outfits})
         evaluated: list[OutfitCandidate] = []
         for candidate in candidates:
             score_result = self.scorer.score(candidate, profile)
@@ -129,11 +122,7 @@ class FashionEngine:
             candidate.styling_logic = self._build_styling_logic(candidate)
             evaluated.append(candidate)
 
-        approved = [
-            candidate
-            for candidate in evaluated
-            if candidate.critic_decision == "APPROVE" or candidate.outfit_score >= 70
-        ]
+        approved = [candidate for candidate in evaluated if candidate.critic_decision == "APPROVE" or candidate.outfit_score >= 70]
         ranked = self.ranker.rank_outfits(approved or evaluated)
         best = ranked[0] if ranked else None
         if best is None:
@@ -159,7 +148,7 @@ class FashionEngine:
             critic_feedback=best.critic_feedback,
             critic_decision=best.critic_decision,
             meta={
-                "queriesUsed": discovery.queries_used[:8],
+                "queriesUsed": discovery.queries_used[:12],
                 "queriesTotal": len(discovery.queries_used),
                 "rawItems": discovery.raw_items,
                 "totalCandidatesConsidered": len(discovery.products),
@@ -167,13 +156,14 @@ class FashionEngine:
                 "candidatesBuilt": len(candidates),
                 "nicheLevel": profile.niche_level,
                 "engineVersion": ENGINE_VERSION,
+                "trendRadarVersion": self.trend.radar_version,
                 "dropped": dict(discovery.dropped),
                 "theses": [candidate.styling_thesis for candidate in ranked],
                 "scoreBreakdown": best.score_breakdown,
+                "providerMix": [getattr(provider, "name", type(provider).__name__) for provider in self.providers],
             },
         )
 
-    # ─── вспомогательное ──────────────────────────────────────────────
     @staticmethod
     def _profile(raw_profile: UserStyleProfile | dict | None) -> UserStyleProfile:
         if isinstance(raw_profile, UserStyleProfile):
@@ -187,53 +177,26 @@ class FashionEngine:
         def unique(values: list[str]) -> list[str]:
             return list(dict.fromkeys(value for value in values if value))
 
-        silhouettes = unique(
-            [entry for item in items for entry in (getattr(item.fashion_attributes, "silhouette", []) or [])]
-        )
-        colors = unique(
-            [
-                getattr(item.fashion_attributes, "color", "")
-                for item in items
-                if item.fashion_attributes and getattr(item.fashion_attributes, "color", "")
-            ]
-        )
-        textures = unique(
-            [
-                getattr(item.fashion_attributes, "texture", "")
-                or getattr(item.fashion_attributes, "material", "")
-                for item in items
-                if item.fashion_attributes
-            ]
-        )
+        silhouettes = unique([entry for item in items for entry in (getattr(item.fashion_attributes, "silhouette", []) or [])])
+        colors = unique([getattr(item.fashion_attributes, "color", "") for item in items if item.fashion_attributes and getattr(item.fashion_attributes, "color", "")])
+        textures = unique([
+            getattr(item.fashion_attributes, "texture", "") or getattr(item.fashion_attributes, "material", "")
+            for item in items if item.fashion_attributes
+        ])
         hero = next((item for item in items if item.role == "hero"), items[0] if items else None)
         return {
             "silhouette": " + ".join(silhouettes) or "balanced",
             "color": " / ".join(colors) or "monochrome",
-            "layering": "intentional layering present"
-            if any(getattr(item.fashion_attributes, "layering_potential", "") == "high" for item in items)
-            else "minimal layering",
+            "layering": "intentional layering present" if any(getattr(item.fashion_attributes, "layering_potential", "") == "high" for item in items) else "minimal layering",
             "textures": " + ".join(textures) or "mixed",
             "focalPoint": hero.name if hero else "undefined",
             "roles": [item.role for item in items],
         }
 
 
-def create_outfit(
-    query: str,
-    profile: UserStyleProfile | dict | None = None,
-    options: EngineOptions | dict | None = None,
-    providers: list | None = None,
-) -> OutfitResult:
-    """Удобная обёртка (в оригинале — ``createOutfit``)."""
-    engine = FashionEngine(providers=providers, options=options)
-    return engine.create_outfit(query, profile)
+def create_outfit(query: str, profile: UserStyleProfile | dict | None = None, options: EngineOptions | dict | None = None, providers: list | None = None) -> OutfitResult:
+    return FashionEngine(providers=providers, options=options).create_outfit(query, profile)
 
 
-def create_outfit_dict(
-    query: str,
-    profile: UserStyleProfile | dict | None = None,
-    options: EngineOptions | dict | None = None,
-    providers: list | None = None,
-) -> dict[str, Any]:
-    """Тот же вызов, но сразу JSON-совместимый ответ контракта движка."""
+def create_outfit_dict(query: str, profile: UserStyleProfile | dict | None = None, options: EngineOptions | dict | None = None, providers: list | None = None) -> dict[str, Any]:
     return create_outfit(query, profile, options, providers).to_dict()
