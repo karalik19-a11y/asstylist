@@ -1,4 +1,13 @@
-"""Память пользователя: рост и вес вводятся один раз."""
+"""Память пользователя: рост и вес вводятся один раз.
+
+Эндпоинты:
+
+* ``GET /api/profile`` — что сервис помнит (``saved: false``, если данных нет);
+* ``PUT /api/profile`` — сохранить или обновить рост и вес;
+* ``POST /api/profile/used`` — отметить, что сохранёнными данными воспользовались;
+* ``POST /api/profile/reset`` (и ``DELETE /api/profile``) — «забыть мои данные»;
+* ``POST /api/profile/register`` — выдать неизменяемый цвет-ID.
+"""
 
 from __future__ import annotations
 
@@ -58,14 +67,18 @@ def read_profile(request: Request, session: Session = Depends(get_session)) -> d
 async def write_profile(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
     payload = await _body_payload(request)
     user = _resolve_user(session, {**_query_payload(request), **payload})
-    return profile_service.save_profile(session, user, payload)
+    profile, problems = profile_service.save_profile(session, user, payload)
+    if problems:
+        profile = {**profile, "warnings": problems}
+    return profile
 
 
 @router.post("/used")
 async def mark_used(request: Request, session: Session = Depends(get_session)) -> dict[str, Any]:
     payload = await _body_payload(request)
     user = _resolve_user(session, {**_query_payload(request), **payload})
-    return profile_service.mark_used(session, user)
+    profile_service.mark_used(session, user)
+    return profile_service.get_profile(session, user)
 
 
 @router.post("/reset")
