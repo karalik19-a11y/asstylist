@@ -62,24 +62,22 @@ export function Header({
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
 
   const handleSoundToggle = () => {
-    const next = toggleSound()
-    setSoundOn(next)
+    setSoundOn(toggleSound())
   }
 
   return (
     <header className={`stack app-header${compact ? ' compact' : ''}`} style={{ gap: compact ? 0 : 10 }}>
-      <div className="row-between" style={{ alignItems: 'center' }}>
-        <div className="row" style={{ gap: 10, minWidth: 0, flex: 1 }}>
+      <div className="row-between header-main-row" style={{ alignItems: 'center' }}>
+        <div className="row header-main-left" style={{ gap: 8, minWidth: 0, flex: 1 }}>
           {onBack ? (
             <button
               type="button"
-              className="btn btn-sm btn-outline"
+              className="btn btn-sm btn-outline header-back"
               onClick={() => {
                 playClick()
                 onBack()
               }}
               aria-label="Назад"
-              style={{ minHeight: 42, minWidth: 46, padding: '8px 14px', fontSize: 16 }}
             >
               ←
             </button>
@@ -87,22 +85,19 @@ export function Header({
           {onHome ? (
             <BrandLogo onHome={onHome} />
           ) : (
-            <div className="kicker" style={{ flexShrink: 0 }}>
-              ASStylist
-            </div>
+            <div className="kicker header-kicker">ASStylist</div>
           )}
         </div>
 
-        <div className="row" style={{ gap: 10, flexShrink: 0 }}>
+        <div className="row header-controls">
           <button
             type="button"
-            className="btn btn-sm btn-ghost"
+            className="header-control header-control-icon"
             onClick={handleSoundToggle}
             aria-label={soundOn ? 'Выключить звук' : 'Включить звук'}
             title={soundOn ? 'Звук: включён' : 'Звук: выключен'}
-            style={{ padding: '8px 10px', minHeight: 42, minWidth: 44 }}
           >
-            <SoundIcon enabled={soundOn} size={18} />
+            <SoundIcon enabled={soundOn} size={16} />
           </button>
           {right}
         </div>
@@ -254,9 +249,16 @@ export function Spinner() {
 }
 
 export function ThemeToggle({ theme, onToggle }: { theme: 'noir' | 'parchment'; onToggle: () => void }) {
+  const isNoir = theme === 'noir'
   return (
-    <button type="button" className="btn btn-sm btn-ghost" onClick={onToggle} style={{ padding: '8px 14px', minHeight: 42, fontSize: 13 }} title="Переключить тему">
-      {theme === 'noir' ? 'Светлая' : 'Тёмная'}
+    <button
+      type="button"
+      className="header-control header-control-icon"
+      onClick={() => { playClick(); onToggle() }}
+      aria-label={isNoir ? 'Включить светлую тему' : 'Включить тёмную тему'}
+      title={isNoir ? 'Светлая тема' : 'Тёмная тема'}
+    >
+      <span aria-hidden="true">{isNoir ? '☼' : '☾'}</span>
     </button>
   )
 }
