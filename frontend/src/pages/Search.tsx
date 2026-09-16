@@ -7,7 +7,6 @@ import { ItemPhoto } from '../components/ItemPhoto'
 import { openExternal } from '../lib/telegram'
 import { playClick, playSuccess, playTick } from '../lib/sound'
 
-/** Человекочитаемые пометки источников позиций выдачи. */
 const SOURCE_LABELS: Record<string, string> = {
   avito: 'Авито',
   'web-search': 'онлайн-находка',
@@ -171,7 +170,7 @@ export function Search({
           className="engine-query"
           value={query}
           rows={3}
-          placeholder="Например: грязный индустриальный образ с прозрачным верхом и кожаной курткой"
+          placeholder="Опишите образ своими словами: силуэт, ткани, настроение, вещи"
           aria-label="Поисковый запрос"
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -241,7 +240,7 @@ export function Search({
 
         <div className="stack" style={{ gap: 10 }}>
           <RangeField
-            label="Уровень ниши"
+            label="Нишевость"
             value={niche ?? 60}
             min={0}
             max={100}
@@ -251,7 +250,7 @@ export function Search({
             hint="Выше — редкие вещи, ниже — базовые."
           />
           <button type="button" className="link-btn" onClick={() => setNiche(null)}>
-            {niche === null ? 'Сейчас: ниша выводится из стиля' : 'Сбросить и выводить из стиля'}
+            {niche === null ? 'Сейчас: нишевость из стиля' : 'Сбросить и выводить из стиля'}
           </button>
         </div>
 
@@ -304,7 +303,7 @@ export function Search({
               <Badge tone={engine.critic_decision === 'APPROVE' ? 'ok' : 'warn'}>
                 критик: {engine.critic_decision === 'APPROVE' ? 'одобрено' : 'нужно усилить'}
               </Badge>
-              <Badge>ниша {engine.niche_level}/100</Badge>
+              <Badge>нишевость {engine.niche_level}/100</Badge>
               {engine.aesthetics?.map((aesthetic) => (
                 <Badge key={aesthetic}>{aesthetic}</Badge>
               ))}
