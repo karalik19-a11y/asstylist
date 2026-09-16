@@ -1,4 +1,4 @@
-/* Supplied ASStylist mark — responsive, monochrome, theme-aware. */
+/* ASStylist mark — crisp geometry and native brand colors. */
 .brand-logo-word {
   display: flex;
   align-items: center;
@@ -15,14 +15,10 @@
   display: block;
   width: 100%;
   height: auto;
-  color: #000;
-  filter: invert(1);
+  filter: none !important;
 }
 
-.brand-logo-ass > span {
-  display: none;
-}
-
+.brand-logo-ass > span,
 .brand-logo-word > em {
   display: none;
 }
@@ -34,10 +30,6 @@
 .brand-logo-big .brand-logo-ass {
   width: min(380px, 78vw);
   flex-basis: min(380px, 78vw);
-}
-
-[data-theme='parchment'] .brand-logo-ass .brand-logo-image {
-  filter: none;
 }
 
 @media (max-width: 520px) {
