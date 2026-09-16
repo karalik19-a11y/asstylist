@@ -1,0 +1,269 @@
+/* TREND overrides — keeps Club Capri identity, mobile + motion polish */
+:root {
+  --page-bg: linear-gradient(165deg, #d4eef8 0%, #b5dff0 28%, #e8d4c0 58%, #f5c4b6 82%, #f0b8c8 100%);
+  --glass-blur: saturate(180%) blur(24px);
+  --r-xl: 28px;
+  --r-lg: 22px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.app.screen-flash {
+  animation: screenSwap 0.42s var(--ease-spring) both;
+}
+
+@keyframes screenSwap {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.hero {
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -12px -8px auto;
+  height: 120px;
+  border-radius: 32px;
+  background: radial-gradient(ellipse at 30% 40%, rgba(238, 56, 80, 0.12), transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(47, 127, 193, 0.14), transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+  animation: heroGlow 8s ease-in-out infinite alternate;
+}
+
+@keyframes heroGlow {
+  from { opacity: 0.7; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+
+.btn-primary.btn-xl {
+  animation: ctaSettle 0.7s var(--ease-spring) both;
+}
+
+@keyframes ctaSettle {
+  0% { transform: translateY(10px) scale(0.96); opacity: 0; }
+  70% { transform: translateY(-2px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.btn,
+.chip,
+.stamp-tile,
+.style-pill-btn,
+.index-row,
+.link-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover,
+  .stamp-card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease;
+  }
+}
+
+.card,
+.stamp-card,
+.style-preview-card {
+  transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease, border-color 0.2s ease;
+}
+
+.style-pills-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  margin: 0 -4px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.style-pills-row::-webkit-scrollbar {
+  display: none;
+}
+
+.style-pill-btn {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  transition: transform 0.25s var(--ease-spring), background 0.2s ease, color 0.2s ease,
+    box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.style-pill-btn[data-active='true'] {
+  animation: pillSelect 0.35s var(--ease-spring);
+}
+
+@keyframes pillSelect {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.style-preview-card {
+  animation: riseIn 0.45s var(--ease-spring) both;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  box-shadow: var(--glass-inner), 0 12px 28px rgba(23, 68, 99, 0.1);
+}
+
+.index-row {
+  min-height: 64px;
+  transition: background-color 0.2s ease, transform 0.2s var(--ease-spring);
+}
+
+.index-row:active {
+  transform: scale(0.985);
+}
+
+.progress span {
+  position: relative;
+  overflow: hidden;
+  transition: width 0.45s var(--ease-spring);
+}
+
+.progress span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: progressShine 1.8s ease-in-out infinite;
+}
+
+@keyframes progressShine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.action-bar {
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  animation: barRise 0.4s var(--ease-spring) both;
+}
+
+@keyframes barRise {
+  from { transform: translateY(110%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.score-ring {
+  animation: scoreIn 0.55s var(--ease-spring) both;
+}
+
+@keyframes scoreIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.item-card {
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s ease;
+}
+
+.item-card:active {
+  transform: scale(0.99);
+}
+
+@supports (padding: max(0px)) {
+  .app {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    gap: 22px;
+    padding-top: calc(16px + var(--tg-content-safe-top, 0px));
+  }
+
+  .hero h1 {
+    font-size: clamp(24px, 7.5vw, 32px);
+    letter-spacing: -0.02em;
+  }
+
+  .btn-xl {
+    min-height: 58px;
+    border-radius: 18px;
+    font-size: 16.5px;
+  }
+
+  .home-actions-grid .btn {
+    min-height: 50px;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+[data-theme='noir'] {
+  --page-bg: linear-gradient(165deg, #0c1824 0%, #132536 40%, #1a2030 70%, #241828 100%);
+}
+
+[data-theme='noir'] .hero::before {
+  background: radial-gradient(ellipse at 30% 40%, rgba(238, 56, 80, 0.18), transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(47, 127, 193, 0.2), transparent 50%);
+}
+
+.link-btn {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.link-btn::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-leopard), var(--accent-leopard-dark));
+  transition: width 0.3s var(--ease-spring), left 0.3s var(--ease-spring);
+}
+
+.link-btn:hover::after,
+.link-btn:focus-visible::after {
+  width: 100%;
+  left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app.screen-flash,
+  .page-transition,
+  .page-transition > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .hero::before,
+  .progress span::after {
+    display: none !important;
+  }
+}

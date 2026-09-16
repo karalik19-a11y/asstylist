@@ -67,14 +67,11 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [loadingList, setLoadingList] = useState(false)
   const [userName, setUserName] = useState<string | null>(null)
-  // Память о человеке: рост и вес, введённые в прошлый раз.
   const [savedBody, setSavedBody] = useState<BodyMemory | null>(null)
-  // По умолчанию — системная тема клиента Telegram, в браузере — светлая.
   const [theme, setTheme] = useState<'noir' | 'parchment'>(() =>
     telegramColorScheme() === 'dark' ? 'noir' : 'parchment',
   )
 
-  // Атрибут data-theme и цвет хедера Telegram всегда следуют за состоянием.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     syncTelegramChrome(theme)
@@ -96,7 +93,6 @@ export default function App() {
     }
   }, [])
 
-  // Реакция на смену темы в самом Telegram (клиент может переключать на лету).
   useEffect(() => {
     const offTheme = onTelegramEvent('themeChanged', () => {
       applyTheme(telegramColorScheme() === 'dark' ? 'noir' : 'parchment')
@@ -107,18 +103,13 @@ export default function App() {
   useEffect(() => {
     initTelegram()
     setUserName(telegramUserName())
-    api
-      .meta()
-      .then(setMeta)
-      .catch(() => setMeta(null))
+    api.meta().then(setMeta).catch(() => setMeta(null))
     api
       .auth()
       .then((response) => setUserName(response.user.first_name ?? response.user.telegram_id))
       .catch(() => undefined)
-    // Память о росте и весе: сервер → локальная копия.
     void loadBodyMemory().then(setSavedBody)
     void refreshHistory()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshHistory])
 
   const goHome = useCallback(() => {
@@ -127,7 +118,6 @@ export default function App() {
     void refreshHistory()
   }, [refreshHistory])
 
-  /** Единое действие «назад»: используется и шапкой, и нативной BackButton. */
   const backAction = useCallback(() => {
     if (screen === 'wizard') {
       if (model.step === 'photo') goHome()
@@ -142,7 +132,6 @@ export default function App() {
     backActionRef.current = backAction
   }, [backAction])
 
-  // Нативная BackButton клиента (Bot API): показываем вне главного экрана.
   useEffect(() => {
     return onBackButton(() => {
       haptic('light')
@@ -152,13 +141,10 @@ export default function App() {
 
   useEffect(() => {
     setBackButtonVisible(screen !== 'home')
-    // Диалог «закрыть?» — только когда посреди сценария есть что терять.
     setClosingConfirmation(screen !== 'home')
   }, [screen])
 
   const startWizard = useCallback(() => {
-    // Если рост и вес уже сохранены — сначала предлагаем выбор:
-    // «собрать по сохранённым» или «ввести новые».
     if (savedBody) {
       dispatch({
         type: 'reset',
@@ -187,7 +173,6 @@ export default function App() {
     dispatch({ type: 'reset' })
   }, [])
 
-  /** После удачной сборки запоминаем рост и вес — в следующий раз спросим иначе. */
   const rememberBody = useCallback((height: number, weight: number) => {
     void saveBodyMemory(height, weight).then(setSavedBody)
   }, [])
@@ -211,10 +196,6 @@ export default function App() {
     }
   }, [model.state, refreshHistory, rememberBody])
 
-  /**
-   * Сборка образа по запросу из экрана поиска: патч кладётся в состояние
-   * мастера, поэтому движок получает ту же формулировку, что и в поиске.
-   */
   const handleEngineGenerate = useCallback(
     async (patch: Partial<WizardState>) => {
       const nextState = { ...model.state, ...patch }
@@ -227,8 +208,6 @@ export default function App() {
         setScreen('result')
         haptic('success')
         playSuccess()
-        // Рост и вес, с которыми собрали образ, запоминаем и здесь: при
-        // следующем входе спросим только «новые данные или сохранённые».
         rememberBody(nextState.height_cm, nextState.weight_kg)
         void refreshHistory()
       } catch (caught) {
@@ -306,16 +285,22 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const root = document.querySelector('.app')
+    if (!(root instanceof HTMLElement)) return
+    root.classList.remove('screen-flash')
+    void root.offsetWidth
+    root.classList.add('screen-flash')
+  }, [screen])
+
   return (
-    <div className="app">
-      {/* Плавающие световые пятна фона (летняя лазурь) */}
+    <div className="app" data-screen={screen}>
       <div className="ambient" aria-hidden="true">
         <span className="blob blob-a" />
         <span className="blob blob-b" />
         <span className="blob blob-c" />
       </div>
 
-      {/* SVG Global Definitions for Leopard Rosettes */}
       <LeopardPatternDef />
 
       {screen !== 'home' && screen !== 'wizard' ? (
