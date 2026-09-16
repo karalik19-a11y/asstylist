@@ -42,37 +42,38 @@ class AuthResponse(BaseModel):
 
 
 class LookRequest(BaseModel):
+    """JSON variant of the generate payload (multipart is handled in the route)."""
+
     style: str = "minimal"
     mood: str = "calm"
     occasion: str = "everyday"
     season: str = "all"
     presentation: str = "unisex"
-    height_cm: float = 172
-    weight_kg: float = 68
-    budget_rub: float = 50_000
+    height_cm: float = Field(default=172, ge=120, le=230)
+    weight_kg: float = Field(default=68, ge=30, le=250)
+    budget_rub: float = Field(default=50_000, ge=5_000, le=BUDGET_CEILING_RUB)
     preferred_colors: list[str] = Field(default_factory=list)
     avoid_colors: list[str] = Field(default_factory=list)
     size: str | None = None
     plan: str | None = None
     query: str | None = None
     niche_level: int | None = None
-    telegram_id: str | None = None
     init_data: str | None = None
     demo_user_id: str | None = None
+    telegram_id: str | None = None
     save: bool = True
 
     @field_validator("preferred_colors", "avoid_colors", mode="before")
     @classmethod
-    def _colors(cls, value: Any) -> list[str]:
+    def _normalize_colors(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
         if isinstance(value, str):
             value = [part.strip() for part in value.split(",") if part.strip()]
-        return _clean_color_list(value if isinstance(value, list) else None)
-
-    @field_validator("budget_rub")
-    @classmethod
-    def _budget(cls, value: float) -> float:
-        return min(float(value), float(BUDGET_CEILING_RUB))
+        if not isinstance(value, list):
+            return []
+        return _clean_color_list(value)
 
 
 class ProductImportRequest(BaseModel):
-    products: list[dict[str, Any]]
+    products: list[dict[str, Any]] = Field(default_factory=list)
