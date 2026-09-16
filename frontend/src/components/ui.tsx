@@ -59,12 +59,6 @@ export function Header({
   right?: ReactNode
   compact?: boolean
 }) {
-  const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
-
-  const handleSoundToggle = () => {
-    setSoundOn(toggleSound())
-  }
-
   return (
     <header className={`stack app-header${compact ? ' compact' : ''}`} style={{ gap: compact ? 0 : 10 }}>
       <div className="row-between header-main-row" style={{ alignItems: 'center' }}>
@@ -178,95 +172,52 @@ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'ok' 
 
 export function verificationTone(status: string): 'ok' | 'warn' | 'bad' {
   if (status === 'verified') return 'ok'
-  if (status === 'warning' || status === 'external') return 'warn'
+  if (status === 'review') return 'warn'
   return 'bad'
 }
 
-export function verificationLabel(status: string): string {
-  if (status === 'verified') return 'проверено'
-  if (status === 'warning') return 'внимание'
-  if (status === 'failed') return 'не проверено'
-  if (status === 'external') return 'Авито'
-  return status
-}
-
-export function isAvitoUrl(url: string | undefined): boolean {
-  if (!url) return false
-  try {
-    const host = new URL(url, 'https://asstylist.local').hostname.toLowerCase()
-    return host === 'avito.ru' || host.endsWith('.avito.ru')
-  } catch {
-    return url.includes('avito.ru')
-  }
-}
-
-function scoreColor(score: number): string {
-  if (score >= 88) return 'var(--ok)'
-  if (score >= 70) return 'var(--accent-leopard)'
-  return 'var(--warn)'
-}
-
 export function ScoreRing({ score }: { score: number }) {
-  const clamped = Math.max(0, Math.min(100, score))
-  const color = scoreColor(clamped)
+  const value = Math.max(0, Math.min(100, Math.round(score)))
   return (
-    <div
-      className="score-ring"
-      style={{
-        background:
-          `radial-gradient(circle at 50% 50%, rgba(8, 20, 31, 0.62) 0 57%, rgba(8, 20, 31, 0) 59%), ` +
-          `conic-gradient(${color} ${clamped * 3.6}deg, var(--surface-2) 0deg)`,
-        boxShadow: 'inset 0 0 0 6px var(--surface), 0 10px 24px rgba(23, 68, 99, 0.18)',
-      }}
-      aria-label={`Оценка ${Math.round(clamped)} из 100`}
-    >
-      {Math.round(clamped)}
+    <div className="score-ring" aria-label={`Оценка ${value} из 100`}>
+      <strong>{value}</strong>
+      <span>/100</span>
     </div>
   )
 }
 
-export function BudgetBar({ total, budget }: { total: number; budget: number }) {
-  const share = budget > 0 ? Math.min(1, total / budget) : 0
-  const left = Math.max(0, budget - total)
+export function BudgetBar({ spent, budget }: { spent: number; budget: number }) {
+  const pct = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0
   return (
-    <div className="stack" style={{ gap: 6 }}>
-      <div className="budget-bar">
-        <span style={{ width: `${share * 100}%` }} />
-      </div>
-      <div className="row-between small muted">
-        <span>{formatRub(total)} из {formatRub(budget)}</span>
-        <span>{left > 0 ? `остаток ${formatRub(left)}` : 'полный бюджет'}</span>
-      </div>
+    <div className="budget-bar" aria-label={`Потрачено ${formatRub(spent)} из ${formatRub(budget)}`}>
+      <span style={{ width: `${pct}%` }} />
     </div>
   )
 }
 
-export function SectionTitle({ children, hint, index }: { children: ReactNode; hint?: string; index?: string }) {
+export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="section-head">
-      <h3>
-        {index ? (<><span className="sec-num">№ {index}</span>{children}</>) : children}
-      </h3>
-      {hint ? <span className="section-head-hint muted small">{hint}</span> : null}
+    <div className="row-between section-title">
+      <h3>{children}</h3>
+      {action}
     </div>
   )
 }
 
 export function Spinner() {
-  return <span className="spinner" aria-hidden="true" />
+  return <span className="spinner" aria-label="Загрузка" />
 }
 
-export function ThemeToggle({ theme, onToggle }: { theme: 'noir' | 'parchment'; onToggle: () => void }) {
-  const isNoir = theme === 'noir'
+export function ThemeToggle({ theme, onToggle }: { theme: 'light' | 'dark'; onToggle: () => void }) {
   return (
     <button
       type="button"
       className="header-control header-control-icon"
-      onClick={() => { playClick(); onToggle() }}
-      aria-label={isNoir ? 'Включить светлую тему' : 'Включить тёмную тему'}
-      title={isNoir ? 'Светлая тема' : 'Тёмная тема'}
+      onClick={onToggle}
+      aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
+      title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
     >
-      <span aria-hidden="true">{isNoir ? '☼' : '☾'}</span>
+      {theme === 'dark' ? '☼' : '☾'}
     </button>
   )
 }
