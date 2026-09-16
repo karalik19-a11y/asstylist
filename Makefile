@@ -27,7 +27,7 @@ test-backend:  ## backend pytest suite
 	cd backend && ../$(PY) -m pytest
 
 test-engine:  ## fashion_engine + ranking/budget focused tests (safe zone for agents)
-	cd backend && ../$(PY) -m pytest -q -k "engine or fashion or ranking or budget or verification or look_builder" --tb=short
+	cd backend && ../$(PY) -m pytest -q -k "engine or fashion or ranking or budget or verification or look_builder or boundary" --tb=short
 
 test-frontend:  ## frontend vitest
 	npm --prefix frontend run test

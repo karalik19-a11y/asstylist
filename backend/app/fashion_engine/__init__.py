@@ -25,11 +25,14 @@
 на ``Math.random`` заменён на детерминированный ``stable_id``, таблицы
 ключевых слов расширены русскими основами, исправлен вызов
 ``_is_mass_market`` в ``TasteEngine``.
+
+Граница пакета для агентов: см. ``README.md`` и ``pipeline.PIPELINE_STEPS``.
 """
 
 from __future__ import annotations
 
 from .engine import ENGINE_VERSION, EngineOptions, FashionEngine, create_outfit
+from .pipeline import PIPELINE_STEPS, pipeline_as_dict, pipeline_ids
 from .search.provider import SearchContext, SearchProvider
 from .search.providers.avito_provider import AvitoSearchProvider, avito_search_url
 from .search.providers.avito_snapshot_provider import AvitoSnapshotProvider
@@ -58,6 +61,7 @@ __all__ = [
     "FashionEngine",
     "MockRealProductProvider",
     "OutfitResult",
+    "PIPELINE_STEPS",
     "ProductItem",
     "SearchContext",
     "SearchProvider",
@@ -68,4 +72,6 @@ __all__ = [
     "WebSearchProvider",
     "avito_search_url",
     "create_outfit",
+    "pipeline_as_dict",
+    "pipeline_ids",
 ]
