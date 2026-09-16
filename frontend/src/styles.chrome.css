@@ -1,16 +1,19 @@
 /* ==========================================================================
-   CHROME SYSTEM — single source of truth for layout / adaptive / overlap
-   8-point grid · Breakpoints: sm ≤400 | md ≤560 | base ≤640
+   CHROME SYSTEM — MOBILE-FIRST (Telegram Mini App priority)
+   Base = phone (360–430px). Larger screens only enhance.
+   8-point grid · Breakpoints: base (mobile) → md ≥401 → lg ≥561
    ========================================================================== */
 
 :root {
+  /* Mobile-first tokens */
   --chrome-max: 640px;
-  --space-x: 16px;
-  --space-y: 16px;
-  --header-h: 56px;
-  --tab-bar-h: 72px;
-  --action-bar-h: 96px;
-  --glass-blur-mobile: blur(10px) saturate(150%);
+  --space-x: 14px;          /* tighter side padding on phones */
+  --header-h: 52px;
+  --tab-bar-h: 70px;
+  --action-bar-h: 92px;
+  --glass-blur-mobile: blur(8px) saturate(140%); /* lighter for performance */
+
+  /* 8-point scale */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -20,7 +23,7 @@
   --space-8: 32px;
 }
 
-/* --- Base app shell: chrome owns all padding --- */
+/* --- App shell: mobile is the default --- */
 .app {
   box-sizing: border-box !important;
   min-height: 100dvh !important;
@@ -34,7 +37,6 @@
   filter: none !important;
   padding-left: max(var(--space-x), env(safe-area-inset-left, 0px)) !important;
   padding-right: max(var(--space-x), env(safe-area-inset-right, 0px)) !important;
-  /* default padding neutralised; screen-specific rules below win */
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
@@ -47,11 +49,11 @@
   ) !important;
 }
 
-/* Wizard — action bar lives here */
+/* Wizard */
 .app[data-screen='wizard'] {
   padding-top: calc(var(--space-2) + var(--tg-content-safe-top, 0px)) !important;
   padding-bottom: calc(
-    var(--action-bar-h) + var(--space-6) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+    var(--action-bar-h) + var(--space-5) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
   ) !important;
 }
 
@@ -72,7 +74,7 @@ html {
   scroll-padding-bottom: calc(var(--action-bar-h) + var(--space-3));
 }
 
-/* ===================== Header ===================== */
+/* ===================== Header (mobile sticky / fixed) ===================== */
 
 .app[data-screen='wizard'] .app-header {
   position: sticky !important;
@@ -82,9 +84,9 @@ html {
   transform: none !important;
   width: 100% !important;
   margin: 0 0 var(--space-3) !important;
-  padding: var(--space-2) 0 var(--space-3) !important;
+  padding: var(--space-2) 0 var(--space-2) !important;
   z-index: 40;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border-bottom: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 70%, transparent);
@@ -103,10 +105,10 @@ html {
   transform: translateX(-50%) !important;
   width: min(var(--chrome-max), 100%) !important;
   margin: 0 !important;
-  padding: calc(var(--space-2) + var(--tg-content-safe-top, 0px)) var(--space-x) var(--space-3) !important;
+  padding: calc(var(--space-2) + var(--tg-content-safe-top, 0px)) var(--space-x) var(--space-2) !important;
   box-sizing: border-box;
   z-index: 200;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border-bottom: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 70%, transparent);
@@ -122,10 +124,10 @@ html {
   line-height: 1.25;
   max-width: 100%;
   word-break: break-word;
-  font-size: clamp(17px, 4.5vw, 20px);
+  font-size: clamp(16px, 4.4vw, 19px);
 }
 
-/* ===================== Tab bar ===================== */
+/* ===================== Tab bar — mobile floating pill ===================== */
 
 .tab-bar {
   position: fixed !important;
@@ -135,15 +137,15 @@ html {
   bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
   z-index: 210;
   display: flex;
-  gap: var(--space-1);
-  padding: 6px;
-  width: min(340px, calc(100% - 24px));
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  gap: 2px;
+  padding: 5px;
+  width: min(340px, calc(100% - 20px));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 80%, transparent);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
   margin: 0;
 }
 
@@ -153,18 +155,18 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-height: 52px;
-  padding: 6px 4px;
-  border-radius: 16px;
+  gap: 2px;
+  min-height: 50px;          /* ≥ 48px touch target */
+  padding: 5px 2px;
+  border-radius: 15px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-label, inherit);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .tab-bar-btn svg {
@@ -199,7 +201,7 @@ html {
   backdrop-filter: var(--glass-blur-mobile) !important;
   -webkit-backdrop-filter: var(--glass-blur-mobile) !important;
   border-top: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 80%, transparent);
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.1);
   display: flex !important;
   flex-direction: column !important;
   gap: var(--space-2) !important;
@@ -217,12 +219,12 @@ html {
 }
 
 .action-bar-btn-back {
-  flex: 0 0 30% !important;
-  min-width: 96px !important;
-  max-width: 130px !important;
+  flex: 0 0 28% !important;
+  min-width: 88px !important;
+  max-width: 120px !important;
   min-height: 52px !important;
   height: auto !important;
-  font-size: 16px !important;
+  font-size: 15.5px !important;
 }
 
 .action-bar-btn-main {
@@ -230,28 +232,28 @@ html {
   min-width: 0 !important;
   min-height: 52px !important;
   height: auto !important;
-  font-size: 17px !important;
+  font-size: 16.5px !important;
   font-weight: 700 !important;
 }
 
-/* ===================== Buttons & touch targets ===================== */
+/* ===================== Buttons — large touch targets by default ===================== */
 
 .btn {
   min-height: 52px !important;
-  font-size: 16.5px !important;
+  font-size: 16px !important;
   font-weight: 650 !important;
-  padding: 12px 18px !important;
+  padding: 12px 16px !important;
   border-radius: 16px !important;
 }
 
 .btn-primary {
-  font-size: 17.5px !important;
+  font-size: 17px !important;
   font-weight: 700 !important;
 }
 
 .btn-xl {
-  min-height: 58px !important;
-  font-size: 18px !important;
+  min-height: 56px !important;
+  font-size: 17.5px !important;
 }
 
 .btn-sm {
@@ -260,17 +262,17 @@ html {
   padding: 10px 14px !important;
 }
 
-/* ===================== Brand & logo ===================== */
+/* ===================== Brand ===================== */
 
 .brand-logo-big .brand-logo-word {
-  font-size: clamp(48px, 13vw, 62px) !important;
+  font-size: clamp(44px, 12.5vw, 58px) !important;
   line-height: 1.05 !important;
   letter-spacing: -0.03em !important;
 }
 
 .brand-logo-big .brand-logo-rule {
-  min-width: 110px !important;
-  height: 4px !important;
+  min-width: 100px !important;
+  height: 3px !important;
   margin-top: 8px !important;
 }
 
@@ -280,18 +282,18 @@ html {
 }
 
 .app-header .brand-logo-word {
-  font-size: clamp(20px, 5.5vw, 26px) !important;
+  font-size: clamp(18px, 5vw, 24px) !important;
 }
 
-/* ===================== Forms & ranges ===================== */
+/* ===================== Forms ===================== */
 
 .range-field {
-  gap: 10px;
-  padding: 6px 0 10px;
+  gap: 8px;
+  padding: 4px 0 8px;
 }
 
 .range-value {
-  font-size: 18px !important;
+  font-size: 17px !important;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -338,12 +340,12 @@ input[type='range']::-moz-range-thumb {
   box-shadow: 0 3px 10px rgba(232, 32, 69, 0.4);
 }
 
-/* ===================== Cards & item layout ===================== */
+/* ===================== Cards & items — mobile default ===================== */
 
 .profile-avatar {
-  width: 80px !important;
-  height: 80px !important;
-  min-width: 80px;
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px;
   border-radius: 50% !important;
   overflow: hidden !important;
   display: grid !important;
@@ -363,7 +365,7 @@ input[type='range']::-moz-range-thumb {
 
 .item-card-v2 {
   display: grid !important;
-  grid-template-columns: 100px minmax(0, 1fr) !important;
+  grid-template-columns: 88px minmax(0, 1fr) !important;
   gap: 12px !important;
   padding: 12px !important;
   align-items: start;
@@ -383,7 +385,7 @@ input[type='range']::-moz-range-thumb {
 
 .item-actions-v2 .btn {
   width: 100% !important;
-  min-height: 46px !important;
+  min-height: 48px !important;
   font-size: 14.5px !important;
 }
 
@@ -391,47 +393,30 @@ input[type='range']::-moz-range-thumb {
   order: -1;
 }
 
-/* ===================== Responsive ===================== */
+/* Mobile-first grids: single column by default */
+.grid-2,
+.home-actions-grid {
+  grid-template-columns: 1fr !important;
+}
 
-@media (max-width: 400px) {
+/* ===================== Progressive enhancement for larger phones / tablets ===================== */
+
+@media (min-width: 401px) {
   :root {
-    --space-x: 14px;
-    --tab-bar-h: 68px;
-  }
-
-  .item-card-v2 {
-    grid-template-columns: 88px minmax(0, 1fr) !important;
+    --space-x: 16px;
+    --header-h: 56px;
+    --tab-bar-h: 72px;
   }
 
   .grid-2,
   .home-actions-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .action-bar-btn-back {
-    flex-basis: 28% !important;
-    min-width: 88px !important;
-  }
-}
-
-@media (max-width: 560px) {
-  .card,
-  .stamp-card {
-    padding: 16px !important;
-    border-radius: 18px !important;
+  .item-card-v2 {
+    grid-template-columns: 100px minmax(0, 1fr) !important;
   }
 
-  .card,
-  .stamp-card,
-  .app-header,
-  .tab-bar,
-  .action-bar {
-    backdrop-filter: blur(8px) saturate(130%) !important;
-    -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
-  }
-}
-
-@media (min-width: 401px) {
   .item-actions-v2 {
     display: grid !important;
     grid-template-columns: 1fr 1fr auto !important;
@@ -441,9 +426,32 @@ input[type='range']::-moz-range-thumb {
     grid-column: 1 / -1;
     order: 0;
   }
+
+  .action-bar-btn-back {
+    flex-basis: 30% !important;
+    min-width: 96px !important;
+  }
 }
 
-/* Kill conflicting animations that can cause layout thrashing */
+@media (min-width: 561px) {
+  .card,
+  .stamp-card {
+    padding: 20px !important;
+    border-radius: 20px !important;
+  }
+
+  /* slightly richer glass on larger screens */
+  .card,
+  .stamp-card,
+  .app-header,
+  .tab-bar,
+  .action-bar {
+    backdrop-filter: blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  }
+}
+
+/* Kill layout-shifting animations on mobile */
 .app.screen-flash {
   animation: none !important;
 }
