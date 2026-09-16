@@ -153,6 +153,75 @@ def collect(
     return found
 
 
+PHOTO_DIR_NAME = "photos"
+
+#: Заголовки «как из браузера»: CDN Авито отдаёт фото не любому клиенту.
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    "Referer": "https://www.avito.ru/",
+}
+
+_EXT_BY_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/avif": ".avif",
+}
+
+
+def download_photos(
+    listings: list[dict[str, Any]],
+    *,
+    snapshot_path: pathlib.Path,
+    limit: int = 60,
+    verbose: bool = True,
+) -> int:
+    """Сложить фотографии объявлений рядом со снимком (``catalog/photos``).
+
+    Зачем: CDN Авито отдаёт картинки браузеру не всегда (hotlink-защита,
+    регион). Если фото уже лежит в поставке, сервис показывает конкретную вещь
+    с фотографией где угодно и без сети.
+
+    В записи добавляется ``photo_path`` (относительный путь от снимка) — по нему
+    ``/api/media/photo`` отдаёт файл, не выходя в интернет.
+    """
+    import httpx
+
+    photos_dir = snapshot_path.parent / PHOTO_DIR_NAME
+    photos_dir.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    for entry in listings[:limit]:
+        url = str(entry.get("image") or "")
+        if not url or str(entry.get("photo_path") or ""):
+            continue
+        try:
+            response = httpx.get(url, timeout=20.0, follow_redirects=True, headers=_BROWSER_HEADERS)
+            response.raise_for_status()
+            media_type = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+            payload = response.content
+        except Exception as exc:  # noqa: BLE001 — фото не должно ломать обновление снимка
+            if verbose:
+                print(f"    ! фото {entry.get('id')}: {type(exc).__name__}", flush=True)
+            continue
+        if media_type not in _EXT_BY_TYPE or len(payload) < 1024:
+            continue
+        filename = f"{entry.get('id')}{_EXT_BY_TYPE[media_type]}"
+        try:
+            (photos_dir / filename).write_bytes(payload)
+        except OSError as exc:
+            if verbose:
+                print(f"    ! фото {entry.get('id')}: {exc}", flush=True)
+            continue
+        entry["photo_path"] = f"{PHOTO_DIR_NAME}/{filename}"
+        saved += 1
+    return saved
+
+
 def merge(
     old: list[dict[str, Any]],
     new: list[dict[str, Any]],
@@ -181,6 +250,11 @@ def main() -> int:
     parser.add_argument("--keep-days", type=int, default=45, help="сколько дней хранить старые находки")
     parser.add_argument("--city", default=settings.avito_city, help="регион Авито (rossiya, moskva, …)")
     parser.add_argument("--dry-run", action="store_true", help="не писать файл, только показать итог")
+    parser.add_argument(
+        "--no-photos",
+        action="store_true",
+        help="не скачивать фотографии объявлений в catalog/photos (по умолчанию скачиваем)",
+    )
     args = parser.parse_args()
 
     provider = AvitoSearchProvider(
@@ -199,6 +273,11 @@ def main() -> int:
         return 1
 
     listings = merge(payload.get("listings") or [], fresh, keep_days=args.keep_days)
+    if not args.no_photos:
+        # Фото кладём рядом со снимком: тогда карточки вещей показывают снимок
+        # объявления даже там, где CDN Авито браузеру не отвечает.
+        saved = download_photos(listings, snapshot_path=args.path)
+        print(f"скачано фотографий: {saved}")
     queries_meta = [
         {"query": query, "captured_at": datetime.now(timezone.utc).date().isoformat()}
         for query in args.queries

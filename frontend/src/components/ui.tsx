@@ -259,9 +259,12 @@ export function ScoreRing({ score }: { score: number }) {
     <div
       className="score-ring"
       style={{
-        background: `conic-gradient(${color} ${clamped * 3.6}deg, var(--surface-2) 0deg)`,
-        boxShadow: 'inset 0 0 0 6px var(--surface)',
-        color,
+        // Первый слой — затемнённый диск под цифру, второй — цветная дуга.
+        // Раньше цифра красилась в цвет дуги и пропадала на ней.
+        background:
+          `radial-gradient(circle at 50% 50%, rgba(8, 20, 31, 0.62) 0 57%, rgba(8, 20, 31, 0) 59%), ` +
+          `conic-gradient(${color} ${clamped * 3.6}deg, var(--surface-2) 0deg)`,
+        boxShadow: 'inset 0 0 0 6px var(--surface), 0 10px 24px rgba(23, 68, 99, 0.18)',
       }}
       aria-label={`Оценка селекции ${Math.round(clamped)} из 100`}
     >

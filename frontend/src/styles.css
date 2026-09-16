@@ -1074,6 +1074,9 @@ input[type='range']::-moz-range-thumb {
 
 /* ===================== Look result & items ===================== */
 
+/* Кольцо оценки: цветная дуга по краю, внутри — затемнённый диск с цифрой.
+   Цифра светлая: цвет дуги сообщает оценку, поэтому текст не должен сливаться
+   с самой шкалой (именно это и было видно как «надпись пропала»). */
 .score-ring {
   width: 84px;
   height: 84px;
@@ -1081,11 +1084,14 @@ input[type='range']::-moz-range-thumb {
   display: grid;
   place-items: center;
   font-weight: 800;
-  font-size: 24px;
+  font-size: 25px;
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 7px var(--surface), 0 10px 24px rgba(23, 68, 99, 0.18);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(6, 20, 32, 0.6);
+  box-shadow: 0 10px 24px rgba(23, 68, 99, 0.18);
   animation: ringIn 0.7s var(--ease-spring) both;
 }
 
@@ -1154,6 +1160,81 @@ input[type='range']::-moz-range-thumb {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Фото не приехало: не чёрная дыра, а понятная плашка с оттенками вещи. */
+.item-photo-fallback {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0 10px,
+    rgba(255, 255, 255, 0.15) 10px 20px
+  ) !important;
+}
+
+.item-photo-note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+  background: rgba(10, 24, 36, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.item-photo-note-title {
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.item-photo-note-hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.86);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.item-photo-chips {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.item-photo-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* компактная выдача: заглушка без длинных пояснений */
+.engine-item-photo .item-photo-note {
+  gap: 5px;
+  padding: 6px;
+}
+
+.engine-item-photo .item-photo-note-title {
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+
+.engine-item-photo .item-photo-note-hint {
+  display: none;
+}
+
+.engine-item-photo .item-photo-chip {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
 }
 
 /* крупное фото в карточке вещи образа */

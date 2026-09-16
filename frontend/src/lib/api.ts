@@ -11,6 +11,28 @@ import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
+/**
+ * Ссылка на фото объявления через наш сервер.
+ *
+ * CDN Авито отдаёт картинки браузеру не всегда (hotlink-защита, регион,
+ * Referer) — тогда в карточке вещи был чёрный прямоугольник. Сервер ходит за
+ * фото сам и отдаёт его со своего домена: /api/media/photo.
+ */
+export function photoProxyUrl(url: string): string {
+  return `${BASE}/api/media/photo?u=${encodeURIComponent(url)}`
+}
+
+/** Фотография объявления Авито: домены avito.ru и CDN *.avito.st. */
+export function isAvitoPhotoUrl(url?: string | null): boolean {
+  if (!url) return false
+  try {
+    const host = new URL(url, 'https://asstylist.local').hostname.toLowerCase()
+    return host === 'avito.st' || host.endsWith('.avito.st') || host === 'avito.ru' || host.endsWith('.avito.ru')
+  } catch {
+    return url.includes('avito.st')
+  }
+}
+
 export class ApiError extends Error {
   status: number
   constructor(message: string, status: number) {
