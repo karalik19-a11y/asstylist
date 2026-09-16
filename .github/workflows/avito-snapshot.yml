@@ -71,37 +71,13 @@ jobs:
               data = {}
           listings = data.get("listings", [])
           report = {
-              "status": "ok" if listings else "blocked",
+              # «ok» — только если скрипт действительно записал свежие находки.
+              "status": "ok" if "записано:" in text else "blocked",
               "listings": len(listings),
               "captured_at": data.get("captured_at", ""),
               "queries": len(data.get("queries", [])),
               "captcha": bool(re.search(r"captcha|доступ ограничен|робот|проверка безопасности", text, re.I)),
               "tail": text[-2000:],
-          }
-          pathlib.Path("backend/app/catalog/avito_refresh_report.json").write_text(
-              json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-          )
-          print(json.dumps({k: v for k, v in report.items() if k != "tail"}, ensure_ascii=False))
-          PY
-
-      - name: Report
-        if: always()
-        run: |
-          python - <<'PY'
-          import json, pathlib, re
-          log = pathlib.Path("/tmp/refresh.log")
-          text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
-          snapshot = pathlib.Path("backend/app/catalog/avito_listings.json")
-          try:
-              data = json.loads(snapshot.read_text(encoding="utf-8"))
-          except Exception:
-              data = {}
-          report = {
-              "status": "ok" if "записано:" in text else "blocked",
-              "listings": len(data.get("listings", [])),
-              "captured_at": data.get("captured_at", ""),
-              "tail": text[-1600:],
-              "captcha": bool(re.search(r"доступ ограничен|captcha|робот", text, re.I)),
           }
           pathlib.Path("backend/app/catalog/avito_refresh_report.json").write_text(
               json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
