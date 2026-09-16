@@ -63,16 +63,16 @@ PRESENTATION_OPTIONS: list[dict[str, Any]] = [
 ]
 
 CATEGORY_LABELS: dict[str, str] = {
-    "outerwear": "Верхняя одежда", "top": "Верх", "bottom": "Низ", "dress": "Платье",
-    "shoes": "Обувь", "bag": "Сумка", "accessory": "Аксессуар",
+    "outerwear": "Верхняя одежда", "top": "Верх", "knitwear": "Трикотаж", "bottom": "Низ",
+    "dress": "Платье", "shoes": "Обувь", "bag": "Сумка", "accessory": "Аксессуар",
 }
-
-SLOT_LABELS: dict[str, str] = {
-    "outerwear": "Верхняя одежда", "top": "Верх", "bottom": "Низ", "dress": "Платье",
-    "shoes": "Обувь", "bag": "Сумка", "accessory": "Аксессуар",
+SLOTS: tuple[str, ...] = ("outerwear", "top", "knitwear", "bottom", "dress", "shoes", "bag", "accessory")
+SLOT_LABELS: dict[str, str] = {key: value for key, value in CATEGORY_LABELS.items()}
+SLOT_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "outerwear": ("outerwear",), "top": ("top", "knitwear"), "bottom": ("bottom",), "dress": ("dress",),
+    "shoes": ("shoes",), "bag": ("bag",), "accessory": ("accessory",),
 }
-
-OUTFIT_PLANS: dict[str, dict[str, Any]] = {
+SLOT_PLANS: dict[str, dict[str, Any]] = {
     "layered": {"description": "Многослойный образ с верхней одеждой", "slots": {
         "outerwear": {"weight": .30, "required": True, "order": 0}, "top": {"weight": .14, "required": True, "order": 1},
         "bottom": {"weight": .16, "required": True, "order": 3}, "shoes": {"weight": .20, "required": True, "order": 4},
