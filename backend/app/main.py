@@ -26,18 +26,11 @@ from .telegram.botapi import configure_bot
 
 
 def _autoconfigure_telegram() -> None:
-    """Attach the Mini App to the bot (menu button + commands + webhook).
-
-    Runs in a daemon thread on boot so a slow/unreachable Telegram API can
-    never delay or break startup. All failures are swallowed: the app must
-    always start, with or without Telegram.
-    """
+    """Attach the Mini App to the bot without blocking application startup."""
     try:
         if not settings.telegram_autoconfigure or settings.app_env == "test":
             return
         token = settings.telegram_bot_token
-        # Render injects RENDER_EXTERNAL_URL (https://<service>.onrender.com),
-        # so an explicit TELEGRAM_WEB_APP_URL is optional there.
         base = (settings.telegram_web_app_url or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
         if not token or not base:
             return
@@ -50,7 +43,7 @@ def _autoconfigure_telegram() -> None:
         if not settings.telegram_web_app_url:
             settings.telegram_web_app_url = result["web_app_url"]
         print(f"[telegram] bot autoconfigured: {'; '.join(result['actions'])}", flush=True)
-    except Exception as exc:  # noqa: BLE001 — boot must never fail because of Telegram
+    except Exception as exc:  # noqa: BLE001
         print(f"[telegram] autoconfigure skipped: {exc}", flush=True)
 
 
@@ -118,5 +111,11 @@ if os.path.isdir(DIST_DIR):
     def spa(full_path: str):
         candidate = os.path.abspath(os.path.join(DIST_DIR, full_path))
         if full_path and candidate.startswith(DIST_DIR) and os.path.isfile(candidate):
-            return FileResponse(candidate)
-        return FileResponse(os.path.join(DIST_DIR, "index.html"))
+            # Hashed Vite assets can be cached; HTML must never be pinned to an old build.
+            if full_path.startswith("assets/"):
+                return FileResponse(candidate, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+            return FileResponse(candidate, headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache"})
+        return FileResponse(
+            os.path.join(DIST_DIR, "index.html"),
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+        )
