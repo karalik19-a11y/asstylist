@@ -1,14 +1,38 @@
-/* ASStylist mark — crisp geometry and native brand colors. */
+/* ASStylist mark — clean wordmark, no wrapper/frame. */
+.brand-logo {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.brand-logo:hover,
+.brand-logo:focus,
+.brand-logo:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
 .brand-logo-word {
-  display: flex;
-  align-items: center;
+  display: block;
   min-width: 0;
+  line-height: 0;
 }
 
 .brand-logo-ass {
   display: block;
   width: 148px;
   flex: 0 0 148px;
+  line-height: 0;
 }
 
 .brand-logo-ass .brand-logo-image {
@@ -20,11 +44,12 @@
 
 .brand-logo-ass > span,
 .brand-logo-word > em {
-  display: none;
+  display: none !important;
 }
 
+/* The line belongs to the wordmark block, not a frame around the logo. */
 .brand-logo-rule {
-  margin-top: 6px;
+  display: none !important;
 }
 
 .brand-logo-big .brand-logo-ass {
