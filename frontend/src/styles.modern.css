@@ -1,0 +1,163 @@
+/* ASStylist 2026 UI pass: typography, touch ergonomics, motion and archive controls. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-label: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ease-ui: cubic-bezier(.2,.8,.2,1);
+  --touch-size: 46px;
+}
+
+body,
+button,
+input,
+textarea,
+select { font-family: var(--font-body); }
+
+h1, h2, h3, h4, .result-title, .app-header-title, .stamp-tile-title, .brand-logo-tagline { font-family: var(--font-display); }
+
+button,
+.btn,
+.chip,
+.index-row,
+.stamp-tile,
+.tabbar button,
+.details-toggle,
+.link-btn { touch-action: manipulation; }
+
+.btn,
+.chip,
+.index-row,
+.tabbar button,
+.favorite-filter,
+.details-toggle { min-height: var(--touch-size); }
+
+.btn,
+.chip,
+.favorite-filter,
+.index-row,
+.stamp-tile,
+.details-toggle,
+.brand-logo { transition: transform .22s var(--ease-ui), background-color .22s ease, border-color .22s ease, box-shadow .22s ease, color .22s ease, opacity .22s ease; }
+
+.btn:active,
+.chip:active,
+.favorite-filter:active,
+.index-row:active,
+.stamp-tile:active,
+.details-toggle:active,
+.brand-logo:active { transform: scale(.975); }
+
+/* Archive */
+.archive-page { padding-bottom: 12px; }
+.archive-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--glass-bg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.archive-toolbar-copy { min-width: 0; display: grid; gap: 2px; }
+.archive-toolbar-copy strong { font-family: var(--font-display); font-size: 15px; }
+.favorite-filter {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  color: var(--text-main);
+  font: 600 13px/1 var(--font-body);
+  cursor: pointer;
+}
+.favorite-filter:hover { border-color: rgba(224,177,78,.5); }
+.favorite-filter.is-on {
+  color: #17130a;
+  background: #f3c84b;
+  border-color: #f3c84b;
+  box-shadow: 0 7px 20px rgba(243,200,75,.25);
+}
+.favorite-filter-star { display: grid; place-items: center; width: 22px; height: 22px; }
+.favorite-filter-state { font-size: 10px; letter-spacing: .08em; opacity: .72; }
+.favorite-filter.is-on .favorite-filter-state { opacity: .95; }
+.archive-list { overflow: hidden; }
+.archive-row { width: 100%; text-align: left; position: relative; }
+.archive-row.is-pressing { background: var(--surface-hover); }
+.archive-row-main { overflow: hidden; }
+.archive-row-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); }
+.archive-price { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.archive-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archive-badges { min-width: 0; }
+.archive-chevron { flex: 0 0 auto; font-size: 25px; line-height: 1; opacity: .4; transform: translateX(0); transition: transform .22s var(--ease-ui), opacity .22s ease; }
+.archive-row:hover .archive-chevron { opacity: .8; transform: translateX(3px); }
+.archive-empty { text-align: center; padding: 42px 18px; }
+.archive-empty-icon { width: 52px; height: 52px; display: grid; place-items: center; margin: 0 auto 12px; border-radius: 50%; background: var(--surface-2); color: var(--warn); }
+.archive-empty h3 { margin: 0; }
+.archive-empty p { max-width: 420px; margin: 8px auto 0; }
+
+/* Favorite action */
+.favorite-action { border: 1px solid var(--border-strong); background: var(--border-strong); color: var(--canvas); }
+.favorite-action.is-favorite { background: #f3c84b; border-color: #f3c84b; color: #17130a; box-shadow: 0 10px 26px rgba(243,200,75,.22); }
+.favorite-action.is-favorite:hover { background: #ffd65e; border-color: #ffd65e; }
+
+/* Mobile-first layout and Telegram safe areas. */
+.app { width: min(100%, 980px); margin-inline: auto; }
+.app-header { padding-top: max(12px, env(safe-area-inset-top)); }
+.tabbar { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+@media (max-width: 720px) {
+  :root { --touch-size: 48px; }
+  body { font-size: 16px; line-height: 1.5; }
+  .stage { min-height: 100svh; }
+  .app { width: 100%; padding-inline: 12px; }
+  .app-header { padding-inline: 2px; }
+  .app-header .btn { min-width: 48px; }
+  .brand-logo-ass { width: 116px; flex-basis: 116px; }
+  .brand-logo-big .brand-logo-ass { width: min(330px, 90vw); flex-basis: min(330px, 90vw); }
+  .archive-toolbar { position: sticky; top: 6px; z-index: 8; padding: 8px; }
+  .archive-toolbar-copy strong { font-size: 14px; }
+  .favorite-filter { min-height: 44px; padding-inline: 10px; }
+  .archive-row { padding: 13px 10px; gap: 8px; }
+  .archive-row .index-num { min-width: 28px; }
+  .archive-row-title { align-items: flex-start; }
+  .archive-row-title strong { font-size: 14px; white-space: normal; line-height: 1.3; }
+  .archive-price { font-size: 13px; }
+  .archive-meta { font-size: 12px; }
+  .archive-badges { padding-right: 2px; }
+  .archive-empty { padding: 34px 14px; }
+  .result-page { gap: 14px !important; padding-bottom: 16px; }
+  .result-hero { gap: 14px !important; }
+  .result-actions { display: grid; grid-template-columns: 1fr; gap: 9px; }
+  .result-actions .btn { min-height: 50px; }
+  .unified-score { gap: 12px; }
+  .unified-score-main strong { font-size: 19px !important; }
+  .result-summary, .result-thesis { font-size: 15px !important; }
+  .item-card, .card { border-radius: 18px; }
+  input, select, textarea { font-size: 16px !important; }
+  .chip { min-height: 44px; padding-inline: 13px; }
+  .stamp-tile { min-height: 108px; }
+}
+
+@media (max-width: 420px) {
+  .app { padding-inline: 9px; }
+  .archive-toolbar { gap: 8px; }
+  .favorite-filter > span:nth-child(2) { display: none; }
+  .favorite-filter { width: 86px; justify-content: center; }
+  .archive-row { padding: 12px 8px; }
+  .index-list .index-num { font-size: 11px; }
+  .brand-logo-ass { width: 104px; flex-basis: 104px; }
+  .brand-logo-big .brand-logo-ass { width: 88vw; flex-basis: 88vw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
