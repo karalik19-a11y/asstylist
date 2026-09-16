@@ -10,6 +10,7 @@ import type {
 import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
+const REQUEST_TIMEOUT_MS = 90_000
 
 export function photoProxyUrl(url: string): string {
   return `${BASE}/api/media/photo?u=${encodeURIComponent(url)}`
@@ -35,21 +36,39 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { Accept: 'application/json', ...(init.headers ?? {}) },
-  })
-  if (!response.ok) {
-    let detail = `Ошибка запроса (${response.status})`
-    try {
-      const body = await response.json()
-      if (body && typeof body.detail === 'string') detail = body.detail
-    } catch {
-      /* keep the generic message */
-    }
-    throw new ApiError(detail, response.status)
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const externalSignal = init.signal
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort()
+    else externalSignal.addEventListener('abort', () => controller.abort(), { once: true })
   }
-  return (await response.json()) as T
+
+  try {
+    const response = await fetch(`${BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...(init.headers ?? {}) },
+    })
+    if (!response.ok) {
+      let detail = `Ошибка запроса (${response.status})`
+      try {
+        const body = await response.json()
+        if (body && typeof body.detail === 'string') detail = body.detail
+      } catch {
+        /* keep the generic message */
+      }
+      throw new ApiError(detail, response.status)
+    }
+    return (await response.json()) as T
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('Сервер не ответил вовремя. Попробуйте ещё раз.', 408)
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }
 
 function identityParams(): URLSearchParams {
@@ -111,7 +130,7 @@ export const api = {
     request<EngineSearchResult>('/api/engine/search', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit: 8, ...params }),
     }),
-  profile: () => request<{ saved: boolean; profile: { height_cm?: number; weight_kg?: number }; updated_at: string | null; used_count: number; user?: { id: number; telegram_id: string; username: string | null; first_name: string | null; is_demo: boolean; signature_color: string | null; registered: boolean } }>(`/api/profile?${identityParams().toString()}`),
+  profile: () => request<{ saved: boolean; profile: { height_cm?: number; weight_kg?: number }; updated_at: string | null; used_count: number; problems?: string[]; user?: { id: number; telegram_id: string; username: string | null; first_name: string | null; is_demo: boolean; signature_color: string | null; registered: boolean } }>(`/api/profile?${identityParams().toString()}`),
   saveProfile: (payload: { height_cm?: number; weight_kg?: number }) => request<{ saved: boolean; profile: { height_cm?: number; weight_kg?: number }; updated_at: string | null; used_count: number; problems?: string[] }>(`/api/profile?${identityParams().toString()}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   useProfile: () => request<{ used_count: number }>(`/api/profile/used?${identityParams().toString()}`, { method: 'POST' }),
   forgetProfile: () => request<{ saved: boolean }>(`/api/profile/reset?${identityParams().toString()}`, { method: 'POST' }),
