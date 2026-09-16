@@ -3,15 +3,15 @@
 
 No paid API, SDK, key, database or AI provider is required. The script uses
 public Google News RSS topic queries plus deterministic editorial scoring.
-Publisher-provided images are discovered from RSS media or the article's
-public Open Graph metadata, so the journal can be image-led without a paid
-image API.
+Publisher-selected images are cached into the static site, while article
+briefs are assembled from the publisher's public RSS/meta descriptions.
 """
 from __future__ import annotations
 
 import html
 import json
 import re
+import shutil
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -20,7 +20,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 OUT = Path("frontend/public/journal.json")
-USER_AGENT = "ASStylist-Journal/1.1 (+https://github.com/karalik19-a11y/asstylist)"
+IMAGE_DIR = Path("frontend/public/journal-images")
+USER_AGENT = "ASStylist-Journal/2.0 (+https://github.com/karalik19-a11y/asstylist)"
 
 FEEDS = [
     ("world", "fashion industry news runway designers brands", "Мир моды"),
@@ -48,13 +49,25 @@ KEYWORDS = [
 
 def clean(text: str) -> str:
     text = re.sub(r"<[^>]+>", " ", html.unescape(text or ""))
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def fetch(url: str, timeout: int = 15) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/rss+xml,application/xml;q=0.9,*/*;q=0.5"})
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/rss+xml,application/xml;q=0.9,*/*;q=0.5",
+        },
+    )
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return response.read()
+
+
+def fetch_response(url: str, timeout: int = 15):
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"})
+    return urllib.request.urlopen(req, timeout=timeout)
 
 
 def text(node: ET.Element | None, default: str = "") -> str:
@@ -71,13 +84,13 @@ def first_image(item: ET.Element) -> str | None:
         if tag == "enclosure":
             url = child.attrib.get("url")
             kind = child.attrib.get("type", "")
-            if url and (kind.startswith("image/") or re.search(r"\.(?:jpg|jpeg|png|webp)(?:$|\?)", url, re.I)):
+            if url and (kind.startswith("image/") or re.search(r"\.(?:jpg|jpeg|png|webp|avif)(?:$|\?)", url, re.I)):
                 return url
     return None
 
 
 def og_image(url: str) -> str | None:
-    """Read only the public page head and extract its publisher-selected image."""
+    """Read the public page head and extract its publisher-selected image."""
     try:
         raw = fetch(url, timeout=8).decode("utf-8", errors="ignore")[:350_000]
     except Exception:
@@ -97,6 +110,67 @@ def og_image(url: str) -> str | None:
             if candidate.startswith("http"):
                 return candidate
     return None
+
+
+def editorial_brief(title: str, description: str, source: str, category: str) -> str:
+    """Turn the public feed excerpt into a readable in-app editorial brief.
+
+    This deliberately does not scrape or reproduce full articles. It keeps the
+    user's reading experience inside ASStylist while leaving the source link
+    available for the full original story.
+    """
+    desc = clean(description)
+    desc = re.sub(r"\b(read more|continue reading|читать далее)\b.*$", "", desc, flags=re.I).strip(" .—–")
+    desc = re.sub(r"^\s*(источник|source)\s*:\s*[^.]+[.]?\s*", "", desc, flags=re.I)
+    if not desc:
+        return f"{title}. Редакция ASStylist собрала главное из открытого материала {source.lower()} и оставила короткий контекст, чтобы понять, почему эта история сейчас важна для моды."
+
+    sentences = re.split(r"(?<=[.!?])\s+", desc)
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+    base = " ".join(sentences[:4]).strip()
+    if len(base) < 180 and len(sentences) > 4:
+        base = " ".join(sentences[:6]).strip()
+    if len(base) > 850:
+        base = base[:850].rsplit(" ", 1)[0].rstrip(" ,;:—–") + "…"
+
+    lead = {
+        "world": "Что происходит: ",
+        "russian-streetwear": "Что происходит на локальной сцене: ",
+        "runway": "Что показали: ",
+        "merch": "Что вышло: ",
+        "social-trends": "Что залетает в соцсетях: ",
+    }.get(category, "Что происходит: ")
+    return lead + base
+
+
+def cache_image(url: str | None, article_id: str) -> str | None:
+    if not url:
+        return None
+    try:
+        with fetch_response(url, timeout=12) as response:
+            content_type = (response.headers.get("Content-Type") or "").lower()
+            data = response.read(3_500_000)
+        if not data or len(data) < 5000:
+            return None
+        ext = ".jpg"
+        if "png" in content_type:
+            ext = ".png"
+        elif "webp" in content_type:
+            ext = ".webp"
+        elif "avif" in content_type:
+            ext = ".avif"
+        elif "jpeg" in content_type or "jpg" in content_type:
+            ext = ".jpg"
+        else:
+            path_ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
+            if path_ext in {".jpg", ".jpeg", ".png", ".webp", ".avif"}:
+                ext = ".jpg" if path_ext == ".jpeg" else path_ext
+        target = IMAGE_DIR / f"{article_id}{ext}"
+        target.write_bytes(data)
+        return f"/journal-images/{target.name}"
+    except Exception as exc:
+        print(f"[journal] image cache failed: {url}: {exc}")
+        return None
 
 
 def parse_date(value: str) -> datetime:
@@ -128,6 +202,10 @@ def main() -> None:
     articles: list[dict] = []
     seen: set[str] = set()
 
+    if IMAGE_DIR.exists():
+        shutil.rmtree(IMAGE_DIR)
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
     for category, query, label in FEEDS:
         try:
             root = ET.fromstring(fetch(google_news_url(query)))
@@ -153,6 +231,7 @@ def main() -> None:
                 "id": key or str(len(articles)),
                 "title": title,
                 "summary": summary[:360],
+                "editorial": editorial_brief(title, summary, source, category),
                 "url": url,
                 "source": source,
                 "published_at": published.isoformat(),
@@ -172,6 +251,15 @@ def main() -> None:
         counts[category] += 1
         if len(selected) >= 30:
             break
+
+    cached = 0
+    for article in selected:
+        cached_url = cache_image(article.get("image_url"), article["id"])
+        if cached_url:
+            article["image_url"] = cached_url
+            cached += 1
+        else:
+            article["image_url"] = None
 
     corpus = " ".join(a["title"] + " " + a["summary"] for a in selected).lower()
     trend_terms = ["oversized", "baggy", "red", "brown", "denim", "vintage", "archive", "sneaker", "leather", "layering"]
@@ -194,7 +282,7 @@ def main() -> None:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[journal] wrote {len(selected)} articles ({sum(bool(a['image_url']) for a in selected)} with images) -> {OUT}")
+    print(f"[journal] wrote {len(selected)} articles ({cached} cached images) -> {OUT}")
 
 
 if __name__ == "__main__":
