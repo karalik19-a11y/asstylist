@@ -94,10 +94,8 @@ def test_query_expander_is_unique_and_niche_first():
 def test_validator_rejects_unusable_marketplace_items():
     validator = ItemValidator(0.6)
     assert validator.validate(card("A-1", "Wool Coat", "Lemaire", "coat")).valid
-    no_brand = card("A-2", "Wool Coat", "", "coat")
-    assert not validator.validate(no_brand).valid
-    low_confidence = card("A-3", "Wool Coat", "Lemaire", "coat", confidence=0.2)
-    assert not validator.validate(low_confidence).valid
+    assert not validator.validate(card("A-2", "Wool Coat", "", "coat")).valid
+    assert not validator.validate(card("A-3", "Wool Coat", "Lemaire", "coat", confidence=0.2)).valid
 
 
 def test_identity_resolver_keeps_distinct_avito_listings():
@@ -136,7 +134,7 @@ def test_trend_engine_marks_current_niche_signal():
     assert TrendEngine().radar_version == "2026-09-16"
 
 
-def test_taste_engine_penalises_generic_mass_market_for_niche_profile():
+def test_taste_engine_rejects_generic_mass_market_for_niche_profile():
     engine = TasteEngine()
     niche = UserStyleProfile(niche_level=90, aesthetics=["archive"])
     generic = card(
@@ -147,10 +145,10 @@ def test_taste_engine_penalises_generic_mass_market_for_niche_profile():
         tags=("basic", "regular", "cotton"),
         description="classic everyday basic",
     )
-    generic.fashion_attributes = FashionAttributes(aesthetic="minimal", rarity=0.05)
-    result = engine.score(generic, niche)
-    assert result.generic_score > 50
-    assert engine.should_reject(generic, niche)
+    generic.fashion_attributes = FashionAttributes(aesthetic="minimal", rarity=5)
+    result = engine.evaluate(generic, niche)
+    assert result.generic_score > 65
+    assert engine.should_reject(generic, result)
 
 
 def test_taste_engine_preserves_distinctive_archive_piece():
@@ -166,10 +164,11 @@ def test_taste_engine_preserves_distinctive_archive_piece():
     )
     item.fashion_attributes = FashionAttributes(
         aesthetic="archive",
-        rarity=0.9,
+        rarity=90,
         construction="deconstructed",
-        silhouette="asymmetric",
+        silhouette=["deconstructed", "architectural"],
+        editorial_relevance=0.8,
     )
-    result = engine.score(item, niche)
-    assert result.fashion_score > result.generic_score
+    result = engine.evaluate(item, niche)
+    assert result.fashion_score >= 70
     assert result.taste_category in TASTE_CATEGORIES
