@@ -1,139 +1,196 @@
-/* Darker light theme + soft gradient glows in marked zones */
+/* Ambient gradient glow — blue / gold / cherry pools */
 
-:root {
-  --page-bg: linear-gradient(168deg, #6ba8c8 0%, #4a8fb0 32%, #c9a882 68%, #d4958a 100%);
-  --canvas: #5f9bb8;
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-[data-theme='parchment'] {
-  --page-bg: linear-gradient(168deg, #6ba8c8 0%, #4a8fb0 32%, #c9a882 68%, #d4958a 100%);
-  --canvas: #5f9bb8;
-  --text-main: #0c1c28;
-  --text-muted: rgba(12, 28, 40, 0.72);
-}
-
-/* Extra glow spots — top-right, mid-left, bottom-right (as marked) */
 .ambient::before,
 .ambient::after {
   content: '';
   position: absolute;
   border-radius: 50%;
-  pointer-events: none;
   filter: blur(80px);
-  opacity: 0.85;
   animation: glowDrift 18s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
 
-/* Top-right glow */
 .ambient::before {
-  width: 55vmax;
-  height: 55vmax;
-  right: -20vmax;
-  top: -18vmax;
-  background: radial-gradient(circle at 40% 40%, rgba(255, 200, 120, 0.55), rgba(120, 200, 255, 0.25), transparent 68%);
+  width: 58vmax;
+  height: 58vmax;
+  right: -22vmax;
+  top: -20vmax;
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(255, 200, 80, 0.5),
+    rgba(80, 170, 230, 0.35),
+    transparent 68%
+  );
+  opacity: 0.85;
 }
 
-/* Bottom-right / mid glow */
 .ambient::after {
-  width: 48vmax;
-  height: 48vmax;
-  right: -10vmax;
-  bottom: 5vh;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 140, 160, 0.4), rgba(80, 160, 220, 0.3), transparent 70%);
-  animation-delay: -6s;
+  width: 50vmax;
+  height: 50vmax;
+  right: -12vmax;
+  bottom: 2vh;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 80, 110, 0.38),
+    rgba(60, 140, 210, 0.28),
+    transparent 70%
+  );
+  animation-delay: -7s;
+  opacity: 0.8;
 }
 
-/* Mid-left soft pool via existing blob-a boost */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  will-change: transform;
+  opacity: 0.9;
+}
+
 .blob-a {
-  opacity: 0.95;
-  background: radial-gradient(circle at 32% 32%, rgba(100, 190, 240, 0.75), rgba(70, 140, 200, 0.35), transparent 65%) !important;
+  width: 46vmax;
+  height: 46vmax;
+  left: -14vmax;
+  top: -16vmax;
+  background: radial-gradient(
+    circle at 32% 32%,
+    rgba(70, 160, 230, 0.7),
+    rgba(40, 100, 180, 0.3),
+    transparent 65%
+  ) !important;
+  animation: floatA 22s ease-in-out infinite;
 }
 
 .blob-b {
-  top: 8vh !important;
-  right: -8vmax !important;
-  background: radial-gradient(circle at 60% 40%, rgba(255, 210, 140, 0.7), transparent 65%) !important;
+  width: 40vmax;
+  height: 40vmax;
+  right: -10vmax;
+  top: 6vh !important;
+  background: radial-gradient(
+    circle at 60% 40%,
+    rgba(255, 200, 90, 0.65),
+    transparent 65%
+  ) !important;
+  animation: floatB 27s ease-in-out infinite;
 }
 
 .blob-c {
-  left: -5vw !important;
-  bottom: 10vh !important;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 160, 180, 0.45), rgba(90, 150, 210, 0.25), transparent 65%) !important;
+  width: 34vmax;
+  height: 34vmax;
+  left: -6vw !important;
+  bottom: 8vh !important;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 90, 120, 0.4),
+    rgba(70, 140, 200, 0.22),
+    transparent 65%
+  ) !important;
+  animation: floatC 31s ease-in-out infinite;
 }
 
 [data-theme='noir'] .ambient::before {
-  background: radial-gradient(circle at 40% 40%, rgba(60, 140, 200, 0.45), rgba(180, 80, 120, 0.2), transparent 68%);
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(50, 130, 200, 0.45),
+    rgba(200, 80, 120, 0.18),
+    transparent 68%
+  );
+  opacity: 0.7;
 }
 
 [data-theme='noir'] .ambient::after {
-  background: radial-gradient(circle at 50% 50%, rgba(90, 60, 140, 0.4), rgba(40, 100, 160, 0.3), transparent 70%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(100, 50, 140, 0.35),
+    rgba(40, 100, 180, 0.28),
+    transparent 70%
+  );
+  opacity: 0.65;
+}
+
+[data-theme='noir'] .blob {
+  opacity: 0.55;
+}
+
+[data-theme='noir'] .blob-a {
+  background: radial-gradient(
+    circle at 32% 32%,
+    rgba(40, 120, 190, 0.7),
+    transparent 65%
+  ) !important;
+}
+
+[data-theme='noir'] .blob-b {
+  background: radial-gradient(
+    circle at 60% 40%,
+    rgba(180, 120, 40, 0.4),
+    rgba(120, 50, 80, 0.35),
+    transparent 65%
+  ) !important;
+}
+
+[data-theme='noir'] .blob-c {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(200, 50, 90, 0.35),
+    rgba(40, 80, 140, 0.3),
+    transparent 65%
+  ) !important;
 }
 
 @keyframes glowDrift {
   from {
     transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.7;
+    opacity: 0.65;
   }
   to {
-    transform: translate3d(-3vw, 2vh, 0) scale(1.08);
+    transform: translate3d(-3vw, 2.5vh, 0) scale(1.08);
     opacity: 0.95;
   }
 }
 
-/* Profile */
-.profile-identity {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+@keyframes floatA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(5vw, -3vh, 0) scale(1.1);
+  }
 }
 
-.profile-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--glass-border);
+@keyframes floatB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-4vw, 4vh, 0) scale(1.12);
+  }
 }
 
-.profile-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+@keyframes floatC {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-3vw, -5vh, 0) scale(1.15);
+  }
 }
 
-.profile-avatar-fallback {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.profile-color-block {
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-muted);
-}
-
-.profile-color-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 10px 0;
-}
-
-.profile-color-swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.profile-color-hex {
-  font-family: var(--font-mono);
-  font-size: 16px;
-  letter-spacing: 0.06em;
+@media (prefers-reduced-motion: reduce) {
+  .ambient::before,
+  .ambient::after,
+  .blob {
+    animation: none !important;
+  }
 }

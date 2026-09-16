@@ -1,108 +1,11 @@
-/* TREND overrides — keeps Club Capri identity, mobile + motion polish */
-:root {
-  --page-bg: linear-gradient(165deg, #d4eef8 0%, #b5dff0 28%, #e8d4c0 58%, #f5c4b6 82%, #f0b8c8 100%);
-  --glass-blur: saturate(180%) blur(24px);
-  --r-xl: 28px;
-  --r-lg: 22px;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-body {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-/* Opacity-only enter — NEVER transform on .app (breaks position:fixed chrome). */
-.app.screen-flash > .app-scroll,
-.app.screen-flash > .page-transition {
-  animation: screenFade 0.35s var(--ease-out) both;
-}
-
-@keyframes screenFade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.hero {
-  position: relative;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: -12px -8px auto;
-  height: 120px;
-  border-radius: 32px;
-  background: radial-gradient(ellipse at 30% 40%, rgba(238, 56, 80, 0.12), transparent 55%),
-    radial-gradient(ellipse at 80% 20%, rgba(47, 127, 193, 0.14), transparent 50%);
-  pointer-events: none;
-  z-index: -1;
-  animation: heroGlow 8s ease-in-out infinite alternate;
-}
-
-@keyframes heroGlow {
-  from {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-.btn-primary.btn-xl {
-  animation: ctaSettle 0.7s var(--ease-spring) both;
-}
-
-@keyframes ctaSettle {
-  0% {
-    transform: translateY(10px) scale(0.96);
-    opacity: 0;
-  }
-  70% {
-    transform: translateY(-2px) scale(1.02);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-
-.btn,
-.chip,
-.stamp-tile,
-.style-pill-btn,
-.index-row,
-.link-btn {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .card:hover,
-  .stamp-card:hover {
-    transform: translateY(-2px);
-    transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease;
-  }
-}
+/* Trend motion helpers — tokens live in polish */
 
 .style-pills-row {
   display: flex;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 10px;
   overflow-x: auto;
-  padding: 4px 2px 10px;
-  margin: 0 -4px;
-  scroll-snap-type: x proximity;
+  padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -111,64 +14,25 @@ body {
   display: none;
 }
 
-.style-pill-btn {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.style-pill-btn[data-active='true'] {
-  animation: pillSelect 0.35s var(--ease-spring);
+.hero-top-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-@keyframes pillSelect {
-  0% {
-    transform: scale(0.92);
-  }
-  60% {
-    transform: scale(1.06);
-  }
-  100% {
-    transform: scale(1);
-  }
+.stack {
+  display: flex;
+  flex-direction: column;
 }
 
-.progress span {
-  position: relative;
-  overflow: hidden;
-  transition: width 0.45s var(--ease-spring);
-}
-
-.progress span::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
-  animation: progressShine 1.8s ease-in-out infinite;
-}
-
-@keyframes progressShine {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-[data-theme='noir'] {
-  --page-bg: linear-gradient(165deg, #0c1824 0%, #132536 40%, #1a2030 70%, #241828 100%);
-}
-
-[data-theme='noir'] .hero::before {
-  background: radial-gradient(ellipse at 30% 40%, rgba(238, 56, 80, 0.18), transparent 55%),
-    radial-gradient(ellipse at 80% 20%, rgba(47, 127, 193, 0.2), transparent 50%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app.screen-flash > .app-scroll,
-  .app.screen-flash > .page-transition,
-  .hero::before,
-  .progress span::after {
-    animation: none !important;
-  }
+.muted {
+  color: var(--text-muted);
 }
