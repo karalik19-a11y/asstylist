@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import type { EngineSearchItem, EngineSearchResult, Meta, WizardState } from '../lib/types'
 import { api } from '../lib/api'
 import { formatRub } from '../lib/format'
-import { Badge, Chip, RangeField, SectionTitle, Spinner } from '../components/ui'
+import { Badge, Chip, RangeField, SectionTitle, Spinner, isAvitoUrl } from '../components/ui'
 import { ItemPhoto } from '../components/ItemPhoto'
 import { openExternal } from '../lib/telegram'
 import { playClick, playSuccess, playTick } from '../lib/sound'
 
 /** Человекочитаемые пометки источников позиций выдачи. */
 const SOURCE_LABELS: Record<string, string> = {
+  avito: 'Авито',
   'web-search': 'онлайн-находка',
   'partner-feed': 'партнёрский магазин',
   'mock-real-catalog': 'архетип дизайнера',
@@ -52,7 +53,7 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
         </div>
         <div className="wrap" style={{ gap: 5, marginTop: 6 }}>
           {item.source && SOURCE_LABELS[item.source] ? (
-            <Badge tone="neutral">{SOURCE_LABELS[item.source]}</Badge>
+            <Badge tone={item.source === 'avito' ? 'ok' : 'neutral'}>{SOURCE_LABELS[item.source]}</Badge>
           ) : null}
           {item.engine.taste_label ? <Badge>{item.engine.taste_label}</Badge> : null}
           {item.engine.fashion_score ? <Badge tone="ok">fashion {item.engine.fashion_score}/100</Badge> : null}
@@ -76,7 +77,7 @@ function ItemRow({ item }: { item: EngineSearchItem }) {
               openExternal(item.url)
             }}
           >
-            Открыть в источнике ↗
+            {isAvitoUrl(item.url) ? 'Открыть на Авито ↗' : 'Открыть в источнике ↗'}
           </button>
         ) : null}
       </div>
@@ -255,22 +256,26 @@ export function Search({
         >
           {busy ? (
             <>
-              <Spinner /> Ищем вещи
+              <Spinner /> Ищем на Авито
             </>
           ) : (
             'Найти вещи'
           )}
         </button>
+        <div className="muted small" style={{ textAlign: 'center' }}>
+          Подбираем только на Авито — живые объявления с фото и ценами.
+        </div>
 
         {localError ? <div className="error-box">{localError}</div> : null}
       </section>
 
       {result && engine ? (
         <>
-          <section className="card stack" style={{ gap: 10 }}>
-            <SectionTitle index="02" hint={`v${engine.engine_version ?? '1.0.0'}`}>
-              Тезис образа
-            </SectionTitle>
+          {engine.styling_thesis_ru || engine.styling_thesis ? (
+            <section className="card stack" style={{ gap: 10 }}>
+              <SectionTitle index="02" hint={`v${engine.engine_version ?? '1.0.0'}`}>
+                Тезис образа
+              </SectionTitle>
 
             <div className="row" style={{ gap: 12, alignItems: 'center' }}>
               <div className="engine-score">
@@ -311,16 +316,23 @@ export function Search({
               </div>
             ) : null}
 
-            {tasteMix.length ? (
-              <div className="wrap" style={{ gap: 6 }}>
-                {tasteMix.map(([category, count]) => (
-                  <Badge key={category}>
-                    {category}: {count}
-                  </Badge>
-                ))}
+              {tasteMix.length ? (
+                <div className="wrap" style={{ gap: 6 }}>
+                  {tasteMix.map(([category, count]) => (
+                    <Badge key={category}>
+                      {category}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : (
+            <section className="card stack" style={{ gap: 8 }}>
+              <div className="muted small" style={{ textAlign: 'center' }}>
+                Авито временно недоступен — подобрали вещи и дали ссылки на подборки Авито.
               </div>
-            ) : null}
-          </section>
+            </section>
+          )}
 
           <section className="card stack" style={{ gap: 10 }}>
             <SectionTitle index="03" hint={`${result.items.length} позиций`}>

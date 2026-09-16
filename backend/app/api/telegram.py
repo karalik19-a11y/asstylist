@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -13,9 +13,12 @@ from ..db import get_session
 from ..schemas import AuthRequest, AuthResponse, UserOut
 from ..services.look_service import get_or_create_user
 from ..telegram.auth import TelegramAuthError, authenticate
-from ..telegram.botapi import BotApiError, configure_bot, get_me
+from ..telegram.botapi import BotApiError, configure_bot, get_me, send_message
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
+
+#: Path Telegram POSTs bot updates to (registered via setWebhook).
+WEBHOOK_PATH = "/api/telegram/webhook"
 
 
 class SetupRequest(BaseModel):
@@ -101,7 +104,13 @@ def setup(
         raise HTTPException(status_code=403, detail="Бот уже подключён: требуется ADMIN_TOKEN")
 
     try:
-        result = configure_bot(payload.bot_token, payload.web_app_url)
+        base = payload.web_app_url.rstrip("/")
+        result = configure_bot(
+            payload.bot_token,
+            base,
+            webhook_url=f"{base}{WEBHOOK_PATH}",
+            webhook_secret=settings.admin_token,
+        )
     except BotApiError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -134,3 +143,75 @@ def setup(
             else "Бот подключён."
         ),
     )
+
+
+# --- bot webhook: /start answers with a Mini App button ----------------------
+
+
+def web_app_button_markup(web_app_url: str) -> dict[str, Any]:
+    return {"inline_keyboard": [[{"text": "✨ Открыть asStylist", "web_app": {"url": web_app_url}}]]}
+
+
+START_TEXT = (
+    "👋 <b>asStylist</b> — персональный стилист.\n\n"
+    "Соберу образ под ваш стиль, фигуру и бюджет — вещи подберу "
+    "на <b>Авито</b> с фото, ценами и ссылками.\n\n"
+    "Нажмите кнопку ниже, чтобы начать 👇"
+)
+
+HELP_TEXT = (
+    "<b>Как это работает</b>\n\n"
+    "1️⃣ Откройте приложение кнопкой ниже\n"
+    "2️⃣ Ответьте на 5 вопросов (стиль, настроение, параметры)\n"
+    "3️⃣ Получите образ с вещами с Авито\n\n"
+    "Команды: /start — начать заново, /looks — мои образы (в приложении)."
+)
+
+LOOKS_TEXT = "🧥 Ваши образы живут в приложении — откройте его кнопкой ниже 👇"
+
+FALLBACK_TEXT = "Нажмите кнопку ниже — подберём вам образ ✨"
+
+
+def build_update_reply(update: dict[str, Any], web_app_url: str | None) -> tuple[int | None, str, dict | None]:
+    """Pure decision: which (chat_id, text, markup) answers an incoming update."""
+    message = update.get("message") or {}
+    chat = message.get("chat") or {}
+    chat_id = chat.get("id")
+    if chat_id is None:
+        return None, "", None
+    text = str(message.get("text") or "").strip().split()[0:1]
+    command = text[0].lower().split("@")[0] if text else ""
+    markup = web_app_button_markup(web_app_url) if web_app_url else None
+    if command == "/start":
+        return chat_id, START_TEXT, markup
+    if command == "/help":
+        return chat_id, HELP_TEXT, markup
+    if command == "/looks":
+        return chat_id, LOOKS_TEXT, markup
+    return chat_id, FALLBACK_TEXT, markup
+
+
+def _send_update_reply(token: str, chat_id: int, text: str, markup: dict | None) -> None:
+    try:
+        send_message(token, chat_id, text, reply_markup=markup)
+    except BotApiError:
+        pass  # send failures must never crash the webhook; Telegram retries
+
+
+@router.post("/webhook")
+def webhook(
+    update: dict[str, Any],
+    background: BackgroundTasks,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """Receive bot updates from Telegram. Always 200s: retries are Telegram's job."""
+    if x_telegram_bot_api_secret_token != settings.admin_token:
+        raise HTTPException(status_code=403, detail="bad webhook secret")
+    token = settings.telegram_bot_token
+    if not token:
+        return {"ok": True, "handled": False}
+    chat_id, text, markup = build_update_reply(update, settings.telegram_web_app_url)
+    if chat_id is None:
+        return {"ok": True, "handled": False}
+    background.add_task(_send_update_reply, token, chat_id, text, markup)
+    return {"ok": True, "handled": True}

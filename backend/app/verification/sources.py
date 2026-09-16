@@ -18,6 +18,7 @@ SOURCES: dict[str, Source] = {
     s.id: s
     for s in [
         Source("demo", "Демо-каталог asStylist", "demo", 0.85, "Локальный каталог для демо-режима, без внешних запросов"),
+        Source("avito", "Авито", "marketplace", 0.95, "Живые объявления с фото, ценой и ссылкой"),
         Source("ozon", "Ozon", "marketplace", 0.9, "Маркетплейс"),
         Source("wildberries", "Wildberries", "marketplace", 0.9, "Маркетплейс"),
         Source("lamoda", "Lamoda", "marketplace", 0.9, "Fashion-маркетплейс"),

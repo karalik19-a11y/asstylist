@@ -4,7 +4,7 @@ import { formatRub } from '../lib/format'
 import { openExternal } from '../lib/telegram'
 import { playClick, playTick } from '../lib/sound'
 import { ExternalIcon, SwapIcon } from '../lib/graphics'
-import { Badge, verificationLabel, verificationTone } from './ui'
+import { Badge, isAvitoUrl, verificationLabel, verificationTone } from './ui'
 import { ItemPhoto } from './ItemPhoto'
 
 const BREAKDOWN_LABELS: Record<string, string> = {
@@ -74,6 +74,9 @@ export function ItemCard({
             {item.brand} · {item.fit}
           </div>
           <div className="wrap" style={{ marginTop: 12, gap: 8 }}>
+            {isAvitoUrl(item.url) || item.source === 'avito' ? (
+              <Badge tone="ok">Авито</Badge>
+            ) : null}
             <Badge tone={verificationTone(item.verification_status)}>
               {verificationLabel(item.verification_status)} · {Math.round(item.verification_score * 100)}%
             </Badge>
@@ -117,7 +120,7 @@ export function ItemCard({
           }}
         >
           <ExternalIcon size={12} />
-          <span>В магазин</span>
+          <span>{isAvitoUrl(item.url) || item.source === 'avito' ? 'На Авито' : 'В магазин'}</span>
         </button>
 
         <button

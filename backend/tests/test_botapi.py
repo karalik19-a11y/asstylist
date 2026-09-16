@@ -144,7 +144,7 @@ def test_setup_endpoint_connects_the_bot(client, monkeypatch):
     monkeypatch.setattr(
         telegram_api,
         "configure_bot",
-        lambda token, url: {"bot": BOT_INFO, "web_app_url": url, "actions": ["кнопка меню", "команды"]},
+        lambda token, url, **kwargs: {"bot": BOT_INFO, "web_app_url": url, "actions": ["кнопка меню", "команды"]},
     )
 
     response = client.post(
@@ -165,7 +165,7 @@ def test_setup_endpoint_connects_the_bot(client, monkeypatch):
 def test_setup_endpoint_reports_telegram_errors_as_422(client, monkeypatch):
     import app.api.telegram as telegram_api
 
-    def boom(token, url):
+    def boom(token, url, **kwargs):
         raise BotApiError("Unauthorized")
 
     monkeypatch.setattr(telegram_api, "configure_bot", boom)
@@ -180,7 +180,7 @@ def test_setup_endpoint_never_writes_the_env_when_persist_is_off(client, monkeyp
     monkeypatch.setattr(
         telegram_api,
         "configure_bot",
-        lambda token, url: {"bot": BOT_INFO, "web_app_url": url, "actions": []},
+        lambda token, url, **kwargs: {"bot": BOT_INFO, "web_app_url": url, "actions": []},
     )
     written: dict = {}
     monkeypatch.setattr(telegram_api, "persist_env", lambda updates: written.update(updates) or [])

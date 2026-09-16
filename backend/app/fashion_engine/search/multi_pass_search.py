@@ -75,8 +75,16 @@ class MultiPassSearch:
         limit_per_query = int(options.get("limit_per_query", 6))
         max_products = int(options.get("max_products", 40))
         categories: list[str] = list(options.get("categories") or [])
+        max_queries = options.get("max_queries")
 
         queries = self.expander.expand(user_query, profile)
+        if max_queries is not None:
+            # Живые провайдеры (Авито): каждый расширенный запрос — это HTTP.
+            # Берём первые, самые точные расширения, остальные отбрасываем.
+            try:
+                queries = queries[: max(1, int(max_queries))]
+            except (TypeError, ValueError):
+                pass
         raw_items: list[ProductItem] = []
 
         for query in queries:

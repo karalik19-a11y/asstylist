@@ -1,0 +1,44 @@
+# Render Blueprint: asStylist (FastAPI + built Telegram Mini App, one service).
+#
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+# After the first deploy set TELEGRAM_BOT_TOKEN (and optionally
+# TELEGRAM_WEB_APP_URL) in the dashboard — the backend wires the bot itself
+# on boot (menu button + /start /looks /help + webhook), no clicks needed.
+
+services:
+  - type: web
+    name: asstylist
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      # Real Telegram auth. Browser demo access is disabled; the Mini App only
+      # opens from Telegram. Set to true temporarily if you need browser QA.
+      - key: DEMO_MODE
+        value: false
+      - key: DATABASE_URL
+        value: sqlite:////app/data/asstylist.db
+      - key: DATA_DIR
+        value: /app/data
+      # Used as the Telegram webhook secret — Render generates a strong one.
+      - key: ADMIN_TOKEN
+        generateValue: true
+      # Paste the token from @BotFather here after creating the service.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      # Optional: defaults to RENDER_EXTERNAL_URL (your https://*.onrender.com).
+      # Set only for a custom domain.
+      - key: TELEGRAM_WEB_APP_URL
+        sync: false
+      - key: AVITO_ENABLED
+        value: true
+      - key: AVITO_CITY
+        value: rossiya
+      - key: AI_PROVIDER
+        value: local

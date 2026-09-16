@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     telegram_bot_token: str | None = None
     telegram_web_app_url: str | None = None
     telegram_auth_max_age_sec: int = 86_400
+    #: On boot, when a bot token is configured, attach the Mini App to the bot
+    #: automatically (menu button + commands + webhook) in a background thread.
+    #: Lets a Render deploy "just work" after setting TELEGRAM_BOT_TOKEN.
+    telegram_autoconfigure: bool = True
 
     # --- security ------------------------------------------------------
     cors_origins: tuple[str, ...] = ("*",)
@@ -87,6 +91,7 @@ class Settings(BaseSettings):
     verification_network_timeout_sec: float = 3.0
     allowed_product_hosts: tuple[str, ...] = (
         "asstylist.local",
+        "avito.ru",
         "ozon.ru",
         "wildberries.ru",
         "lamoda.ru",
@@ -126,6 +131,25 @@ class Settings(BaseSettings):
     fashion_engine_enable_mock: bool = True
     #: Вес оценки образа движка в итоговом индексе (0…1).
     fashion_engine_score_weight: float = 0.3
+
+    # --- Авито: единственный источник товаров ---------------------------
+    #: Поиск и подбор вещей идут только по объявлениям Авито: каждая позиция
+    #: выдачи — живое объявление со ссылкой, фото и ценой в рублях. Если Авито
+    #: временно недоступен, движок всё равно подбирает вещи, а ссылки ведут на
+    #: соответствующие подборки Авито (резервный режим, без пустых выдач).
+    avito_enabled: bool = True
+    #: Город/регион поиска (слаг Авито): rossiya — вся страна, moskva,
+    #: sankt-peterburg и т.д.
+    avito_city: str = "rossiya"
+    avito_timeout_sec: float = 6.0
+    #: Сколько объявлений забирать на один запрос.
+    avito_max_results: int = 10
+    #: Сколько расширенных запросов движка уходят в живой поиск (каждый —
+    #: HTTP-запрос; остальные расширения обслуживаются из кэша/пула).
+    avito_max_queries: int = 5
+    #: TTL кэша выдачи Авито (секунды) и негативных ответов.
+    avito_cache_ttl_sec: int = 900
+    avito_negative_ttl_sec: int = 180
 
     # --- живой поиск вещей (WebSearchProvider) ------------------------
     #: Мастер-переключатель: без ключей провайдер тихо отдаёт пустой список,

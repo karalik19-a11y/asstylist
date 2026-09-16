@@ -30,6 +30,9 @@ class EngineOptions:
     min_confidence: float = 0.6
     max_outfits: int = 4
     categories: list[str] = field(default_factory=list)
+    #: Ограничение числа расширенных запросов (для живых провайдеров, где
+    #: каждый запрос — HTTP). None — без ограничения, как в оригинале.
+    max_queries: int | None = None
 
     @classmethod
     def from_value(cls, value: "EngineOptions | dict | None") -> "EngineOptions":
@@ -70,6 +73,7 @@ class FashionEngine:
                 "max_products": self.options.max_products,
                 "limit_per_query": self.options.limit_per_query,
                 "categories": self.options.categories,
+                "max_queries": self.options.max_queries,
             },
         )
 
