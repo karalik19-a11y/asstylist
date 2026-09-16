@@ -1,0 +1,120 @@
+/* ==========================================================================
+   HARD LAYOUT FIX — stop fixed chrome eating content
+   ========================================================================== */
+
+/* Wizard: header is IN FLOW (sticky), not fixed — nothing goes under it */
+.app[data-screen='wizard'] {
+  padding-top: calc(10px + var(--tg-content-safe-top, 0px)) !important;
+  padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
+}
+
+.app[data-screen='wizard'] .app-header {
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  margin-bottom: 8px !important;
+  z-index: 50;
+}
+
+/* Other screens still use fixed header — keep clearance */
+.app:not([data-screen='home']):not([data-screen='wizard']) {
+  padding-top: calc(72px + 24px + var(--tg-content-safe-top, 0px)) !important;
+  padding-bottom: calc(88px + 48px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
+}
+
+/* Action bar always above content, never covers last buttons */
+.action-bar {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 300 !important;
+  width: min(640px, 100%) !important;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
+  box-sizing: border-box !important;
+}
+
+.action-bar-inner {
+  display: flex !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.action-bar-btn-back {
+  flex: 0 0 28% !important;
+  min-width: 100px !important;
+  min-height: 56px !important;
+  font-size: 16px !important;
+}
+
+.action-bar-btn-main {
+  flex: 1 1 auto !important;
+  min-height: 56px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+.app[data-screen='wizard'] .stack.page-transition > *:last-child {
+  margin-bottom: 8px;
+}
+
+.photo-drop-box {
+  margin-bottom: 8px;
+}
+
+/* ---- Home logo 2× ---- */
+.brand-logo-big .brand-logo-word {
+  font-size: clamp(48px, 14vw, 64px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.brand-logo-big .brand-logo-rule {
+  min-width: 120px !important;
+  height: 4px !important;
+  margin-top: 10px !important;
+}
+
+.brand-logo-big .brand-logo-tagline {
+  font-size: 14px !important;
+  margin-top: 10px !important;
+  max-width: 18em;
+}
+
+.brand-logo-ass {
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+
+/* ---- Bigger button labels everywhere ---- */
+.btn {
+  min-height: 56px !important;
+  font-size: 17px !important;
+  font-weight: 650 !important;
+  padding: 14px 20px !important;
+  letter-spacing: 0.01em !important;
+}
+
+.btn-xl {
+  min-height: 64px !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+}
+
+.btn-sm {
+  min-height: 48px !important;
+  font-size: 15px !important;
+}
+
+.btn-primary {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+/* Header logo in wizard stays readable but not huge */
+.app-header .brand-logo-word {
+  font-size: clamp(22px, 6vw, 28px) !important;
+}
