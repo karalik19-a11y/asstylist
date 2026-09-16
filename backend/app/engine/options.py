@@ -1,128 +1,38 @@
-"""Fashion taxonomy: styles, moods, occasions, slots and slot budget weights.
-
-Everything the UI needs for its selectors is served from here, so the client and
-the ranking engine can never drift apart.
-"""
+"""Fashion taxonomy v2: current, niche-first styles and stable compatibility aliases."""
 
 from __future__ import annotations
-
 from typing import Any
 
+# UI taxonomy is intentionally curated rather than a dump of internet micro-trends.
+# Legacy IDs remain accepted by style_by_id() so saved profiles do not break, but
+# they are no longer presented as primary choices.
 STYLE_OPTIONS: list[dict[str, Any]] = [
-    {
-        "id": "minimal",
-        "label": "Минимализм",
-        "emoji": "◻️",
-        "description": "Чистые линии, монохром, качественные ткани, ничего лишнего.",
-        "palette_hint": ["black", "white", "grey", "beige", "navy"],
-    },
-    {
-        "id": "old_money",
-        "label": "Old money",
-        "emoji": "🐎",
-        "description": "Тихая роскошь: кашемир, лоферы, сдержанная палитра и идеальная посадка.",
-        "palette_hint": ["camel", "navy", "ivory", "chocolate", "emerald"],
-    },
-    {
-        "id": "streetwear",
-        "label": "Стритвир",
-        "emoji": "🛹",
-        "description": "Оверсайз, кроссовки, лого-культура и смелые силуэты.",
-        "palette_hint": ["black", "grey", "olive", "orange", "white"],
-    },
-    {
-        "id": "business_casual",
-        "label": "Бизнес-кэжуал",
-        "emoji": "💼",
-        "description": "Пиджак вместо галстука: собранно, но не формально.",
-        "palette_hint": ["navy", "grey", "white", "camel", "burgundy"],
-    },
-    {
-        "id": "techwear",
-        "label": "Теквир",
-        "emoji": "🛰️",
-        "description": "Функциональные ткани, чёрный тотал, карманы и ремни.",
-        "palette_hint": ["black", "charcoal", "olive", "grey"],
-    },
-    {
-        "id": "romantic",
-        "label": "Романтика",
-        "emoji": "🌸",
-        "description": "Мягкие ткани, светлая палитра, летящие силуэты.",
-        "palette_hint": ["blush", "ivory", "lavender", "beige", "pink"],
-    },
-    {
-        "id": "athleisure",
-        "label": "Спорт-шик",
-        "emoji": "🏃",
-        "description": "Спортивный комфорт, который уместен и в городе.",
-        "palette_hint": ["black", "grey", "white", "navy", "teal"],
-    },
-    {
-        "id": "grunge",
-        "label": "Гранж",
-        "emoji": "🎸",
-        "description": "Деним, кожа, потёртости и небрежная многослойность.",
-        "palette_hint": ["black", "charcoal", "brown", "olive", "burgundy"],
-    },
-    {
-        "id": "boho",
-        "label": "Бохо",
-        "emoji": "🌾",
-        "description": "Свободные силуэты, природные оттенки, этнические мотивы.",
-        "palette_hint": ["terracotta", "sand", "olive", "brown", "mustard"],
-    },
-    {
-        "id": "avantgarde",
-        "label": "Авангард",
-        "emoji": "🖤",
-        "description": "Архитектурный крой, асимметрия, чёрный как главный цвет.",
-        "palette_hint": ["black", "charcoal", "white", "silver"],
-    },
-    # --- актуальное из TikTok/Pinterest (2026) -------------------------
-    {
-        "id": "office_siren",
-        "label": "Офис-сирена",
-        "emoji": "🗂️",
-        "description": "Корпкор: острая офисная классика — жакет, юбка-карандаш, очки «Байонетта».",
-        "palette_hint": ["black", "grey", "white", "navy", "burgundy"],
-    },
-    {
-        "id": "gorpcore",
-        "label": "Горпкор",
-        "emoji": "🏔️",
-        "description": "Outdoor-функциональность в городе: флиска, парашютные брюки, трейловая обувь.",
-        "palette_hint": ["olive", "khaki", "black", "grey", "orange"],
-    },
-    {
-        "id": "y2k",
-        "label": "Y2K",
-        "emoji": "💿",
-        "description": "Нулевые вернулись: baggy-джинсы, беби-ти, блеск и акрил.",
-        "palette_hint": ["pink", "silver", "blue", "white", "lavender"],
-    },
-    {
-        "id": "indie_sleaze",
-        "label": "Инди-слиз",
-        "emoji": "📸",
-        "description": "Вечериночный винтаж 2010-х: кожа, майки, вспышка и шум.",
-        "palette_hint": ["black", "white", "red", "grey", "burgundy"],
-    },
-    {
-        "id": "dark_academia",
-        "label": "Тёмная академия",
-        "emoji": "📚",
-        "description": "Твид, оксфорд, свитера и библиотечная палитра.",
-        "palette_hint": ["brown", "chocolate", "burgundy", "grey", "navy"],
-    },
-    {
-        "id": "balletcore",
-        "label": "Балеткор",
-        "emoji": "🩰",
-        "description": "Мягкость пачки: кардиганы на запах, гетры, балетки, ленты.",
-        "palette_hint": ["blush", "ivory", "pink", "light_grey", "lavender"],
-    },
+    {"id": "modern_craftsman", "label": "Modern Craftsman", "emoji": "🧵", "description": "Современный ремесленник: workwear, field jacket, выцветший деним, фактуры и один сильный аксессуар.", "palette_hint": ["brown", "olive", "navy", "cream", "mustard"]},
+    {"id": "leather_weather", "label": "Leather Weather", "emoji": "🧥", "description": "Состаренная кожа, мото-архетипы и мягкий контраст с трикотажем или строгим кроем.", "palette_hint": ["black", "brown", "burgundy", "cream", "olive"]},
+    {"id": "broken_down_prep", "label": "Broken-down Prep", "emoji": "🏄", "description": "Ivy/prep, намеренно расслабленный крой и surf-детали вместо стерильной классики.", "palette_hint": ["navy", "cream", "red", "brown", "washed_blue"]},
+    {"id": "romantic_menswear", "label": "Romantic Menswear", "emoji": "🌹", "description": "Драпировка, полупрозрачные слои, мягкий tailoring и намеренно чувственная пропорция.", "palette_hint": ["black", "ivory", "burgundy", "dusty_pink", "brown"]},
+    {"id": "military_romance", "label": "Military Romance", "emoji": "🎖️", "description": "Военная конструкция + викторианская/флоральная деталь; строгая база и один декоративный сбой.", "palette_hint": ["olive", "black", "burgundy", "cream", "khaki"]},
+    {"id": "archive_reconstruction", "label": "Archive Reconstruction", "emoji": "🧩", "description": "Архивные вещи, deadstock и reworked-конструкция вместо буквального копирования образа с подиума.", "palette_hint": ["black", "grey", "denim", "brown", "white"]},
+    {"id": "technical_romantic", "label": "Technical Romantic", "emoji": "🛰️", "description": "Технические ткани и utility-силуэты, но с мягким слоем, драпировкой или неожиданной фактурой.", "palette_hint": ["black", "charcoal", "olive", "silver", "ivory"]},
+    {"id": "americana_90s", "label": "90s Americana Recut", "emoji": "🇺🇸", "description": "90s sportswear, straight denim, plaid, frontier knit и винтажная простота без костюмности.", "palette_hint": ["blue", "brown", "cream", "red", "green"]},
+    {"id": "accessory_first", "label": "Accessory-first", "emoji": "⛓️", "description": "Сначала характерный аксессуар, затем одежда строится вокруг него — цепь, cuff, charm, ремень.", "palette_hint": ["black", "silver", "brown", "white", "pink"]},
+    {"id": "pink_accent", "label": "Dusty Pink Accent", "emoji": "🌸", "description": "Пыльно-розовый как точечный мужской акцент на строгой, рабочей или кожаной базе.", "palette_hint": ["dusty_pink", "black", "brown", "navy", "cream"]},
+    {"id": "sport_couture", "label": "Sport Couture", "emoji": "⚽", "description": "Спортивная форма мышления + tailoring: ретро-спорт, трековые вещи и точный низ.", "palette_hint": ["navy", "red", "cream", "black", "green"]},
+    {"id": "neo_gothic_editorial", "label": "Neo-Gothic Editorial", "emoji": "🖤", "description": "Тёмный силуэт, кожа, длинные линии и editorial-подача без костюмного Halloween-goth.", "palette_hint": ["black", "charcoal", "burgundy", "silver", "ivory"]},
+    {"id": "post_punk_archive", "label": "Post-punk Archive", "emoji": "🎛️", "description": "Пост-панк, архивные пропорции, потёртые материалы и намеренная шероховатость.", "palette_hint": ["black", "grey", "burgundy", "olive", "white"]},
+    {"id": "minimal_precision", "label": "Minimal Precision", "emoji": "◻️", "description": "Минимализм через пропорции, материал и точный крой — без old-money шаблона.", "palette_hint": ["black", "white", "grey", "navy", "brown"]},
 ]
+
+# Persisted profiles from v1 may contain these IDs. They are compatibility aliases,
+# not UI recommendations.
+LEGACY_STYLE_ALIASES: dict[str, str] = {
+    "minimal": "minimal_precision", "old_money": "broken_down_prep", "streetwear": "sport_couture",
+    "business_casual": "minimal_precision", "techwear": "technical_romantic", "romantic": "romantic_menswear",
+    "athleisure": "sport_couture", "grunge": "post_punk_archive", "boho": "modern_craftsman",
+    "avantgarde": "archive_reconstruction", "office_siren": "minimal_precision", "gorpcore": "technical_romantic",
+    "y2k": "sport_couture", "indie_sleaze": "post_punk_archive", "dark_academia": "archive_reconstruction",
+    "balletcore": "romantic_menswear",
+}
 
 MOOD_OPTIONS: list[dict[str, Any]] = [
     {"id": "confident", "label": "Уверенность", "emoji": "🦁", "description": "Держу комнату, когда вхожу."},
@@ -136,139 +46,65 @@ MOOD_OPTIONS: list[dict[str, Any]] = [
 ]
 
 OCCASION_OPTIONS: list[dict[str, Any]] = [
-    {"id": "everyday", "label": "Каждый день", "formality": 1},
-    {"id": "work", "label": "Работа", "formality": 3},
-    {"id": "date", "label": "Свидание", "formality": 2},
-    {"id": "party", "label": "Вечеринка", "formality": 3},
-    {"id": "travel", "label": "Путешествие", "formality": 1},
-    {"id": "event", "label": "Событие", "formality": 4},
+    {"id": "everyday", "label": "Каждый день", "formality": 1}, {"id": "work", "label": "Работа", "formality": 3},
+    {"id": "date", "label": "Свидание", "formality": 2}, {"id": "party", "label": "Вечеринка", "formality": 3},
+    {"id": "travel", "label": "Путешествие", "formality": 1}, {"id": "event", "label": "Событие", "formality": 4},
 ]
-
 SEASON_OPTIONS: list[dict[str, Any]] = [
-    {"id": "all", "label": "Любой сезон"},
-    {"id": "spring", "label": "Весна"},
-    {"id": "summer", "label": "Лето"},
-    {"id": "autumn", "label": "Осень"},
-    {"id": "winter", "label": "Зима"},
+    {"id": "all", "label": "Любой сезон"}, {"id": "spring", "label": "Весна"}, {"id": "summer", "label": "Лето"},
+    {"id": "autumn", "label": "Осень"}, {"id": "winter", "label": "Зима"},
 ]
-
 PRESENTATION_OPTIONS: list[dict[str, Any]] = [
-    {"id": "unisex", "label": "Унисекс"},
-    {"id": "feminine", "label": "Женственный"},
-    {"id": "masculine", "label": "Мужественный"},
+    {"id": "unisex", "label": "Унисекс"}, {"id": "feminine", "label": "Женственный"}, {"id": "masculine", "label": "Мужественный"},
 ]
-
 CATEGORY_LABELS: dict[str, str] = {
-    "outerwear": "Верхняя одежда",
-    "top": "Верх",
-    "knitwear": "Трикотаж",
-    "bottom": "Низ",
-    "dress": "Платье",
-    "shoes": "Обувь",
-    "bag": "Сумка",
-    "accessory": "Аксессуар",
+    "outerwear": "Верхняя одежда", "top": "Верх", "knitwear": "Трикотаж", "bottom": "Низ",
+    "dress": "Платье", "shoes": "Обувь", "bag": "Сумка", "accessory": "Аксессуар",
 }
-
-#: Slots that build a complete look, in rendering order.
 SLOTS: tuple[str, ...] = ("outerwear", "top", "knitwear", "bottom", "dress", "shoes", "bag", "accessory")
-
-SLOT_LABELS: dict[str, str] = {
-    "outerwear": "Верхняя одежда",
-    "top": "Верх",
-    "knitwear": "Трикотаж",
-    "bottom": "Низ",
-    "dress": "Платье",
-    "shoes": "Обувь",
-    "bag": "Сумка",
-    "accessory": "Аксессуар",
-}
-
-#: Which categories can fill which slot.
+SLOT_LABELS: dict[str, str] = {key: value for key, value in CATEGORY_LABELS.items()}
 SLOT_CATEGORIES: dict[str, tuple[str, ...]] = {
-    "outerwear": ("outerwear",),
-    "top": ("top", "knitwear"),
-    "bottom": ("bottom",),
-    "dress": ("dress",),
-    "shoes": ("shoes",),
-    "bag": ("bag",),
-    "accessory": ("accessory",),
+    "outerwear": ("outerwear",), "top": ("top", "knitwear"), "bottom": ("bottom",), "dress": ("dress",),
+    "shoes": ("shoes",), "bag": ("bag",), "accessory": ("accessory",),
 }
-
-#: Share of the budget each slot may claim, plus whether it can be dropped.
 SLOT_PLANS: dict[str, dict[str, Any]] = {
-    "layered": {
-        "description": "Многослойный образ с верхней одеждой",
-        "slots": {
-            "outerwear": {"weight": 0.30, "required": True, "order": 0},
-            "top": {"weight": 0.14, "required": True, "order": 1},
-            "bottom": {"weight": 0.16, "required": True, "order": 3},
-            "shoes": {"weight": 0.20, "required": True, "order": 4},
-            "bag": {"weight": 0.14, "required": False, "order": 5},
-            "accessory": {"weight": 0.06, "required": False, "order": 6},
-        },
-    },
-    "dress": {
-        "description": "Образ на основе платья",
-        "slots": {
-            "outerwear": {"weight": 0.26, "required": False, "order": 0},
-            "dress": {"weight": 0.32, "required": True, "order": 2},
-            "shoes": {"weight": 0.22, "required": True, "order": 4},
-            "bag": {"weight": 0.14, "required": False, "order": 5},
-            "accessory": {"weight": 0.06, "required": False, "order": 6},
-        },
-    },
-    "light": {
-        "description": "Лёгкий образ без верхней одежды",
-        "slots": {
-            "top": {"weight": 0.22, "required": True, "order": 1},
-            "bottom": {"weight": 0.26, "required": True, "order": 3},
-            "shoes": {"weight": 0.26, "required": True, "order": 4},
-            "bag": {"weight": 0.18, "required": False, "order": 5},
-            "accessory": {"weight": 0.08, "required": False, "order": 6},
-        },
-    },
+    "layered": {"description": "Многослойный образ с верхней одеждой", "slots": {
+        "outerwear": {"weight": .30, "required": True, "order": 0}, "top": {"weight": .14, "required": True, "order": 1},
+        "bottom": {"weight": .16, "required": True, "order": 3}, "shoes": {"weight": .20, "required": True, "order": 4},
+        "bag": {"weight": .14, "required": False, "order": 5}, "accessory": {"weight": .06, "required": False, "order": 6},}},
+    "dress": {"description": "Образ на основе платья", "slots": {
+        "outerwear": {"weight": .26, "required": False, "order": 0}, "dress": {"weight": .32, "required": True, "order": 2},
+        "shoes": {"weight": .22, "required": True, "order": 4}, "bag": {"weight": .14, "required": False, "order": 5},
+        "accessory": {"weight": .06, "required": False, "order": 6},}},
+    "light": {"description": "Лёгкий образ без верхней одежды", "slots": {
+        "top": {"weight": .22, "required": True, "order": 1}, "bottom": {"weight": .26, "required": True, "order": 3},
+        "shoes": {"weight": .26, "required": True, "order": 4}, "bag": {"weight": .18, "required": False, "order": 5},
+        "accessory": {"weight": .08, "required": False, "order": 6},}},
 }
 
 
 def plan_for_season(season: str, occasion: str) -> str:
-    """Pick a look plan: dresses for warm weather/events, layers for cold."""
-    if season in ("winter", "autumn"):
-        return "layered"
-    if occasion in ("event", "party", "date") and season in ("summer", "all", "spring"):
-        return "dress"
-    if season == "summer":
-        return "light"
+    if season in ("winter", "autumn"): return "layered"
+    if occasion in ("event", "party", "date") and season in ("summer", "all", "spring"): return "dress"
+    if season == "summer": return "light"
     return "layered"
 
 
 def style_by_id(style_id: str) -> dict[str, Any]:
-    for option in STYLE_OPTIONS:
-        if option["id"] == style_id:
-            return option
-    return STYLE_OPTIONS[0]
+    requested = LEGACY_STYLE_ALIASES.get(style_id, style_id)
+    return next((option for option in STYLE_OPTIONS if option["id"] == requested), STYLE_OPTIONS[0])
 
 
 def mood_by_id(mood_id: str) -> dict[str, Any]:
-    for option in MOOD_OPTIONS:
-        if option["id"] == mood_id:
-            return option
-    return MOOD_OPTIONS[0]
+    return next((option for option in MOOD_OPTIONS if option["id"] == mood_id), MOOD_OPTIONS[0])
 
 
 def formality_for_occasion(occasion: str) -> int:
-    for option in OCCASION_OPTIONS:
-        if option["id"] == occasion:
-            return int(option["formality"])
-    return 1
+    return next((int(option["formality"]) for option in OCCASION_OPTIONS if option["id"] == occasion), 1)
 
 
 def all_options() -> dict[str, Any]:
-    return {
-        "styles": STYLE_OPTIONS,
-        "moods": MOOD_OPTIONS,
-        "occasions": OCCASION_OPTIONS,
-        "seasons": SEASON_OPTIONS,
-        "presentations": PRESENTATION_OPTIONS,
-        "categories": [{"id": key, "label": value} for key, value in CATEGORY_LABELS.items()],
-        "slots": [{"id": key, "label": value} for key, value in SLOT_LABELS.items()],
-    }
+    return {"styles": STYLE_OPTIONS, "moods": MOOD_OPTIONS, "occasions": OCCASION_OPTIONS,
+            "seasons": SEASON_OPTIONS, "presentations": PRESENTATION_OPTIONS,
+            "categories": [{"id": key, "label": value} for key, value in CATEGORY_LABELS.items()],
+            "slots": [{"id": key, "label": value} for key, value in SLOT_LABELS.items()]}
