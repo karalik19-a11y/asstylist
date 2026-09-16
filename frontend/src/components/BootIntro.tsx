@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const LOGO_SRC = '/asstylist-logo.svg?brand=20260916-v3'
+const LOGO_SRC = '/asstylist-logo.svg?brand=20260916-v4'
 
 export function BootIntro({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<'hold' | 'shrink' | 'out'>('hold')
