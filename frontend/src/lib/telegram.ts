@@ -22,7 +22,15 @@ interface SafeAreaInset {
 
 export interface TelegramWebApp {
   initData?: string
-  initDataUnsafe?: { user?: { id: number; username?: string; first_name?: string; last_name?: string; photo_url?: string } }
+  initDataUnsafe?: {
+    user?: {
+      id: number
+      username?: string
+      first_name?: string
+      last_name?: string
+      photo_url?: string
+    }
+  }
   colorScheme?: 'light' | 'dark'
   ready?: () => void
   expand?: () => void
@@ -32,6 +40,8 @@ export interface TelegramWebApp {
   disableClosingConfirmation?: () => void
   setHeaderColor?: (color: string) => void
   setBackgroundColor?: (color: string) => void
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void
+  openTelegramLink?: (url: string) => void
   onEvent?: (event: EventName, handler: () => void) => void
   offEvent?: (event: EventName, handler: () => void) => void
   HapticFeedback?: {
@@ -72,6 +82,7 @@ export const isTelegram = (): boolean => getWebApp() !== null && Boolean(getWebA
 
 const HEADER_COLORS = { parchment: '#7eb8d4', noir: '#0b1a26' } as const
 
+/** Твик «шапки» Telegram и meta theme-color под текущую тему приложения. */
 export function syncTelegramChrome(theme: 'noir' | 'parchment'): void {
   const app = getWebApp()
   const color = HEADER_COLORS[theme]
@@ -168,6 +179,27 @@ export function telegramUserName(): string | null {
   return app?.initDataUnsafe?.user?.first_name ?? app?.initDataUnsafe?.user?.username ?? null
 }
 
+/** Open http(s) links via Telegram client or window.open fallback. */
+export function openExternal(url: string): void {
+  const app = getWebApp()
+  if (app?.openLink) {
+    app.openLink(url, { try_instant_view: false })
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+/** Open t.me links inside Telegram when possible. */
+export function openTelegramLink(url: string): void {
+  const app = getWebApp()
+  if (app?.openTelegramLink) {
+    app.openTelegramLink(url)
+    return
+  }
+  openExternal(url)
+}
+
+/** URL аватарки Telegram (если клиент отдал photo_url). */
 export function telegramUserPhoto(): string | null {
   const url = getWebApp()?.initDataUnsafe?.user?.photo_url
   return url || null
