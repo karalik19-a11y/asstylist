@@ -3,7 +3,6 @@ import { formatRub } from '../lib/format'
 import { isSoundEnabled, playClick, playTick, toggleSound } from '../lib/sound'
 import { SoundIcon } from '../lib/graphics'
 
-/** Крупный логотип сервиса. Клик всегда ведёт на главную. */
 export function BrandLogo({
   onHome,
   big = false,
@@ -45,12 +44,14 @@ export function Header({
   onBack,
   onHome,
   right,
+  compact = false,
 }: {
   title: string
   subtitle?: string
   onBack?: () => void
   onHome?: () => void
   right?: ReactNode
+  compact?: boolean
 }) {
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
 
@@ -60,7 +61,7 @@ export function Header({
   }
 
   return (
-    <header className="stack app-header" style={{ gap: 14 }}>
+    <header className={`stack app-header${compact ? ' compact' : ''}`} style={{ gap: compact ? 0 : 10 }}>
       <div className="row-between" style={{ alignItems: 'center' }}>
         <div className="row" style={{ gap: 10, minWidth: 0, flex: 1 }}>
           {onBack ? (
@@ -101,11 +102,12 @@ export function Header({
         </div>
       </div>
 
-      <div style={{ paddingBottom: 2, minWidth: 0 }}>
-        <h2 className="app-header-title">{title}</h2>
-        {subtitle ? <div className="muted small" style={{ marginTop: 4 }}>{subtitle}</div> : null}
-      </div>
-      <hr className="rule" />
+      {!compact ? (
+        <div className="app-header-title-block" style={{ paddingBottom: 2, minWidth: 0 }}>
+          <h2 className="app-header-title">{title}</h2>
+          {subtitle ? <div className="muted small" style={{ marginTop: 4 }}>{subtitle}</div> : null}
+        </div>
+      ) : null}
     </header>
   )
 }
@@ -120,47 +122,19 @@ export function ProgressBar({ value }: { value: number }) {
 
 export function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      className="chip"
-      data-active={active}
-      onClick={() => {
-        playTick()
-        onClick()
-      }}
-      aria-pressed={active}
-    >
+    <button type="button" className="chip" data-active={active} onClick={() => { playTick(); onClick() }} aria-pressed={active}>
       {children}
     </button>
   )
 }
 
 export function Tile({
-  active,
-  onClick,
-  badgeKanji,
-  badgeNum,
-  title,
-  description,
+  active, onClick, badgeKanji, badgeNum, title, description,
 }: {
-  active: boolean
-  onClick: () => void
-  badgeKanji?: string
-  badgeNum?: string
-  title: string
-  description?: string
+  active: boolean; onClick: () => void; badgeKanji?: string; badgeNum?: string; title: string; description?: string
 }) {
   return (
-    <button
-      type="button"
-      className="stamp-tile"
-      data-active={active}
-      onClick={() => {
-        playClick()
-        onClick()
-      }}
-      aria-pressed={active}
-    >
+    <button type="button" className="stamp-tile" data-active={active} onClick={() => { playClick(); onClick() }} aria-pressed={active}>
       <div className="stamp-tile-top">
         {badgeKanji ? <span className="stamp-tile-kanji">{badgeKanji}</span> : <span />}
         {badgeNum ? <span className="stamp-tile-badge">№ {badgeNum}</span> : null}
@@ -172,43 +146,17 @@ export function Tile({
 }
 
 export function RangeField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  suffix,
-  onChange,
-  hint,
+  label, value, min, max, step = 1, suffix, onChange, hint,
 }: {
-  label: string
-  value: number
-  min: number
-  max: number
-  step?: number
-  suffix: string
-  onChange: (value: number) => void
-  hint?: string
+  label: string; value: number; min: number; max: number; step?: number; suffix: string; onChange: (value: number) => void; hint?: string
 }) {
   return (
     <div className="range-field">
       <div className="row-between">
         <span className="tiny">{label}</span>
-        <span className="range-value">
-          {value} {suffix}
-        </span>
+        <span className="range-value">{value} {suffix}</span>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(event) => {
-          onChange(Number(event.target.value))
-        }}
-      />
+      <input type="range" min={min} max={max} step={step} value={value} aria-label={label} onChange={(e) => onChange(Number(e.target.value))} />
       {hint ? <span className="muted small">{hint}</span> : null}
     </div>
   )
@@ -261,7 +209,7 @@ export function ScoreRing({ score }: { score: number }) {
           `conic-gradient(${color} ${clamped * 3.6}deg, var(--surface-2) 0deg)`,
         boxShadow: 'inset 0 0 0 6px var(--surface), 0 10px 24px rgba(23, 68, 99, 0.18)',
       }}
-      aria-label={`Оценка селекции ${Math.round(clamped)} из 100`}
+      aria-label={`Оценка ${Math.round(clamped)} из 100`}
     >
       {Math.round(clamped)}
     </div>
@@ -277,9 +225,7 @@ export function BudgetBar({ total, budget }: { total: number; budget: number }) 
         <span style={{ width: `${share * 100}%` }} />
       </div>
       <div className="row-between small muted">
-        <span>
-          {formatRub(total)} из {formatRub(budget)}
-        </span>
+        <span>{formatRub(total)} из {formatRub(budget)}</span>
         <span>{left > 0 ? `остаток ${formatRub(left)}` : 'полный бюджет'}</span>
       </div>
     </div>
@@ -290,14 +236,7 @@ export function SectionTitle({ children, hint, index }: { children: ReactNode; h
   return (
     <div className="section-head">
       <h3>
-        {index ? (
-          <>
-            <span className="sec-num">№ {index}</span>
-            {children}
-          </>
-        ) : (
-          children
-        )}
+        {index ? (<><span className="sec-num">№ {index}</span>{children}</>) : children}
       </h3>
       {hint ? <span className="section-head-hint muted small">{hint}</span> : null}
     </div>
@@ -310,13 +249,7 @@ export function Spinner() {
 
 export function ThemeToggle({ theme, onToggle }: { theme: 'noir' | 'parchment'; onToggle: () => void }) {
   return (
-    <button
-      type="button"
-      className="btn btn-sm btn-ghost"
-      onClick={onToggle}
-      style={{ padding: '8px 14px', minHeight: 42, fontSize: 13 }}
-      title="Переключить тему оформления"
-    >
+    <button type="button" className="btn btn-sm btn-ghost" onClick={onToggle} style={{ padding: '8px 14px', minHeight: 42, fontSize: 13 }} title="Переключить тему">
       {theme === 'noir' ? 'Светлая' : 'Тёмная'}
     </button>
   )
