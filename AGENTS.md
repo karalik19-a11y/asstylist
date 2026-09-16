@@ -3,6 +3,8 @@
 This document is the primary contract for **any AI agent** (or human) making changes to this repository.
 Follow it strictly so improvements stay safe and the live site / Telegram Mini App keep working.
 
+**Quick cards:** [CHEATSHEET.md](./CHEATSHEET.md) · [docs/cheatsheets/](./docs/cheatsheets/)
+
 ## Project in one paragraph
 
 asStylist is a free AI fashion director delivered as a **Telegram Mini App**.
@@ -30,7 +32,7 @@ Core intelligence lives in `backend/app/fashion_engine/` (search + outfit archit
 | `backend/app/verification/**` | Product checks (add tests; critical checks need ADR) |
 | `backend/tests/**` or `backend/**/test_*.py` | Tests |
 | `docs/**` | Architecture, ADRs, how-to guides |
-| `AGENTS.md`, `CONTRIBUTING.md` | Agent/human process |
+| `AGENTS.md`, `CONTRIBUTING.md`, `CHEATSHEET.md` | Agent/human process |
 
 ## Dangerous zones (human review required)
 
@@ -45,13 +47,13 @@ Core intelligence lives in `backend/app/fashion_engine/` (search + outfit archit
 
 ## How to add a feature (checklist)
 
-1. Read this file and `docs/architecture.md`.
+1. Skim [CHEATSHEET.md](./CHEATSHEET.md); read this file and `docs/architecture.md`.
 2. For Fashion Engine work, read `backend/app/fashion_engine/README.md` and pick a step from `PIPELINE_STEPS`.
 3. If the change affects ranking, budget, verification, or API shape → write `docs/adr/XXXX-title.md`.
 4. Implement pure logic first under `fashion_engine/` or `engine/`.
 5. Add unit tests; run `make test-backend` (or `make test-engine`).
 6. Only then wire API / UI if needed.
-7. Update `docs/adding-feature.md` section if you introduce a new extension point.
+7. Update `docs/adding-feature.md` or cheatsheets if you introduce a new extension point.
 8. Keep commit messages imperative and scoped (`feat(engine): …`, `docs: …`, `test: …`).
 
 ## How to run locally (agents)
@@ -67,6 +69,8 @@ make run           # http://localhost:8000 — must still work after your change
 
 Do **not** require network, bot tokens, or paid keys for unit tests.
 
+More commands: [docs/cheatsheets/commands.md](./docs/cheatsheets/commands.md)
+
 ## Extension points (stable)
 
 - **Search providers**: `backend/app/fashion_engine/search/providers/` (`SearchProvider`)
@@ -74,6 +78,8 @@ Do **not** require network, bot tokens, or paid keys for unit tests.
 - **Ranking factors** (app layer): configurable via `RANKING_WEIGHTS_JSON` (defaults must not silently change)
 - **Verification checks**: `backend/app/verification/`
 - **Engine mode**: `FASHION_ENGINE_MODE` = `hybrid` | `engine` | `legacy`
+
+Task recipes: [docs/cheatsheets/tasks.md](./docs/cheatsheets/tasks.md)
 
 ## What “done” looks like
 
