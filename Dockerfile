@@ -1,6 +1,10 @@
 # ---------- stage 1: build the Mini App bundle ----------
 FROM node:22-slim AS web
 WORKDIR /web
+ARG BUILD_SHA=
+ARG RENDER_GIT_COMMIT=
+ARG SOURCE_VERSION=
+ENV VITE_BUILD_ID=${BUILD_SHA:-${RENDER_GIT_COMMIT:-${SOURCE_VERSION:-}}}
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install --no-audit --no-fund
 COPY frontend/ ./
