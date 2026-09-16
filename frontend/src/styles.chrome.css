@@ -1,60 +1,78 @@
 /* ==========================================================================
    CHROME SYSTEM — single source of truth for layout / adaptive / overlap
-   Breakpoints: sm ≤400 | md ≤560 | (base ≤640 column)
+   8-point grid · Breakpoints: sm ≤400 | md ≤560 | base ≤640
    ========================================================================== */
 
 :root {
   --chrome-max: 640px;
   --space-x: 16px;
+  --space-y: 16px;
   --header-h: 56px;
-  --tab-bar-h: 68px;
-  --action-bar-h: 92px;
-  --glass-blur-mobile: blur(8px) saturate(140%);
+  --tab-bar-h: 72px;
+  --action-bar-h: 96px;
+  --glass-blur-mobile: blur(10px) saturate(150%);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
 }
 
+/* --- Base app shell: chrome owns all padding --- */
 .app {
-  box-sizing: border-box;
-  min-height: 100dvh;
-  max-width: var(--chrome-max);
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: relative;
+  box-sizing: border-box !important;
+  min-height: 100dvh !important;
+  max-width: var(--chrome-max) !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--space-4) !important;
+  position: relative !important;
   transform: none !important;
   filter: none !important;
-  padding-left: max(var(--space-x), env(safe-area-inset-left, 0px));
-  padding-right: max(var(--space-x), env(safe-area-inset-right, 0px));
+  padding-left: max(var(--space-x), env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(var(--space-x), env(safe-area-inset-right, 0px)) !important;
+  /* default padding neutralised; screen-specific rules below win */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
+/* Home */
 .app[data-screen='home'] {
-  padding-top: calc(12px + var(--tg-content-safe-top, 0px));
+  padding-top: calc(var(--space-3) + var(--tg-content-safe-top, 0px)) !important;
   padding-bottom: calc(
-    var(--tab-bar-h) + 20px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
-  );
+    var(--tab-bar-h) + var(--space-5) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+  ) !important;
 }
 
+/* Wizard — action bar lives here */
 .app[data-screen='wizard'] {
-  padding-top: calc(6px + var(--tg-content-safe-top, 0px));
+  padding-top: calc(var(--space-2) + var(--tg-content-safe-top, 0px)) !important;
   padding-bottom: calc(
-    var(--action-bar-h) + 24px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
-  );
+    var(--action-bar-h) + var(--space-6) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+  ) !important;
 }
 
+/* Screens with fixed header + tab bar */
 .app[data-screen='result'],
 .app[data-screen='search'],
 .app[data-screen='history'],
-.app[data-screen='profile'] {
-  padding-top: calc(var(--header-h) + 18px + var(--tg-content-safe-top, 0px));
+.app[data-screen='profile'],
+.app[data-screen='journal'] {
+  padding-top: calc(var(--header-h) + var(--space-4) + var(--tg-content-safe-top, 0px)) !important;
   padding-bottom: calc(
-    var(--tab-bar-h) + 20px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
-  );
+    var(--tab-bar-h) + var(--space-5) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)
+  ) !important;
 }
 
 html {
-  scroll-padding-top: calc(var(--header-h) + 8px);
-  scroll-padding-bottom: calc(var(--action-bar-h) + 12px);
+  scroll-padding-top: calc(var(--header-h) + var(--space-2));
+  scroll-padding-bottom: calc(var(--action-bar-h) + var(--space-3));
 }
+
+/* ===================== Header ===================== */
 
 .app[data-screen='wizard'] .app-header {
   position: sticky !important;
@@ -63,10 +81,10 @@ html {
   right: auto !important;
   transform: none !important;
   width: 100% !important;
-  margin: 0 0 10px !important;
-  padding: 8px 0 10px !important;
+  margin: 0 0 var(--space-3) !important;
+  padding: var(--space-2) 0 var(--space-3) !important;
   z-index: 40;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border-bottom: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 70%, transparent);
@@ -77,17 +95,18 @@ html {
 .app[data-screen='result'] .app-header,
 .app[data-screen='search'] .app-header,
 .app[data-screen='history'] .app-header,
-.app[data-screen='profile'] .app-header {
+.app[data-screen='profile'] .app-header,
+.app[data-screen='journal'] .app-header {
   position: fixed !important;
   top: 0 !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
   width: min(var(--chrome-max), 100%) !important;
   margin: 0 !important;
-  padding: calc(8px + var(--tg-content-safe-top, 0px)) var(--space-x) 10px !important;
+  padding: calc(var(--space-2) + var(--tg-content-safe-top, 0px)) var(--space-x) var(--space-3) !important;
   box-sizing: border-box;
   z-index: 200;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border-bottom: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 70%, transparent);
@@ -106,19 +125,21 @@ html {
   font-size: clamp(17px, 4.5vw, 20px);
 }
 
+/* ===================== Tab bar ===================== */
+
 .tab-bar {
   position: fixed !important;
   left: 50% !important;
   right: auto !important;
   transform: translateX(-50%);
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
+  bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px));
   z-index: 210;
   display: flex;
-  gap: 4px;
-  padding: 5px;
-  width: min(320px, calc(100% - 24px));
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  gap: var(--space-1);
+  padding: 6px;
+  width: min(340px, calc(100% - 24px));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
   backdrop-filter: var(--glass-blur-mobile);
   -webkit-backdrop-filter: var(--glass-blur-mobile);
   border: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 80%, transparent);
@@ -133,9 +154,9 @@ html {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  min-height: 48px;
+  min-height: 52px;
   padding: 6px 4px;
-  border-radius: 15px;
+  border-radius: 16px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -143,6 +164,7 @@ html {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .tab-bar-btn svg {
@@ -160,6 +182,8 @@ html {
   color: var(--text-main);
 }
 
+/* ===================== Action bar (wizard) ===================== */
+
 .action-bar {
   position: fixed !important;
   left: 50% !important;
@@ -169,16 +193,16 @@ html {
   z-index: 220 !important;
   width: min(var(--chrome-max), 100%) !important;
   margin: 0 !important;
-  padding: 10px var(--space-x) calc(12px + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
+  padding: var(--space-3) var(--space-x) calc(var(--space-3) + env(safe-area-inset-bottom, 0px) + var(--tg-safe-bottom, 0px)) !important;
   box-sizing: border-box !important;
-  background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 94%, transparent) !important;
   backdrop-filter: var(--glass-blur-mobile) !important;
   -webkit-backdrop-filter: var(--glass-blur-mobile) !important;
   border-top: 1px solid color-mix(in srgb, var(--glass-border, rgba(255,255,255,0.12)) 80%, transparent);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  gap: var(--space-2) !important;
   animation: none !important;
 }
 
@@ -186,7 +210,7 @@ html {
   display: flex !important;
   flex-direction: row !important;
   align-items: stretch !important;
-  gap: 10px !important;
+  gap: var(--space-3) !important;
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
@@ -210,26 +234,7 @@ html {
   font-weight: 700 !important;
 }
 
-.brand-logo-big .brand-logo-word {
-  font-size: clamp(48px, 13vw, 62px) !important;
-  line-height: 1.05 !important;
-  letter-spacing: -0.03em !important;
-}
-
-.brand-logo-big .brand-logo-rule {
-  min-width: 110px !important;
-  height: 4px !important;
-  margin-top: 8px !important;
-}
-
-.brand-logo-ass {
-  color: #ffffff !important;
-  font-weight: 800 !important;
-}
-
-.app-header .brand-logo-word {
-  font-size: clamp(20px, 5.5vw, 26px) !important;
-}
+/* ===================== Buttons & touch targets ===================== */
 
 .btn {
   min-height: 52px !important;
@@ -254,6 +259,31 @@ html {
   font-size: 14.5px !important;
   padding: 10px 14px !important;
 }
+
+/* ===================== Brand & logo ===================== */
+
+.brand-logo-big .brand-logo-word {
+  font-size: clamp(48px, 13vw, 62px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.brand-logo-big .brand-logo-rule {
+  min-width: 110px !important;
+  height: 4px !important;
+  margin-top: 8px !important;
+}
+
+.brand-logo-ass {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.app-header .brand-logo-word {
+  font-size: clamp(20px, 5.5vw, 26px) !important;
+}
+
+/* ===================== Forms & ranges ===================== */
 
 .range-field {
   gap: 10px;
@@ -308,6 +338,8 @@ input[type='range']::-moz-range-thumb {
   box-shadow: 0 3px 10px rgba(232, 32, 69, 0.4);
 }
 
+/* ===================== Cards & item layout ===================== */
+
 .profile-avatar {
   width: 80px !important;
   height: 80px !important;
@@ -359,9 +391,12 @@ input[type='range']::-moz-range-thumb {
   order: -1;
 }
 
+/* ===================== Responsive ===================== */
+
 @media (max-width: 400px) {
   :root {
     --space-x: 14px;
+    --tab-bar-h: 68px;
   }
 
   .item-card-v2 {
@@ -408,6 +443,7 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
+/* Kill conflicting animations that can cause layout thrashing */
 .app.screen-flash {
   animation: none !important;
 }
