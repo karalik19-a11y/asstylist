@@ -1,16 +1,21 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
+/** Read env without requiring @types/node (tsc runs this file in the frontend project). */
+function env(name: string): string {
+  const g = globalThis as { process?: { env?: Record<string, string | undefined> } }
+  return g.process?.env?.[name] ?? ''
+}
+
 function resolveBuildStamp(): string {
   const raw =
-    process.env.VITE_BUILD_ID ||
-    process.env.SOURCE_VERSION ||
-    process.env.RENDER_GIT_COMMIT ||
-    process.env.GITHUB_SHA ||
-    process.env.COMMIT_REF ||
+    env('VITE_BUILD_ID') ||
+    env('SOURCE_VERSION') ||
+    env('RENDER_GIT_COMMIT') ||
+    env('GITHUB_SHA') ||
+    env('COMMIT_REF') ||
     ''
   if (raw) return raw.slice(0, 12)
-  // local / unknown: date-time so each build is still recognizable
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   return `local-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`
