@@ -124,14 +124,17 @@ def build_look_result(items: list[Any], request: LookRequest) -> LookResult:
             "enabled": False,
             "runtime_mode": mode,
         }
-        return result
+        # Даже в legacy-режиме ссылки ведут только на Авито.
+        return fashion_engine_service.ensure_avito_links(result)
 
     try:
-        return fashion_engine_service.generate_look(items, request)
+        return fashion_engine_service.ensure_avito_links(
+            fashion_engine_service.generate_look(items, request)
+        )
     except LookGenerationError as exc:
         if mode == "engine" or not settings.fashion_engine_allow_fallback:
             raise
-        result = generate_look(items, request)
+        result = fashion_engine_service.ensure_avito_links(generate_look(items, request))
         result.diagnostics["engine"] = {
             "pipeline": "legacy-ranker",
             "enabled": True,
@@ -374,6 +377,12 @@ def swap_slot(session: Session, look: Look, slot: str, extra_exclusions: list[st
     target.brand = chosen.item.brand
     target.price_rub = chosen.item.price_rub
     target.url = chosen.item.url
+    # Замена тоже ведёт только на Авито: каталожная ссылка превращается в
+    # честный дип-линк на подборку Авито по этой вещи.
+    if settings.avito_enabled and not fashion_engine_service.is_avito_url(target.url):
+        target.url = fashion_engine_service.avito_provider().search_url_for(
+            f"{target.brand} {target.name}".strip() or "одежда"
+        )
     target.image_url = chosen.item.image_url
     target.colors = json.dumps(chosen.item.colors, ensure_ascii=False)
     target.color_hexes = json.dumps(chosen.item.color_hexes, ensure_ascii=False)

@@ -60,11 +60,11 @@
   --card-shadow: var(--glass-shadow);
   --raised-shadow: 0 26px 60px rgba(23, 68, 99, 0.18), 0 4px 10px rgba(23, 68, 99, 0.07);
 
-  /* --- Typography --- */
-  --font-display: 'Playfair Display', 'Bodoni MT', Georgia, serif;
-  --font-label: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* --- Typography: Manrope (текст) + Unbounded (логотип/заголовки) --- */
+  --font-display: 'Unbounded', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-label: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'DejaVu Sans Mono', 'SF Mono', Menlo, Consolas, monospace;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --action-bar-bg: rgba(243, 249, 252, 0.6);
 
@@ -316,19 +316,24 @@ h4 {
 }
 
 h1 {
-  font-size: 35px;
-  line-height: 1.12;
+  font-size: clamp(26px, 7.2vw, 34px);
+  line-height: 1.22;
   font-weight: 800;
+  letter-spacing: 0;
+  text-wrap: balance;
 }
 
 h2 {
-  font-size: 26px;
-  line-height: 1.2;
+  font-size: clamp(20px, 5.6vw, 25px);
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-wrap: balance;
 }
 
 h3 {
-  font-size: 19px;
+  font-size: clamp(16px, 4.6vw, 19px);
   line-height: 1.3;
+  letter-spacing: 0;
 }
 
 .condensed-title {
@@ -1732,6 +1737,415 @@ input[type='range']::-moz-range-thumb {
   outline: none;
   border-color: var(--accent-leopard);
   box-shadow: 0 0 0 4px var(--accent-leopard-soft);
+}
+
+/* ==========================================================================
+   ЛОГОТИП: крупный, кликабельный, ведёт на главную
+   ========================================================================== */
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 6px 10px 6px 6px;
+  margin: -6px 0 -6px -6px;
+  border-radius: 16px;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.22s var(--ease-spring), background-color 0.18s ease;
+}
+
+button.brand-logo {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.brand-logo:hover {
+  background: var(--surface-2);
+}
+
+.brand-logo:active {
+  transform: scale(0.96);
+}
+
+.brand-logo:focus-visible {
+  outline: 2.5px solid var(--accent-leopard);
+  outline-offset: 2px;
+}
+
+.brand-logo-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #ff5a68 0%, var(--accent-leopard) 55%, var(--accent-leopard-dark) 100%);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0;
+  box-shadow: 0 8px 20px rgba(238, 56, 80, 0.35), var(--glass-inner);
+}
+
+.brand-logo-word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.brand-logo-word em {
+  font-style: normal;
+  color: var(--accent-leopard);
+}
+
+/* Крупный логотип hero-экрана */
+.brand-logo-big {
+  gap: 14px;
+  padding: 8px 14px 8px 8px;
+  margin: -8px 0 -8px -8px;
+}
+
+.brand-logo-big .brand-logo-mark {
+  width: 54px;
+  height: 54px;
+  border-radius: 19px;
+  font-size: 26px;
+}
+
+.brand-logo-big .brand-logo-word {
+  font-size: clamp(29px, 8.6vw, 38px);
+}
+
+.brand-logo-tagline {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+
+/* Верхняя строка hero: логотип слева, контролы справа, перенос без налезания. */
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-top-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* Заголовок шапки: один класс вместо инлайн-стилей, не рвёт вёрстку */
+.app-header-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(20px, 5.6vw, 26px);
+}
+
+/* Шапка результата: кольцо + титул + печать — с переносом на узких экранах */
+.result-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.result-head-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Строки «метка — значение»: значения не выдавливают метки */
+.row-between > * {
+  min-width: 0;
+}
+
+/* Названия вещей: длинные слова переносятся, а не ломают карточку */
+.item-card strong,
+.engine-item strong,
+.engine-item div {
+  overflow-wrap: break-word;
+}
+
+/* ==========================================================================
+   МОБИЛЬНАЯ АДАПТАЦИЯ: телефоны в первую очередь
+   ========================================================================== */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+button,
+.chip,
+.style-pill-btn,
+.stamp-tile,
+.index-row {
+  touch-action: manipulation;
+}
+
+.style-pills-row {
+  scroll-snap-type: x proximity;
+}
+
+.style-pills-row > * {
+  scroll-snap-align: start;
+}
+
+/* Планшеты и крупные телефоны */
+@media (max-width: 560px) {
+  .app {
+    padding-left: 16px;
+    padding-right: 16px;
+    gap: 22px;
+  }
+
+  .app-header {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .card,
+  .stamp-card,
+  .style-showcase-container {
+    padding: 20px 18px;
+  }
+
+  .btn {
+    min-height: 52px;
+    padding: 14px 18px;
+    font-size: 14.5px;
+  }
+
+  .btn-xl {
+    min-height: 60px;
+    font-size: 16px;
+  }
+
+  .range-value {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+
+  .index-num {
+    font-size: 24px;
+  }
+
+  .item-photo-card {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* В шапке внутренних экранов на телефоне — только марка логотипа. */
+@media (max-width: 520px) {
+  .app-header .brand-logo-word,
+  .app-header .brand-logo-tagline {
+    display: none;
+  }
+
+  .app-header .brand-logo {
+    gap: 0;
+    padding: 4px;
+    margin: -4px 0 -4px -4px;
+  }
+}
+
+/* Компактные телефоны (360–400px): всё строго выровнено, ничего не слипается */
+@media (max-width: 420px) {
+  body {
+    font-size: 15.5px;
+  }
+
+  .app {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .app-header {
+    margin-left: -14px;
+    margin-right: -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .card,
+  .stamp-card {
+    padding: 18px 16px;
+    border-radius: 22px;
+  }
+
+  .style-showcase-container {
+    padding: 18px 16px;
+  }
+
+  .hero {
+    gap: 15px;
+    padding-top: 8px;
+  }
+
+  .hero-sub {
+    font-size: 15.5px;
+  }
+
+  /* Кнопки: тач-цели 48px+, текст не режется */
+  .btn {
+    min-height: 52px;
+    padding: 13px 14px;
+    font-size: 14px;
+    border-radius: 16px;
+  }
+
+  .btn-sm {
+    min-height: 46px;
+    padding: 10px 13px;
+    font-size: 13.5px;
+  }
+
+  .home-actions-grid {
+    gap: 10px;
+  }
+
+  /* Действия карточки: в столбик — никогда не наезжают друг на друга */
+  .item-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .item-actions-grid .btn {
+    min-height: 48px;
+  }
+
+  .item-card {
+    padding: 18px 16px;
+    gap: 14px;
+  }
+
+  .item-head {
+    gap: 14px;
+  }
+
+  .item-swatch {
+    width: 54px;
+    height: 68px;
+  }
+
+  /* Параметры вещи: один столбец */
+  .breakdown {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Выдача поиска: компактное фото слева, текст справа */
+  .engine-item {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .engine-item-photo {
+    width: 68px;
+    height: 84px;
+  }
+
+  /* Шапка результата: печать уходит на следующую строку */
+  .result-head {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  /* Нижняя панель мастера: кнопке «Назад» хватает места */
+  .action-bar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .action-bar-inner {
+    gap: 10px;
+  }
+
+  .action-bar-btn-back {
+    flex-basis: 96px;
+    min-width: 84px;
+  }
+
+  /* Поля ввода: 16px выключают авто-зум iOS */
+  .engine-query,
+  .token-input {
+    font-size: 16px;
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 9px 15px;
+    font-size: 13.5px;
+  }
+
+  .style-pill-btn {
+    min-height: 42px;
+    padding: 9px 15px;
+    font-size: 13.5px;
+  }
+
+  .stamp-tile {
+    padding: 15px;
+  }
+
+  .stamp-tile-title {
+    font-size: 16.5px;
+  }
+
+  .section-head h3 {
+    font-size: 17px;
+  }
+}
+
+/* Очень узкие экраны (≤340px): строгая одноколоночность */
+@media (max-width: 340px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .home-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-logo-word {
+    font-size: 20px;
+  }
+
+  .brand-logo-mark {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+}
+
+/* Широкие экраны: чуть больше воздуха, контент по центру */
+@media (min-width: 520px) {
+  .item-actions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ===================== Reduced motion (a11y) ===================== */

@@ -28,6 +28,10 @@ os.environ["STATIC_DIR"] = str(ROOT_DIR / "frontend" / "dist")
 os.environ["DATA_DIR"] = str(ROOT_DIR / "data")
 os.environ["AI_PROVIDER"] = "local"
 os.environ["VERIFICATION_NETWORK_ENABLED"] = "false"
+# Детерминированные тесты без сети: живой поиск Авито выключен, движок
+# работает по локальному каталогу. Живой провайдер покрыт отдельно
+# (test_avito_provider.py) через фикстуры HTML без единого HTTP-запроса.
+os.environ["AVITO_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -14,7 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.config import persist_env  # noqa: E402
+from app.api.telegram import WEBHOOK_PATH  # noqa: E402
+from app.config import persist_env, settings  # noqa: E402
 from app.telegram.botapi import BotApiError, configure_bot  # noqa: E402
 
 
@@ -27,7 +28,13 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        result = configure_bot(args.token, args.url)
+        base = args.url.rstrip("/")
+        result = configure_bot(
+            args.token,
+            base,
+            webhook_url=f"{base}{WEBHOOK_PATH}",
+            webhook_secret=settings.admin_token,
+        )
     except BotApiError as exc:
         print(f"✗ {exc}", file=sys.stderr)
         return 1

@@ -81,15 +81,53 @@ def set_my_commands(
     return bool(_call("setMyCommands", token, {"commands": commands or DEFAULT_COMMANDS}, transport=transport))
 
 
-def validate_web_app_url(url: str) -> str:
-    """Telegram only accepts absolute HTTPS URLs for a Mini App."""
+def set_webhook(
+    token: str,
+    url: str,
+    *,
+    secret_token: str | None = None,
+    transport: httpx.BaseTransport | None = None,
+) -> bool:
+    """Point the bot's updates at our ``POST /api/telegram/webhook`` endpoint."""
+    payload: dict[str, Any] = {"url": url, "allowed_updates": ["message"]}
+    if secret_token:
+        payload["secret_token"] = secret_token
+    return bool(_call("setWebhook", token, payload, transport=transport))
+
+
+def delete_webhook(token: str, *, transport: httpx.BaseTransport | None = None) -> bool:
+    return bool(_call("deleteWebhook", token, {"drop_pending_updates": True}, transport=transport))
+
+
+def send_message(
+    token: str,
+    chat_id: int,
+    text: str,
+    *,
+    reply_markup: dict[str, Any] | None = None,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, Any]:
+    """Send a plain-text reply. ``reply_markup`` carries the web_app button."""
+    payload: dict[str, Any] = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
+    return _call("sendMessage", token, payload, transport=transport)
+
+
+def validate_web_app_url(url: str, *, what: str = "Web App URL") -> str:
+    """Telegram only accepts absolute HTTPS URLs for a Mini App (and webhooks)."""
     from urllib.parse import urlparse
 
     parsed = urlparse(url or "")
     if parsed.scheme != "https":
-        raise BotApiError("Web App URL должен быть абсолютным и начинаться с https://")
+        raise BotApiError(f"{what} должен быть абсолютным и начинаться с https://")
     if not parsed.hostname:
-        raise BotApiError("В Web App URL нет хоста")
+        raise BotApiError(f"В {what} нет хоста")
     if parsed.hostname in ("localhost", "127.0.0.1", "0.0.0.0"):
         raise BotApiError("Telegram не откроет localhost — нужен публичный https-адрес")
     return url.rstrip("/")
@@ -99,9 +137,11 @@ def configure_bot(
     token: str,
     web_app_url: str,
     *,
+    webhook_url: str | None = None,
+    webhook_secret: str | None = None,
     transport: httpx.BaseTransport | None = None,
 ) -> dict[str, Any]:
-    """Validate the token, attach the Mini App and set the command menu."""
+    """Validate the token, attach the Mini App, set commands and (optionally) the webhook."""
     url = validate_web_app_url(web_app_url)
     bot = get_me(token, transport=transport)
     actions: list[str] = []
@@ -114,6 +154,14 @@ def configure_bot(
         actions.append("команды /start /looks /help")
     except BotApiError as exc:  # commands are a nice-to-have, the Mini App is not
         actions.append(f"команды не установлены ({exc})")
+
+    if webhook_url:
+        try:
+            hook = validate_web_app_url(webhook_url, what="Webhook URL")
+            set_webhook(token, hook, secret_token=webhook_secret, transport=transport)
+            actions.append(f"webhook → {hook}")
+        except BotApiError as exc:  # the Mini App works via the menu button even without it
+            actions.append(f"webhook не установлен ({exc})")
 
     return {
         "bot": {

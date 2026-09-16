@@ -3,15 +3,55 @@ import { formatRub } from '../lib/format'
 import { isSoundEnabled, playClick, playTick, toggleSound } from '../lib/sound'
 import { SoundIcon } from '../lib/graphics'
 
+/** Крупный логотип сервиса. Клик всегда ведёт на главную. */
+export function BrandLogo({
+  onHome,
+  big = false,
+  tagline = false,
+}: {
+  onHome: () => void
+  big?: boolean
+  tagline?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      className={big ? 'brand-logo brand-logo-big' : 'brand-logo'}
+      onClick={() => {
+        playClick()
+        onHome()
+      }}
+      aria-label="ASSTYLIST — на главную"
+      title="На главную"
+    >
+      <span className="brand-logo-mark" aria-hidden="true">
+        A
+      </span>
+      <span>
+        <span className="brand-logo-word" aria-hidden="true">
+          AS<em>STYLIST</em>
+        </span>
+        {tagline ? (
+          <span className="brand-logo-tagline" aria-hidden="true">
+            персональный стилист
+          </span>
+        ) : null}
+      </span>
+    </button>
+  )
+}
+
 export function Header({
   title,
   subtitle,
   onBack,
+  onHome,
   right,
 }: {
   title: string
   subtitle?: string
   onBack?: () => void
+  onHome?: () => void
   right?: ReactNode
 }) {
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
@@ -39,9 +79,13 @@ export function Header({
               ←
             </button>
           ) : null}
-          <div className="kicker" style={{ flexShrink: 0 }}>
-            ASSTYLIST
-          </div>
+          {onHome ? (
+            <BrandLogo onHome={onHome} />
+          ) : (
+            <div className="kicker" style={{ flexShrink: 0 }}>
+              ASSTYLIST
+            </div>
+          )}
         </div>
 
         <div className="row" style={{ gap: 10 }}>
@@ -60,7 +104,7 @@ export function Header({
       </div>
 
       <div style={{ paddingBottom: 2 }}>
-        <h2 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 28 }}>{title}</h2>
+        <h2 className="app-header-title">{title}</h2>
         {subtitle ? <div className="muted small" style={{ marginTop: 4 }}>{subtitle}</div> : null}
       </div>
       <hr className="rule" />
@@ -187,8 +231,19 @@ export function verificationLabel(status: string): string {
   if (status === 'verified') return 'проверено'
   if (status === 'warning') return 'внимание'
   if (status === 'failed') return 'не проверено'
-  if (status === 'external') return 'внешний источник'
+  if (status === 'external') return 'Авито'
   return status
+}
+
+/** True, если карточка вещи ведёт на Авито (живое объявление или подборка). */
+export function isAvitoUrl(url: string | undefined): boolean {
+  if (!url) return false
+  try {
+    const host = new URL(url, 'https://asstylist.local').hostname.toLowerCase()
+    return host === 'avito.ru' || host.endsWith('.avito.ru')
+  } catch {
+    return url.includes('avito.ru')
+  }
 }
 
 function scoreColor(score: number): string {

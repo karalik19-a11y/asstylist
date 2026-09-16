@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -19,6 +20,36 @@ from .config import settings
 from .db import SessionLocal, init_db
 from .engine.look_builder import LookGenerationError
 from .services.catalog_service import seed_catalog
+from .telegram.botapi import configure_bot
+
+
+def _autoconfigure_telegram() -> None:
+    """Attach the Mini App to the bot (menu button + commands + webhook).
+
+    Runs in a daemon thread on boot so a slow/unreachable Telegram API can
+    never delay or break startup. All failures are swallowed: the app must
+    always start, with or without Telegram.
+    """
+    try:
+        if not settings.telegram_autoconfigure or settings.app_env == "test":
+            return
+        token = settings.telegram_bot_token
+        # Render injects RENDER_EXTERNAL_URL (https://<service>.onrender.com),
+        # so an explicit TELEGRAM_WEB_APP_URL is optional there.
+        base = (settings.telegram_web_app_url or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
+        if not token or not base:
+            return
+        result = configure_bot(
+            token,
+            base,
+            webhook_url=f"{base}{telegram_api.WEBHOOK_PATH}",
+            webhook_secret=settings.admin_token,
+        )
+        if not settings.telegram_web_app_url:
+            settings.telegram_web_app_url = result["web_app_url"]
+        print(f"[telegram] bot autoconfigured: {'; '.join(result['actions'])}", flush=True)
+    except Exception as exc:  # noqa: BLE001 — boot must never fail because of Telegram
+        print(f"[telegram] autoconfigure skipped: {exc}", flush=True)
 
 
 @asynccontextmanager
@@ -31,6 +62,7 @@ async def lifespan(app: FastAPI):
         app.state.catalog_stats = stats
     finally:
         session.close()
+    threading.Thread(target=_autoconfigure_telegram, name="telegram-autoconfigure", daemon=True).start()
     yield
 
 

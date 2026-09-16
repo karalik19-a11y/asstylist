@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from .engine import ENGINE_VERSION, EngineOptions, FashionEngine, create_outfit
 from .search.provider import SearchContext, SearchProvider
+from .search.providers.avito_provider import AvitoSearchProvider, avito_search_url
 from .search.providers.catalog_provider import CatalogSearchProvider
 from .search.providers.mock_real_product_provider import MockRealProductProvider
 from .search.providers.web_search_provider import WebSearchProvider
@@ -46,6 +47,7 @@ from .types import (
 from .tool_schema import TOOL_SCHEMA
 
 __all__ = [
+    "AvitoSearchProvider",
     "CatalogSearchProvider",
     "DEFAULT_USER_PROFILE",
     "ENGINE_VERSION",
@@ -62,5 +64,6 @@ __all__ = [
     "TOOL_SCHEMA",
     "UserStyleProfile",
     "WebSearchProvider",
+    "avito_search_url",
     "create_outfit",
 ]

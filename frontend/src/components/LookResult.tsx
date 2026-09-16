@@ -60,10 +60,10 @@ export function LookResult({
           <div className="stamp-strip-num">№ {look.id ?? '01'}</div>
         </div>
 
-        <div className="row-between" style={{ alignItems: 'center', gap: 18 }}>
+        <div className="result-head">
           <ScoreRing score={look.score} />
 
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="result-head-main">
             <h2>{look.verdict.title || 'Персональный образ'}</h2>
             <div className="small muted" style={{ marginTop: 4 }}>
               {look.verdict.note}
@@ -91,6 +91,9 @@ export function LookResult({
           <Badge>
             {itemsWord(look.items.length)} · {formatRub(look.total_rub)}
           </Badge>
+          {look.items.length > 0 && look.items.every((entry) => entry.url.includes('avito.ru')) ? (
+            <Badge tone="ok">все вещи — с Авито</Badge>
+          ) : null}
           {look.is_favorite ? <Badge tone="ok">в избранном</Badge> : null}
           <span className="stamp-badge">Сертификат · {look.verdict.grade}</span>
         </div>

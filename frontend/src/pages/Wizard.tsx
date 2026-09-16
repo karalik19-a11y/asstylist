@@ -46,6 +46,7 @@ export function Wizard({
         title={STEP_TITLES[step]}
         subtitle={`Шаг ${STEP_ORDER.indexOf(step) + 1} из ${STEP_ORDER.length}`}
         onBack={isTelegram() ? undefined : step === 'photo' ? onExit : onBack}
+        onHome={onExit}
       />
       <ProgressBar value={(STEP_ORDER.indexOf(step) + 1) / STEP_ORDER.length} />
 
@@ -56,6 +57,9 @@ export function Wizard({
             крой под вас, а не «в среднем». Снимок анализируется при формировании образа и не сохраняется.
           </p>
           <PhotoUploader dataUrl={state.photoDataUrl} onSelect={onPhoto} onClear={onClearPhoto} />
+          <div className="muted small" style={{ textAlign: 'center' }}>
+            Вещи подберём только на Авито — с живыми фото, ценами и ссылками.
+          </div>
           {state.photoDataUrl ? (
             <div className="card small muted" style={{ borderLeft: '4px solid var(--accent-leopard)' }}>
               Снимок прикреплён — разбор внешности (цветотип, подтон, контраст) запустится при формировании гардероба.

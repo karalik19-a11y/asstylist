@@ -282,6 +282,7 @@ export default function App() {
         <Header
           title={SCREEN_TITLES[screen]}
           onBack={isTelegram() ? undefined : backAction}
+          onHome={goHome}
           right={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
         />
       ) : null}

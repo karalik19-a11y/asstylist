@@ -2,8 +2,9 @@
 
 Три вещи:
 
-* ``POST /api/engine/search`` — свободный текстовый поиск вещей по каталогу
-  приложения: движок расширяет запрос, ищет, оценивает вкус и собирает образ;
+* ``POST /api/engine/search`` — свободный текстовый поиск вещей только на
+  Авито: движок расширяет запрос, ищет живые объявления, оценивает вкус и
+  собирает образ;
 * ``POST /api/engine/outfit`` — контракт оригинального движка
   (``{aesthetic, stylingThesis, outfitScore, items[], stylingLogic, …}``),
   удобно для агентов и внешних интеграций;
@@ -95,6 +96,7 @@ def health(session: Session = Depends(get_session)) -> dict[str, Any]:
     from ..fashion_engine import ENGINE_VERSION
 
     items = catalog_service.eligible_items(session)
+    avito = fashion_engine_service.avito_provider()
     return {
         "status": "ok",
         "engine": "ASSTYLIST Fashion Discovery & Outfit Intelligence Engine",
@@ -109,6 +111,15 @@ def health(session: Session = Depends(get_session)) -> dict[str, Any]:
             "eligible_items": len(items),
             "currency": "RUB",
             "budget_max_rub": settings.budget_max_rub,
+        },
+        "avito": {
+            "enabled": settings.avito_enabled,
+            "city": settings.avito_city,
+            "max_queries": settings.avito_max_queries,
+            "max_results": settings.avito_max_results,
+            "cache_entries": avito.cache_size,
+            "last_live_ok": avito.last_live_ok,
+            "last_error": avito.last_error,
         },
         "source": "https://github.com/karalik19-a11y/- (каталог fashion-engine, MIT)",
     }
@@ -165,10 +176,18 @@ def outfit(body: EngineOutfitRequest, session: Session = Depends(get_session)) -
     result = engine.create_outfit(body.query.strip(), profile)
     payload = result.to_dict()
     payload.setdefault("meta", {})
-    payload["meta"]["catalog"] = {
-        "provider": "app-catalog",
-        "cards": len(cards),
-        "currency": "RUB",
-        "source": "verified asStylist catalog",
-    }
+    if settings.avito_enabled:
+        payload["meta"]["catalog"] = {
+            "provider": "avito",
+            "city": settings.avito_city,
+            "currency": "RUB",
+            "source": "live Avito listings",
+        }
+    else:
+        payload["meta"]["catalog"] = {
+            "provider": "app-catalog",
+            "cards": len(cards),
+            "currency": "RUB",
+            "source": "verified asStylist catalog",
+        }
     return payload

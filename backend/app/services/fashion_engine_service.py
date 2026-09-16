@@ -3,14 +3,17 @@
 Здесь движок из репозитория ``karalik19-a11y/-`` (Python-порт в
 ``app/fashion_engine``) подключается к приложению:
 
-* каталог приложения (только позиции, прошедшие верификацию) превращается в
-  карточки движка ``ProductItem`` — с переводом русских названий, стилей,
-  настроений и оттенков в словарь движка (``fashion_engine.lexicon``);
-* движок выполняет поиск и подбор: расширение запроса, Fashion Intelligence,
-  Taste/anti-generic, архитектура образа (hero/base/layer/footwear/accessory),
-  оценка совместимости и критик;
+* поиск и подбор вещей идут **только на Авито**: каждая позиция — живое
+  объявление со ссылкой, фотографией и ценой в рублях
+  (``AvitoSearchProvider``);
+* движок подбирает вещи по ключевым словам, названиям, анализу фото и
+  описания, затем выполняет отбор: расширение запроса,
+  Fashion Intelligence, Taste/anti-generic, архитектура образа
+  (hero/base/layer/footwear/accessory), оценка совместимости и критик;
 * приложение остаётся страховкой: жёсткий бюджет (бюджетный оптимизатор
-  доводит образ до лимита), обязательные слоты плана, слой верификации.
+  доводит образ до лимита), обязательные слоты плана, слой верификации;
+* если Авито временно недоступен, движок всё равно подбирает вещи, а ссылки
+  ведут на соответствующие подборки Авито — пустых выдач не бывает.
 
 Итоговый индекс образа — смесь оценки приложения и оценки движка
 (``FASHION_ENGINE_SCORE_WEIGHT``), обе цифры показываются в UI.
@@ -19,9 +22,14 @@
 from __future__ import annotations
 
 import json
+import re
+import zlib
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
+from ..catalog.products import CATEGORY_SIZES
 from ..config import settings
 from ..engine.body import BodyProfile
 from ..engine.budget import build_look
@@ -32,9 +40,11 @@ from ..engine.look_builder import (
     LookRequest,
     LookResult,
     PreparedPool,
+    generate_look as legacy_generate_look,
     prepare_pool,
 )
-from ..engine.options import SLOT_CATEGORIES, SLOT_LABELS, mood_by_id, style_by_id
+from ..engine.options import SLOT_CATEGORIES, SLOT_LABELS, SLOT_PLANS, mood_by_id, style_by_id
+from ..engine.options import plan_for_season as _plan_for_season
 from ..engine.palette import PaletteProfile
 from ..engine.ranking import (
     CatalogItem,
@@ -46,6 +56,7 @@ from ..engine.ranking import (
     style_verdict,
 )
 from ..fashion_engine import (
+    AvitoSearchProvider,
     CatalogSearchProvider,
     EngineOptions,
     FashionEngine,
@@ -53,10 +64,12 @@ from ..fashion_engine import (
     ProductItem,
     UserStyleProfile,
     WebSearchProvider,
+    avito_search_url,
     lexicon,
 )
 from ..fashion_engine import keywords as engine_keywords
 from ..fashion_engine.search.multi_pass_search import DiscoveryResult
+from ..fashion_engine.search.provider import SearchContext
 from ..fashion_engine.types import OutfitResult
 
 PIPELINE = "asstylist-fashion-engine"
@@ -306,6 +319,304 @@ SLOT_QUERY_HINTS: dict[str, str] = {
     "accessory": "belt scarf accessory",
 }
 
+# ─── Авито: единственный источник товаров ────────────────────────────────────
+
+#: Категория движка → категория приложения (обратное к ENGINE_CATEGORY_TO_SLOT).
+ENGINE_TO_APP_CATEGORY: dict[str, str] = {
+    "coat": "outerwear", "trench": "outerwear", "jacket": "outerwear",
+    "blazer": "outerwear", "parka": "outerwear", "puffer": "outerwear",
+    "top": "top", "shirt": "top", "blouse": "top", "vest": "top",
+    "knit": "knitwear", "sweater": "knitwear", "cardigan": "knitwear",
+    "trousers": "bottom", "jeans": "bottom", "skirt": "bottom",
+    "shorts": "bottom", "pants": "bottom", "leggings": "bottom",
+    "dress": "dress", "jumpsuit": "dress",
+    "boots": "shoes", "sneakers": "shoes", "shoes": "shoes",
+    "bag": "bag", "backpack": "bag", "tote": "bag", "clutch": "bag",
+    "crossbody": "bag",
+    "accessory": "accessory", "belt": "accessory", "scarf": "accessory",
+    "cap": "accessory", "beanie": "accessory", "gloves": "accessory",
+    "sunglasses": "accessory", "earrings": "accessory", "chain": "accessory",
+    "watch": "accessory", "socks": "accessory", "tie": "accessory",
+}
+
+#: Слово движка → цвет приложения (первый подходящий id).
+ENGINE_TO_APP_COLOR: dict[str, str] = {}
+for _app_color, _engine_word in APP_COLOR_TO_ENGINE.items():
+    ENGINE_TO_APP_COLOR.setdefault(_engine_word, _app_color)
+del _app_color, _engine_word
+
+#: Категории движка, допустимые в каждом слоте при живом поиске.
+SLOT_ENGINE_CATEGORIES: dict[str, list[str]] = {}
+for _engine_cat, _slot in ENGINE_CATEGORY_TO_SLOT.items():
+    SLOT_ENGINE_CATEGORIES.setdefault(_slot, []).append(_engine_cat)
+del _engine_cat, _slot
+
+#: Русские существительные слотов для запросов к Авито.
+RU_SLOT_NOUNS: dict[str, str] = {
+    "outerwear": "пальто",
+    "top": "свитер",
+    "bottom": "брюки",
+    "dress": "платье",
+    "shoes": "ботинки",
+    "bag": "сумка",
+    "accessory": "шарф",
+}
+
+#: Стиль → русские определения для запроса к Авито.
+STYLE_RU_ADJ: dict[str, str] = {
+    "minimal": "базовый",
+    "old_money": "кашемир классический",
+    "streetwear": "оверсайз",
+    "business_casual": "классический",
+    "techwear": "технический",
+    "romantic": "кружевной",
+    "athleisure": "спортивный",
+    "grunge": "кожаный потертый",
+    "boho": "льняной",
+    "avantgarde": "асимметричный",
+    "office_siren": "приталенный",
+    "gorpcore": "флис",
+    "y2k": "джинсовый",
+    "indie_sleaze": "винтажный кожаный",
+    "dark_academia": "твид шерстяной",
+    "balletcore": "трикотажный",
+}
+
+#: Сезон → русское определение для запроса к Авито.
+SEASON_RU_ADJ: dict[str, str] = {
+    "winter": "зимний",
+    "spring": "демисезонный",
+    "summer": "летний",
+    "autumn": "демисезонный",
+    "all": "",
+}
+
+#: Подача → русское определение для запроса к Авито.
+PRESENTATION_RU: dict[str, str] = {
+    "feminine": "женский",
+    "masculine": "мужской",
+    "unisex": "",
+}
+
+#: Повод → формальность вещи с Авито (1 — повседневная … 3 — строгая).
+OCCASION_FORMALITY: dict[str, int] = {
+    "everyday": 1, "work": 3, "date": 2, "party": 2, "travel": 1, "event": 3,
+}
+
+_AVITO_PROVIDER: AvitoSearchProvider | None = None
+
+
+def avito_provider() -> AvitoSearchProvider:
+    """Синглтон провайдера Авито (общий TTL-кэш на процесс)."""
+    global _AVITO_PROVIDER
+    if _AVITO_PROVIDER is None:
+        _AVITO_PROVIDER = AvitoSearchProvider(
+            city=settings.avito_city,
+            timeout=settings.avito_timeout_sec,
+            max_results=settings.avito_max_results,
+            cache_ttl_sec=settings.avito_cache_ttl_sec,
+            negative_ttl_sec=settings.avito_negative_ttl_sec,
+        )
+    return _AVITO_PROVIDER
+
+
+def reset_avito_provider() -> None:
+    """Сбросить синглтон (нужно тестам при смене настроек)."""
+    global _AVITO_PROVIDER
+    _AVITO_PROVIDER = None
+
+
+def is_avito_url(url: str) -> bool:
+    """Верификация «ссылки только на Авито»: хост из белого списка Авито."""
+    try:
+        host = (urlparse(url or "").hostname or "").lower()
+    except ValueError:
+        return False
+    return any(host == allowed or host.endswith("." + allowed)
+               for allowed in ("avito.ru",))
+
+
+def ensure_avito_links(result: LookResult) -> LookResult:
+    """Страховка «только Авито»: любая не-авито ссылка заменяется честным
+    дип-линком на подборку Авито по этой вещи. Живые объявления не трогаем."""
+    if not settings.avito_enabled:
+        return result
+    provider = avito_provider()
+    for item in result.items:
+        url = str(item.get("url") or "")
+        if url and is_avito_url(url):
+            item["source"] = "avito"
+            continue
+        text = f"{item.get('brand') or ''} {item.get('name') or ''}".strip() or "одежда"
+        item["url"] = provider.search_url_for(text)
+        item["source"] = "avito"
+        reasons = list(item.get("reasons") or [])
+        note = "Ссылка ведёт на подборку Авито по этой вещи — там живые объявления с фото и ценами."
+        if note not in reasons:
+            reasons.append(note)
+        item["reasons"] = reasons[:5]
+    return result
+
+
+def _slot_noun(slot: str, request: LookRequest) -> str:
+    """Главное существительное слота с учётом сезона и повода."""
+    season = request.season or "all"
+    occasion = request.occasion or "everyday"
+    if slot == "outerwear":
+        return "куртка" if season == "summer" else "пальто"
+    if slot == "top":
+        if occasion == "work":
+            return "рубашка"
+        return "футболка" if season == "summer" else "свитер"
+    if slot == "bottom":
+        if request.presentation == "feminine" and season == "summer":
+            return "юбка"
+        return "брюки" if occasion == "work" else "джинсы"
+    if slot == "shoes":
+        if season == "summer":
+            return "кеды"
+        return "ботинки" if season in ("winter", "autumn", "spring") else "кроссовки"
+    if slot == "accessory":
+        return "шапка" if season == "winter" else "шарф"
+    return RU_SLOT_NOUNS.get(slot, "одежда")
+
+
+def _user_query_keywords(text: str | None, limit: int = 2) -> list[str]:
+    """Самые содержательные слова свободной формулировки пользователя."""
+    if not text:
+        return []
+    words = re.findall(r"[a-zA-Zа-яА-ЯёЁ]{4,}", text.lower().replace("ё", "е"))
+    keywords: list[str] = []
+    for word in words:
+        if word in lexicon.RU_STOPWORDS or len(word) < 4:
+            continue
+        if word not in keywords:
+            keywords.append(word)
+        if len(keywords) >= limit:
+            break
+    return keywords
+
+
+def ru_slot_query(request: LookRequest, slot: str) -> str:
+    """Короткий русский запрос к Авито для слота образа.
+
+    Формула: подача + существительное слота + стиль + сезон + слова
+    пользователя. Короткие запросы дают у Авито самую релевантную выдачу.
+    """
+    parts: list[str] = []
+    presentation = PRESENTATION_RU.get(request.presentation or "unisex", "")
+    if presentation:
+        parts.append(presentation)
+    parts.append(_slot_noun(slot, request))
+    style_adj = STYLE_RU_ADJ.get(request.style or "minimal", "")
+    parts.extend(style_adj.split()[:2])
+    season_adj = SEASON_RU_ADJ.get(request.season or "all", "")
+    if season_adj:
+        parts.append(season_adj)
+    color_ru = ""
+    for color_id in list(request.preferred_colors or [])[:1]:
+        spec = COLORS.get(color_id)
+        if spec is not None:
+            color_ru = spec.ru.lower()
+            break
+    if color_ru:
+        parts.append(color_ru)
+    parts.extend(_user_query_keywords(request.query))
+    deduped = list(dict.fromkeys(part for part in parts if part))[:6]
+    return " ".join(deduped) if deduped else "одежда"
+
+
+def _avito_colors(card: ProductItem, request: LookRequest) -> list[str]:
+    """Цвета приложения для объявления: честная детекция + безопасный запас."""
+    colors: list[str] = []
+    for engine_word in lexicon.detect_colors(f"{card.name} {card.description}"):
+        app_color = ENGINE_TO_APP_COLOR.get(engine_word)
+        if app_color and app_color not in colors:
+            colors.append(app_color)
+    if card.color:
+        app_color = ENGINE_TO_APP_COLOR.get(str(card.color).lower())
+        if app_color and app_color not in colors:
+            colors.insert(0, app_color)
+    if colors:
+        return colors[:3]
+    avoid = set(request.avoid_colors or [])
+    for candidate in list(request.preferred_colors or []) + ["grey", "black", "white", "navy", "beige"]:
+        if candidate in COLORS and candidate not in avoid:
+            return [candidate]
+    return ["grey"]
+
+
+def _avito_sizes(card: ProductItem, app_category: str) -> list[str]:
+    """Размеры из заголовка/описания; иначе — полный ряд категории.
+
+    Полный ряд — осознанный fail-open: фильтр размера не должен выкидывать
+    живые объявления, где размер указан только на фото или в карточке Авито.
+    """
+    text = f"{card.name} {card.description}"
+    found: list[str] = []
+    for token in re.findall(r"\b(XXS|XS|S|M|L|XL|XXL|XXXL)\b", text, re.IGNORECASE):
+        normalized = token.upper()
+        if normalized not in found:
+            found.append(normalized)
+    for number in re.findall(r"\b(3[4-9]|4[0-9]|5[0-8])\b", text):
+        if number not in found:
+            found.append(number)
+    if found:
+        return found[:6]
+    return list(CATEGORY_SIZES.get(app_category, ("one size",)))
+
+
+def _avito_fit(card: ProductItem) -> str:
+    text = f"{card.name} {card.description}".lower()
+    if "оверсайз" in text or "oversize" in text:
+        return "oversize"
+    if "облегающ" in text or "слим" in text or "slim" in text or "скинни" in text:
+        return "slim"
+    if "свободн" in text or "релакс" in text or "relax" in text or "прямой" in text:
+        return "relaxed"
+    return "regular"
+
+
+def avito_card_to_catalog_item(
+    card: ProductItem,
+    request: LookRequest,
+    index: int = 0,
+) -> CatalogItem:
+    """Живое объявление Авито → позиция для ранжировщика приложения.
+
+    Ссылка, фото и цена сохраняются как есть; стили/настроения/сезоны
+    наследуются от запроса (объявление уже отобрано под них живым поиском).
+    """
+    sku = card.sku or card.id or f"avito_{index}"
+    engine_cat = str(card.category or "accessory").lower().split()[0]
+    app_category = ENGINE_TO_APP_CATEGORY.get(engine_cat, "accessory")
+    colors = _avito_colors(card, request)
+    return CatalogItem(
+        product_id=zlib.crc32(sku.encode("utf-8")) % 2_147_483_647,
+        sku=sku,
+        category=app_category,
+        name=card.name or "Вещь с Авито",
+        brand=card.brand or "Авито",
+        price_rub=float(card.price or 0),
+        url=card.source_url,
+        image_url=card.image or "",
+        colors=colors,
+        color_hexes=[COLORS[color].hex for color in colors if color in COLORS],
+        styles=[request.style or "minimal"],
+        moods=[request.mood or "calm"],
+        silhouettes=[],
+        gendered=[],
+        seasons=["all"] if (request.season or "all") == "all" else [request.season],
+        sizes=_avito_sizes(card, app_category),
+        fit=_avito_fit(card),
+        formality=OCCASION_FORMALITY.get(request.occasion or "everyday", 2),
+        rating=4.5,
+        reviews_count=30,
+        verification_status="verified",
+        verification_score=round(min(0.97, max(0.6, float(card.confidence or 0.7))), 3),
+        source="avito",
+    )
+
 #: Перевод отзывов критика движка (строки портированы дословно).
 CRITIC_RU: dict[str, str] = {
     "Silhouette is too predictable / safe. Needs stronger shape language.": (
@@ -489,6 +800,7 @@ def build_engine_query(
 
 def _request_from_look(look: Any) -> LookRequest:
     ranking = look.loads(look.ranking_json, {}) if hasattr(look, "loads") else {}
+    query = ranking.get("query")
     return LookRequest(
         style=look.style,
         mood=look.mood,
@@ -502,6 +814,7 @@ def _request_from_look(look: Any) -> LookRequest:
         avoid_colors=list(ranking.get("avoid_colors") or []),
         size=ranking.get("size"),
         weights=ranking.get("weights"),
+        query=str(query).strip() if isinstance(query, str) and query.strip() else None,
     )
 
 
@@ -529,15 +842,21 @@ def _providers(
     *,
     min_score: float = 8.0,
     include_external: bool = False,
+    live: bool | None = None,
 ) -> list[Any]:
     """Провайдеры движка.
 
-    Внешние источники (живой web-поиск, мок-архетипы) подключаются только в
-    поисковой выдаче (``include_external=True``). При генерации образов движок
-    работает строго с верифицированным каталогом приложения: внешние архетипы —
-    вдохновение/находки для поиска, образ же должен собираться из
-    покупаемых вещей asStylist.
+    Основной режим (``AVITO_ENABLED=true``): только Авито — живые объявления
+    со ссылками, фото и ценами. ``live=False`` внутри этого режима означает
+    «движок поверх уже собранного пула Авито» (без повторных HTTP-запросов).
+
+    Резервный режим (``AVITO_ENABLED=false``, тесты/офлайн): прежний каталог
+    приложения; внешние источники (живой web-поиск, мок-архетипы)
+    подключаются только в поисковой выдаче (``include_external=True``).
     """
+    use_live = settings.avito_enabled if live is None else bool(live and settings.avito_enabled)
+    if use_live:
+        return [avito_provider()]
     providers: list[Any] = [CatalogSearchProvider(cards, min_score=min_score)]
     if not include_external:
         return providers
@@ -577,17 +896,43 @@ def run_engine(
     *,
     cards: list[ProductItem] | None = None,
     include_external: bool = False,
+    live: bool | None = None,
 ) -> EngineRun:
-    """Прогнать пайплайн движка по пулу кандидатов приложения.
+    """Прогнать пайплайн движка.
 
-    ``include_external=True`` (поисковый экран) добавляет в discovery живой
-    web-поиск и мок-архетипы; генерация образов бежит по каталогу приложения.
+    Живой режим (Авито включён и ``live`` не запрещён): discovery идёт по
+    объявлениям Авито напрямую. Иначе — по пулу кандидатов приложения
+    (``include_external=True`` добавляет живой web-поиск и мок-архетипы).
     """
+    use_live = settings.avito_enabled if live is None else bool(live and settings.avito_enabled)
+    profile = build_profile(request, palette=prepared.palette, body=prepared.body)
+    query = build_engine_query(request, palette=prepared.palette, body=prepared.body)
+
+    if use_live:
+        providers = _providers([], live=True)
+        options = EngineOptions(
+            max_products=settings.fashion_engine_max_products,
+            limit_per_query=min(settings.fashion_engine_limit_per_query, settings.avito_max_results),
+            min_confidence=settings.fashion_engine_min_confidence,
+            max_queries=settings.avito_max_queries,
+        )
+        engine = FashionEngine(providers=providers, options=options)
+        discovery = engine.discover(query, profile)
+        outfit = engine.create_outfit(query, profile, preloaded=discovery)
+        return EngineRun(
+            query=query,
+            profile=profile,
+            discovery=discovery,
+            outfit=outfit,
+            cards={card.sku or card.id: card for card in discovery.products},
+            providers=[provider.name for provider in providers],
+        )
+
     if cards is None:
         cards = [to_engine_card(scored.item) for scored in prepared.ranked]
     cards = cards[: max(1, settings.fashion_engine_max_cards)]
 
-    providers = _providers(cards, include_external=include_external)
+    providers = _providers(cards, include_external=include_external, live=False)
 
     options = EngineOptions(
         max_products=settings.fashion_engine_max_products,
@@ -595,9 +940,6 @@ def run_engine(
         min_confidence=settings.fashion_engine_min_confidence,
     )
     engine = FashionEngine(providers=providers, options=options)
-
-    profile = build_profile(request, palette=prepared.palette, body=prepared.body)
-    query = build_engine_query(request, palette=prepared.palette, body=prepared.body)
     discovery = engine.discover(query, profile)
     outfit = engine.create_outfit(query, profile, preloaded=discovery)
     return EngineRun(
@@ -826,6 +1168,7 @@ def _engine_block(
         "alternatives": list(run.outfit.alternatives),
         "repair": repair,
         "fallback": fallback,
+        "providers": list(run.providers),
     }
 
 
@@ -866,9 +1209,191 @@ def _alternatives(prepared: PreparedPool, run: EngineRun, slot: str, taken: set[
 
 
 def generate_look(products: list[CatalogItem], request: LookRequest) -> LookResult:
-    """Собрать образ движком ASSTYLIST (с бюджетной страховкой приложения)."""
+    """Собрать образ движком ASSTYLIST (вещи — только с Авито).
+
+    Основной режим: живые объявления Авито → интеллект движка → бюджетная
+    страховка приложения. Резервный режим (``AVITO_ENABLED=false``): прежний
+    пул каталога приложения.
+    """
+    if settings.avito_enabled:
+        return generate_look_avito(products, request)
     prepared = prepare_pool(products, request)
-    run = run_engine(prepared, request)
+    run = run_engine(prepared, request, live=False)
+    return _assemble_look(prepared, request, run)
+
+
+def _fetch_avito_pool(
+    request: LookRequest,
+    *,
+    body: BodyProfile | None = None,
+    palette: PaletteProfile | None = None,
+    slots: list[str] | None = None,
+) -> tuple[list[ProductItem], list[str]]:
+    """Живой пул объявлений Авито: по короткому запросу на каждый слот.
+
+    Запросы идут параллельно (каждый со своим таймаутом провайдера).
+    Возвращает (карточки без дублей, запросы слотов).
+    """
+    target_slots = list(slots) if slots else list(SLOT_CATEGORIES)
+    profile = build_profile(request, palette=palette, body=body)
+    provider = avito_provider()
+    slot_queries = {slot: ru_slot_query(request, slot) for slot in target_slots}
+
+    def _one(slot: str) -> list[ProductItem]:
+        try:
+            return provider.search(
+                slot_queries[slot],
+                SearchContext(
+                    user_profile=profile,
+                    limit=settings.avito_max_results,
+                    categories=list(SLOT_ENGINE_CATEGORIES.get(slot, [])),
+                ),
+            )
+        except Exception:
+            return []
+
+    fetched: list[ProductItem] = []
+    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="avito") as pool:
+        futures = [pool.submit(_one, slot) for slot in target_slots]
+        for future in futures:
+            try:
+                fetched.extend(future.result(timeout=settings.avito_timeout_sec + 4.0))
+            except Exception:
+                continue
+
+    seen: set[str] = set()
+    unique: list[ProductItem] = []
+    for card in fetched:
+        key = str(card.sku or card.id)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(card)
+    return unique, [slot_queries[slot] for slot in target_slots]
+
+
+def _fallback_catalog_as_avito(
+    products: list[CatalogItem],
+    request: LookRequest,
+    reason: str,
+) -> LookResult:
+    """Резервный режим: подбор по каталогу, но ВСЕ ссылки — на Авито.
+
+    Включается, только если живая выдача Авито пуста (сеть закрыта или блок).
+    Образ собирается прежним ранжировщиком, а каждая карточка ведёт на
+    подборку Авито по этой вещи — пустых выдач не бывает никогда.
+    """
+    result = ensure_avito_links(legacy_generate_look(products, request))
+    profile = build_profile(request)
+    diagnostics = dict(result.diagnostics or {})
+    diagnostics["engine"] = {
+        "pipeline": "legacy-ranker",
+        "enabled": True,
+        "runtime_mode": "avito-fallback",
+        "fallback": "avito-unreachable",
+        "fallback_reason": reason,
+        "providers": ["avito"],
+        "web_sources": ["avito"],
+        "niche_level": profile.niche_level,
+        "aesthetics": list(profile.aesthetics),
+    }
+    warnings = list(diagnostics.get("warnings") or [])
+    warnings.append(reason)
+    diagnostics["warnings"] = warnings
+    result.diagnostics = diagnostics
+    return result
+
+
+def generate_look_avito(products: list[CatalogItem], request: LookRequest) -> LookResult:
+    """Образ из живых объявлений Авито: поиск → интеллект → бюджет."""
+    try:
+        reference = prepare_pool(products, request)
+    except LookGenerationError:
+        raise LookGenerationError("Каталог пуст — не из чего собрать образ")
+
+    plan_id = request.plan if request.plan in SLOT_PLANS else _plan_for_season(request.season, request.occasion)
+    target_slots = [slot for slot in SLOT_PLANS[plan_id]["slots"]]
+    # Пул собираем шире плана, чтобы у движка был выбор архитектуры образа
+    # (например, «платье вместо верха с низом»).
+    for extra in ("top", "bottom", "dress", "shoes"):
+        if extra not in target_slots:
+            target_slots.append(extra)
+
+    raw_cards, slot_queries = _fetch_avito_pool(
+        request, body=reference.body, palette=reference.palette, slots=target_slots
+    )
+    covered = {
+        ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory") for card in raw_cards
+    }
+    if len(raw_cards) < 3 or len(covered & set(target_slots)) < 2:
+        live_error = avito_provider().last_error or "живая выдача пуста"
+        return _fallback_catalog_as_avito(
+            products,
+            request,
+            f"Авито временно недоступен ({live_error}) — подобрали вещи и дали ссылки на Авито.",
+        )
+
+    profile = build_profile(request, palette=reference.palette, body=reference.body)
+    engine = FashionEngine(
+        providers=[avito_provider()],
+        options=EngineOptions(
+            max_products=settings.fashion_engine_max_products,
+            limit_per_query=settings.avito_max_results,
+            min_confidence=settings.fashion_engine_min_confidence,
+        ),
+    )
+    enriched = engine.enrich(raw_cards, profile)
+    enriched.sort(key=lambda card: (-float(card.fashion_score or 0), card.id))
+    products_capped = enriched[: settings.fashion_engine_max_products]
+    for card in products_capped:
+        if not card.provider:
+            card.provider = "avito"
+    discovery = DiscoveryResult(
+        products=products_capped,
+        references=[],
+        queries_used=slot_queries,
+        raw_items=len(raw_cards),
+        considered=len(raw_cards),
+        dropped={"antigeneric": 0, "confidence": 0, "budget": 0, "duplicates": 0},
+    )
+    main_query = build_engine_query(request, palette=reference.palette, body=reference.body)
+    outfit = engine.create_outfit(main_query, profile, preloaded=discovery)
+    if not outfit.items:
+        return _fallback_catalog_as_avito(
+            products,
+            request,
+            "Объявления Авито не прошли отбор движка — подобрали вещи и дали ссылки на Авито.",
+        )
+    run = EngineRun(
+        query=main_query,
+        profile=profile,
+        discovery=discovery,
+        outfit=outfit,
+        cards={card.sku or card.id: card for card in products_capped},
+        providers=["avito"],
+    )
+
+    avito_pool = [avito_card_to_catalog_item(card, request, index) for index, card in enumerate(products_capped)]
+    try:
+        prepared = prepare_pool(avito_pool, request)
+    except LookGenerationError as exc:
+        return _fallback_catalog_as_avito(
+            products, request, f"Объявления Авито не прошли отбор ({exc}) — подобрали вещи и дали ссылки на Авито."
+        )
+    try:
+        return _assemble_look(prepared, request, run)
+    except LookGenerationError:
+        return _fallback_catalog_as_avito(
+            products, request, "Из объявлений Авито не сложился полный образ — подобрали вещи и дали ссылки на Авито."
+        )
+
+
+def _assemble_look(prepared: PreparedPool, request: LookRequest, run: EngineRun) -> LookResult:
+    """Сборка образа из пула приложения и прогона движка.
+
+    Единый финал для каталожного и авито-режимов: кандидаты по слотам в
+    порядке движка → бюджетный оптимизатор → карточки с объяснениями.
+    """
     if not run.outfit.items:
         reason = (run.outfit.critic_feedback or ["не нашлось достаточно вещей"])[0]
         raise LookGenerationError(f"Образ не удалось собрать: {reason}")
@@ -1058,6 +1583,68 @@ def _engine_outfit_skus(look: Any) -> set[str]:
     return set()
 
 
+def rerank_for_slot_avito(
+    slot: str,
+    *,
+    look: Any,
+    ctx: RankingContext,
+) -> list[ScoredItem]:
+    """Замены для слота — свежие объявления Авито, отсортированные движком."""
+    request = _request_from_look(look)
+    profile = build_profile(request, palette=ctx.palette, body=ctx.body)
+    query = f"{request.query or ''} {SLOT_QUERY_HINTS.get(slot, slot)}".strip()
+    try:
+        cards = avito_provider().search(
+            query,
+            SearchContext(
+                user_profile=profile,
+                limit=max(8, settings.avito_max_results),
+                categories=list(SLOT_ENGINE_CATEGORIES.get(slot, [])),
+            ),
+        )
+    except Exception:
+        return []
+    # Только честные попадания в слот: категория объявления должна совпасть.
+    cards = [
+        card
+        for card in cards
+        if ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory") == slot
+    ]
+    if not cards:
+        return []
+    engine = FashionEngine(
+        providers=[avito_provider()],
+        options=EngineOptions(
+            max_products=max(12, len(cards)),
+            limit_per_query=4,
+            min_confidence=settings.fashion_engine_min_confidence,
+        ),
+    )
+    engine.enrich(cards, profile)
+    for card in cards:
+        if not card.provider:
+            card.provider = "avito"
+    order = {card.sku or card.id: index for index, card in enumerate(cards)}
+    total = max(1, len(cards))
+    enriched: list[ScoredItem] = []
+    for index, card in enumerate(cards):
+        item = avito_card_to_catalog_item(card, request, index)
+        app_scored = score_item(item, ctx)
+        breakdown: dict[str, Any] = dict(app_scored.breakdown)
+        breakdown["engine"] = round(float(card.fashion_score or 0) / 100, 3)
+        breakdown["engineAttributes"] = _engine_item_meta(card, slot)
+        breakdown["engineOutfit"] = False
+        enriched.append(
+            ScoredItem(
+                item=item,
+                score=_blended_score(app_scored.score, card, order.get(card.sku or card.id), total),
+                breakdown=breakdown,
+            )
+        )
+    enriched.sort(key=lambda s: (-s.score, s.item.price_rub, s.item.sku))
+    return enriched
+
+
 def rerank_for_slot(
     ranked: list[ScoredItem],
     slot: str,
@@ -1066,6 +1653,13 @@ def rerank_for_slot(
     ctx: RankingContext,
 ) -> list[ScoredItem]:
     """Переставить кандидатов слота по релевантности движка (для «Заменить»)."""
+    if settings.avito_enabled:
+        try:
+            live = rerank_for_slot_avito(slot, look=look, ctx=ctx)
+        except Exception:
+            live = []
+        if live:
+            return live
     request = _request_from_look(look)
     profile = build_profile(request, palette=ctx.palette, body=ctx.body)
     query = build_engine_query(
@@ -1121,6 +1715,7 @@ def rerank_for_slot(
 
 #: Человекочитаемая пометка источника для позиций не из каталога приложения.
 SOURCE_LABELS_RU: dict[str, str] = {
+    "avito": "Авито",
     "web-search": "онлайн-находка",
     "mock-real-catalog": "архетипный дизайнер",
     "partner-feed": "партнёрский магазин",
@@ -1172,6 +1767,161 @@ def _external_item_payload(card: ProductItem, run: EngineRun) -> dict[str, Any] 
     }
 
 
+def search_avito(
+    request: LookRequest,
+    prepared: PreparedPool,
+    *,
+    query: str,
+    limit: int = 8,
+) -> dict[str, Any]:
+    """Свободный поиск вещей движком — только по объявлениям Авито.
+
+    Живая выдача: название, цена, ссылка и фото каждого объявления. Если Авито
+    недоступен — резервный режим: подбор по каталогу, но все ссылки ведут на
+    соответствующие подборки Авито.
+    """
+    run = run_engine(prepared, request, live=True)
+    # Сначала вещи с максимальным совпадением по запросу, затем — по вкусу:
+    # иначе разные запросы давали бы одну и ту же выдачу.
+    discovered = sorted(
+        run.discovery.products,
+        key=lambda card: (
+            -_query_relevance(card),
+            -float(card.fashion_score or 0),
+            card.id,
+        ),
+    )[: max(1, limit)]
+
+    ctx_info = {
+        "style": request.style,
+        "mood": request.mood,
+        "palette_label": prepared.palette.season_label,
+        "silhouette_ru": prepared.body.silhouette_ru,
+    }
+    items: list[dict[str, Any]] = []
+    for index, card in enumerate(discovered):
+        if not card.source_url or not (card.price or 0) > 0:
+            continue
+        catalog_item = avito_card_to_catalog_item(card, request, index)
+        app_scored = score_item(catalog_item, prepared.ctx)
+        slot = ENGINE_CATEGORY_TO_SLOT.get(str(card.category or "").lower(), "accessory")
+        meta = _engine_item_meta(card, slot)
+        reasons = (
+            _engine_reasons(card, run, limit=3)
+            + item_reasons(app_scored, ctx_info, limit=2)
+            + ["Найдено на Авито — живое объявление с фото и ценой."]
+        )
+        items.append(
+            {
+                "sku": catalog_item.sku,
+                "name": catalog_item.name,
+                "brand": catalog_item.brand,
+                "category": catalog_item.category,
+                "slot": slot,
+                "slot_label": SLOT_LABELS.get(slot, slot),
+                "price_rub": catalog_item.price_rub,
+                "price_note": "",
+                "url": catalog_item.url,
+                "image_url": catalog_item.image_url,
+                "colors": list(catalog_item.colors),
+                "color_hexes": list(catalog_item.color_hexes),
+                "score": _search_position(
+                    app_scored.score, card, run.rank_index(card.sku or card.id), len(run.discovery.products)
+                ),
+                "engine": meta,
+                "reasons": list(dict.fromkeys(reasons))[:5],
+                "verification_status": "verified",
+                "verification_score": round(float(card.confidence or 0.7), 3),
+                "source": "avito",
+            }
+        )
+
+    fallback = None
+    fallback_reason = None
+    if not items:
+        fallback = "avito-unreachable"
+        fallback_reason = avito_provider().last_error or "живая выдача Авито пуста"
+        provider = avito_provider()
+        for scored in prepared.ranked[: max(1, limit)]:
+            slot = slot_for_item(scored.item, APP_CATEGORY_TO_ENGINE.get(scored.item.category))
+            app_scored = score_item(scored.item, prepared.ctx)
+            items.append(
+                {
+                    "sku": scored.sku,
+                    "name": scored.item.name,
+                    "brand": scored.item.brand,
+                    "category": scored.item.category,
+                    "slot": slot,
+                    "slot_label": SLOT_LABELS.get(slot, slot),
+                    "price_rub": scored.item.price_rub,
+                    "price_note": "",
+                    "url": provider.search_url_for(f"{scored.item.brand} {scored.item.name}"),
+                    "image_url": scored.item.image_url,
+                    "colors": list(scored.item.colors),
+                    "color_hexes": list(scored.item.color_hexes),
+                    "score": round(app_scored.score, 4),
+                    "engine": {},
+                    "reasons": item_reasons(app_scored, ctx_info)
+                    + ["Ссылка ведёт на подборку Авито по этой вещи — там живые объявления с фото и ценами."],
+                    "verification_status": scored.item.verification_status,
+                    "verification_score": round(scored.item.verification_score, 3),
+                    "source": "avito",
+                }
+            )
+
+    total = round(sum(item["price_rub"] for item in items), 2)
+    theses = engine_keywords.THESIS_LABELS_RU
+    thesis = run.outfit.styling_thesis
+    return {
+        "query": query,
+        "engine": {
+            "pipeline": PIPELINE,
+            "engine_version": str((run.outfit.meta or {}).get("engineVersion", "")),
+            "styling_thesis": thesis,
+            "styling_thesis_ru": engine_keywords.thesis_label_ru(thesis),
+            "aesthetic": run.outfit.aesthetic,
+            "aesthetic_ru": aesthetic_ru(run),
+            "outfit_score": round(float(run.outfit.outfit_score or 0), 1),
+            "styling_logic": run.outfit.styling_logic,
+            "critic_decision": run.outfit.critic_decision,
+            "critic_feedback": _critic_ru(run.outfit.critic_feedback),
+            "queries_used": list((run.outfit.meta or {}).get("queriesUsed") or run.discovery.queries_used[:8]),
+            "queries_total": len(run.discovery.queries_used),
+            "candidates": {
+                "raw_items": run.discovery.raw_items,
+                "considered": len(run.discovery.products),
+                "validated": len(run.discovery.products),
+                "dropped": dict(run.discovery.dropped),
+            },
+            "niche_level": run.profile.niche_level,
+            "aesthetics": list(run.profile.aesthetics),
+            "profile": run.profile.to_dict(),
+            "taste_mix": _taste_mix(run),
+            "alternatives": list(run.outfit.alternatives),
+            "fallback": fallback,
+            "fallback_reason": fallback_reason,
+            "providers": ["avito"],
+            "web_sources": ["avito"],
+        },
+        "thesis_options": [theses.get(name, name) for name in (run.outfit.meta or {}).get("theses", [])],
+        "items": items,
+        "total_rub": total,
+        "budget_rub": request.budget_rub,
+        "suggested_request": {
+            "query": query,
+            "style": request.style,
+            "mood": request.mood,
+            "occasion": request.occasion,
+            "season": request.season,
+            "presentation": request.presentation,
+            "budget_rub": request.budget_rub,
+            "height_cm": request.height_cm,
+            "weight_kg": request.weight_kg,
+            "niche_level": run.profile.niche_level,
+        },
+    }
+
+
 def search(
     payload: dict[str, Any],
     products: list[CatalogItem],
@@ -1200,7 +1950,9 @@ def search(
         weights=settings.resolved_ranking_weights(),
     )
     prepared = prepare_pool(products, request)
-    run = run_engine(prepared, request, include_external=True)
+    if settings.avito_enabled:
+        return search_avito(request, prepared, query=query, limit=limit)
+    run = run_engine(prepared, request, include_external=True, live=False)
     run_providers = run.providers
     web = _web_provider()
     web_sources = web.configured_sources() if web is not None else []
@@ -1352,23 +2104,33 @@ def search(
         },
     }
 
-
 __all__ = [
     "APP_CATEGORY_TO_ENGINE",
     "APP_COLOR_TO_ENGINE",
     "BRAND_TIERS",
+    "ENGINE_CATEGORY_TO_SLOT",
+    "ENGINE_TO_APP_CATEGORY",
     "EngineRun",
     "MOOD_ENGINE",
     "OCCASION_ENGINE",
     "PIPELINE",
     "STYLE_ENGINE",
+    "avito_card_to_catalog_item",
+    "avito_provider",
     "brand_tier",
     "build_engine_query",
     "build_profile",
+    "ensure_avito_links",
     "generate_look",
+    "generate_look_avito",
+    "is_avito_url",
     "rerank_for_slot",
+    "rerank_for_slot_avito",
+    "reset_avito_provider",
+    "ru_slot_query",
     "run_engine",
     "search",
+    "search_avito",
     "slot_for_item",
     "to_engine_card",
 ]

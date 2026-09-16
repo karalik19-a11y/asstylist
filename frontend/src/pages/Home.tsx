@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { HistoryEntry, Meta } from '../lib/types'
 import { formatRub, itemsWord, relativeTime } from '../lib/format'
-import { Badge, SectionTitle, ThemeToggle } from '../components/ui'
+import { Badge, BrandLogo, SectionTitle, ThemeToggle } from '../components/ui'
 import { playClick, playTick } from '../lib/sound'
 
 export function Home({
@@ -35,9 +35,13 @@ export function Home({
     <div className="stack page-transition" style={{ gap: 30 }}>
       {/* ---------- Hero: коротко, крупно, по делу ---------- */}
       <header className="hero">
-        <div className="row-between">
-          <span className="kicker">ASSTYLIST</span>
-          <div className="row" style={{ gap: 8 }}>
+        <div className="hero-top">
+          <BrandLogo
+            big
+            tagline
+            onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          />
+          <div className="hero-top-controls">
             {meta?.demo_mode ? <Badge tone="warn">демо-режим</Badge> : <Badge tone="ok">telegram</Badge>}
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
@@ -55,6 +59,7 @@ export function Home({
             <Badge>{meta.moods.length} настроений</Badge>
             <Badge>{meta.colors.length} оттенков</Badge>
             <Badge>до {formatRub(meta.budget.max_rub)}</Badge>
+            <Badge tone="ok">вещи — с Авито</Badge>
           </div>
         ) : null}
       </header>
