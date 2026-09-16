@@ -53,9 +53,36 @@ jobs:
         run: |
           set +e
           python backend/scripts/refresh_avito_snapshot.py \
-            --per-query "${{ github.event.inputs.per_query || '5' }}" \
-            --delay "${{ github.event.inputs.delay || '4' }}" 2>&1 | tee /tmp/refresh.log
+            --per-query "${{ github.event.inputs.per_query || '6' }}" \
+            --delay "${{ github.event.inputs.delay || '6' }}" 2>&1 | tee /tmp/refresh.log
           echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Report
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib, re
+          log = pathlib.Path("/tmp/refresh.log")
+          text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
+          snapshot = pathlib.Path("backend/app/catalog/avito_listings.json")
+          try:
+              data = json.loads(snapshot.read_text(encoding="utf-8"))
+          except Exception:
+              data = {}
+          listings = data.get("listings", [])
+          report = {
+              "status": "ok" if listings else "blocked",
+              "listings": len(listings),
+              "captured_at": data.get("captured_at", ""),
+              "queries": len(data.get("queries", [])),
+              "captcha": bool(re.search(r"captcha|доступ ограничен|робот|проверка безопасности", text, re.I)),
+              "tail": text[-2000:],
+          }
+          pathlib.Path("backend/app/catalog/avito_refresh_report.json").write_text(
+              json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps({k: v for k, v in report.items() if k != "tail"}, ensure_ascii=False))
+          PY
 
       - name: Report
         if: always()
