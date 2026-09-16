@@ -8,6 +8,11 @@ import type { CSSProperties } from 'react'
  * Координаты SVG — в единицах шрифта (1em = 2000): базовая линия буквы лежит
  * на y=0, поэтому vertical-align: -0.4em ставит её на базовую линию текста.
  */
+const HORN =
+  'M 570 -1420 C 460 -1500, 395 -1610, 380 -1730 C 368 -1850, 405 -1965, 520 -2025 ' +
+  'C 520 -1940, 515 -1850, 530 -1750 C 570 -1620, 660 -1545, 810 -1500 ' +
+  'C 725 -1455, 640 -1425, 570 -1420 Z'
+
 export function DevilA({ className = '', style }: { className?: string; style?: CSSProperties }) {
   return (
     <svg
@@ -21,17 +26,14 @@ export function DevilA({ className = '', style }: { className?: string; style?: 
         A
       </text>
       <g className="devil-a-accent">
-        <path d="M 570 -1440 C 470 -1530, 405 -1650, 385 -1780 C 370 -1900, 365 -1960, 370 -2020 C 450 -1910, 550 -1770, 630 -1650 C 680 -1570, 720 -1500, 755 -1450 C 690 -1440, 630 -1438, 570 -1440 Z" />
-        <path
-          d="M 570 -1440 C 470 -1530, 405 -1650, 385 -1780 C 370 -1900, 365 -1960, 370 -2020 C 450 -1910, 550 -1770, 630 -1650 C 680 -1570, 720 -1500, 755 -1450 C 690 -1440, 630 -1438, 570 -1440 Z"
-          transform="matrix(-1 0 0 1 1544 0)"
-        />
-        <path d="M 930 470 L 1200 700 L 870 780 Z" />
+        <path d={HORN} />
+        <path d={HORN} transform="matrix(-1 0 0 1 1544 0)" />
+        <path d="M 940 465 L 1215 705 L 870 785 Z" />
       </g>
       <path
         className="devil-a-tail"
         d="M 500 -60 C 440 160, 470 350, 610 430 C 750 510, 900 470, 990 560"
-        strokeWidth="100"
+        strokeWidth="105"
         strokeLinecap="round"
       />
     </svg>

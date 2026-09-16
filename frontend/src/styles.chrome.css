@@ -213,7 +213,7 @@ html {
 .brand-logo-big .brand-logo-word {
   font-size: clamp(50px, 13.5vw, 66px) !important;
   line-height: 1.05 !important;
-  letter-spacing: -0.015em !important;
+  letter-spacing: -0.02em !important;
 }
 
 .brand-logo-big .brand-logo-rule {
@@ -226,7 +226,6 @@ html {
    чтобы логотип читался и в «parchment», и в «noir». */
 .brand-logo-ass {
   color: var(--text-main) !important;
-  font-weight: 650 !important;
 }
 
 .app-header .brand-logo-word {

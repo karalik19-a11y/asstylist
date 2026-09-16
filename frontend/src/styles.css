@@ -1869,14 +1869,14 @@ button.brand-logo {
   font-weight: 650;
   font-size: 25px;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--text-main);
   white-space: nowrap;
 }
 
 .brand-logo-word em {
   font-style: normal;
-  font-weight: 650;
+  font-weight: inherit;
   background: linear-gradient(95deg, var(--accent-leopard) 0%, #ff5a68 52%, var(--accent-leopard-dark) 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1908,6 +1908,7 @@ button.brand-logo {
 
 .brand-logo-big .brand-logo-word {
   font-size: clamp(31px, 9.2vw, 42px);
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
