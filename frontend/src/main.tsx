@@ -7,6 +7,7 @@ import './styles.layout.css'
 import './styles.polish.css'
 import './styles.ambient.css'
 import './styles.mobile.css'
+import './styles.fix-overlap.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root container #root not found')
