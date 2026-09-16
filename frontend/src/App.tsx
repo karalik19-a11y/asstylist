@@ -19,7 +19,7 @@ import { Wizard } from './pages/Wizard'
 import type { BodyMemory } from './lib/profile'
 import { loadBodyMemory, markBodyUsed, saveBodyMemory } from './lib/profile'
 import { History } from './pages/History'
-import { Verification } from './pages/Verification'
+import { Profile } from './pages/Profile'
 import { Search } from './pages/Search'
 import { LookResult } from './components/LookResult'
 import { Header, ThemeToggle } from './components/ui'
@@ -28,26 +28,14 @@ import { playClick, playSuccess } from './lib/sound'
 import { LeopardPatternDef } from './lib/graphics'
 import { BUILD_STAMP, formatBuildLabel } from './lib/build'
 
-type Screen = 'home' | 'wizard' | 'result' | 'history' | 'verification' | 'search'
-
-type VerificationReport = {
-  total: number
-  verified: number
-  warning: number
-  failed: number
-  eligible: number
-  network_enabled: boolean
-  ttl_days: number
-  min_score: number
-  items: { sku: string; name: string; source: string; status: string; score: number; issues: string[] }[]
-}
+type Screen = 'home' | 'wizard' | 'result' | 'history' | 'profile' | 'search'
 
 const SCREEN_TITLES: Record<Screen, string> = {
   home: 'ASStylist',
   wizard: 'Новый гардероб',
   result: 'Персональная селекция',
   history: 'Архив образов',
-  verification: 'Верификация каталога',
+  profile: 'Личный кабинет',
   search: 'Поиск вещей',
 }
 
@@ -63,7 +51,6 @@ export default function App() {
   const [model, dispatch] = useReducer(wizardReducer, initialModel)
   const [look, setLook] = useState<Look | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [report, setReport] = useState<VerificationReport | null>(null)
   const [generating, setGenerating] = useState(false)
   const [swappingSlot, setSwappingSlot] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -275,18 +262,6 @@ export default function App() {
     void refreshHistory().finally(() => setLoadingList(false))
   }, [refreshHistory])
 
-  const openVerification = useCallback(async () => {
-    setScreen('verification')
-    setLoadingList(true)
-    try {
-      setReport(await api.verification())
-    } catch (caught) {
-      setError(errorMessage(caught))
-    } finally {
-      setLoadingList(false)
-    }
-  }, [])
-
   useEffect(() => {
     const root = document.querySelector('.app')
     if (!(root instanceof HTMLElement)) return
@@ -323,7 +298,6 @@ export default function App() {
           onToggleTheme={toggleTheme}
           onStart={startWizard}
           onOpenHistory={openHistory}
-          onOpenVerification={() => void openVerification()}
           onOpenSearch={openSearch}
         />
       ) : null}
@@ -373,15 +347,14 @@ export default function App() {
         <History items={history} loading={loadingList} onOpen={(id) => void openLook(id)} />
       ) : null}
 
-      {screen === 'verification' ? (
-        <Verification report={report} loading={loadingList && !report} error={error} />
-      ) : null}
+      {screen === 'profile' ? <Profile /> : null}
 
       {screen !== 'wizard' ? (
         <TabBar
-          active={screen === 'history' ? 'archive' : 'home'}
+          active={screen === 'history' ? 'archive' : screen === 'profile' ? 'profile' : 'home'}
           onHome={goHome}
           onArchive={openHistory}
+          onProfile={() => setScreen('profile')}
         />
       ) : null}
 

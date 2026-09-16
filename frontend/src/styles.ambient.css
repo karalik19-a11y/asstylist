@@ -1,0 +1,139 @@
+/* Darker light theme + soft gradient glows in marked zones */
+
+:root {
+  --page-bg: linear-gradient(168deg, #6ba8c8 0%, #4a8fb0 32%, #c9a882 68%, #d4958a 100%);
+  --canvas: #5f9bb8;
+}
+
+[data-theme='parchment'] {
+  --page-bg: linear-gradient(168deg, #6ba8c8 0%, #4a8fb0 32%, #c9a882 68%, #d4958a 100%);
+  --canvas: #5f9bb8;
+  --text-main: #0c1c28;
+  --text-muted: rgba(12, 28, 40, 0.72);
+}
+
+/* Extra glow spots — top-right, mid-left, bottom-right (as marked) */
+.ambient::before,
+.ambient::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.85;
+  animation: glowDrift 18s ease-in-out infinite alternate;
+}
+
+/* Top-right glow */
+.ambient::before {
+  width: 55vmax;
+  height: 55vmax;
+  right: -20vmax;
+  top: -18vmax;
+  background: radial-gradient(circle at 40% 40%, rgba(255, 200, 120, 0.55), rgba(120, 200, 255, 0.25), transparent 68%);
+}
+
+/* Bottom-right / mid glow */
+.ambient::after {
+  width: 48vmax;
+  height: 48vmax;
+  right: -10vmax;
+  bottom: 5vh;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 140, 160, 0.4), rgba(80, 160, 220, 0.3), transparent 70%);
+  animation-delay: -6s;
+}
+
+/* Mid-left soft pool via existing blob-a boost */
+.blob-a {
+  opacity: 0.95;
+  background: radial-gradient(circle at 32% 32%, rgba(100, 190, 240, 0.75), rgba(70, 140, 200, 0.35), transparent 65%) !important;
+}
+
+.blob-b {
+  top: 8vh !important;
+  right: -8vmax !important;
+  background: radial-gradient(circle at 60% 40%, rgba(255, 210, 140, 0.7), transparent 65%) !important;
+}
+
+.blob-c {
+  left: -5vw !important;
+  bottom: 10vh !important;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 160, 180, 0.45), rgba(90, 150, 210, 0.25), transparent 65%) !important;
+}
+
+[data-theme='noir'] .ambient::before {
+  background: radial-gradient(circle at 40% 40%, rgba(60, 140, 200, 0.45), rgba(180, 80, 120, 0.2), transparent 68%);
+}
+
+[data-theme='noir'] .ambient::after {
+  background: radial-gradient(circle at 50% 50%, rgba(90, 60, 140, 0.4), rgba(40, 100, 160, 0.3), transparent 70%);
+}
+
+@keyframes glowDrift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: translate3d(-3vw, 2vh, 0) scale(1.08);
+    opacity: 0.95;
+  }
+}
+
+/* Profile */
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--glass-border);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-fallback {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.profile-color-block {
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-muted);
+}
+
+.profile-color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.profile-color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.profile-color-hex {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}

@@ -1,15 +1,17 @@
 import { playClick } from '../lib/sound'
 
-type TabId = 'home' | 'archive'
+type TabId = 'home' | 'archive' | 'profile'
 
 export function TabBar({
   active,
   onHome,
   onArchive,
+  onProfile,
 }: {
   active: TabId
   onHome: () => void
   onArchive: () => void
+  onProfile: () => void
 }) {
   return (
     <nav className="tab-bar" aria-label="Основная навигация">
@@ -44,6 +46,22 @@ export function TabBar({
           <path d="M9 12h6" />
         </svg>
         <span>Архив</span>
+      </button>
+      <button
+        type="button"
+        className="tab-bar-btn"
+        data-active={active === 'profile'}
+        onClick={() => {
+          playClick()
+          onProfile()
+        }}
+        aria-current={active === 'profile' ? 'page' : undefined}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 19.5c1.8-3.2 4.2-4.5 7-4.5s5.2 1.3 7 4.5" />
+        </svg>
+        <span>Кабинет</span>
       </button>
     </nav>
   )

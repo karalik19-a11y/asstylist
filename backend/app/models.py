@@ -38,6 +38,7 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(128), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    signature_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     looks: Mapped[list["Look"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -94,7 +95,6 @@ class Product(_JSONMixin, Base):
     rating: Mapped[float] = mapped_column(Float, default=4.3)
     reviews_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    # verification layer
     verification_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
     verification_score: Mapped[float] = mapped_column(Float, default=0.0)
     verification_issues: Mapped[str] = mapped_column(Text, default="[]")
@@ -209,4 +209,3 @@ class LookItem(Base):
 
     def alternatives(self) -> list[dict]:
         return _JSONMixin.loads(self.alternatives_json, [])
-

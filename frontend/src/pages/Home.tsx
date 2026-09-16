@@ -8,7 +8,6 @@ export function Home({
   meta,
   onStart,
   onOpenHistory,
-  onOpenVerification,
   onOpenSearch,
   userName,
   theme,
@@ -17,14 +16,12 @@ export function Home({
   meta: Meta | null
   onStart: () => void
   onOpenHistory: () => void
-  onOpenVerification: () => void
   onOpenSearch: () => void
   userName: string | null
   theme: 'noir' | 'parchment'
   onToggleTheme: () => void
 }) {
   const [activeStylePreview, setActiveStylePreview] = useState<string>('minimal')
-
   const currentStyle =
     meta?.styles.find((s) => s.id === activeStylePreview) ?? meta?.styles[0]
 
@@ -32,23 +29,16 @@ export function Home({
     <div className="stack page-transition" style={{ gap: 30 }}>
       <header className="hero">
         <div className="hero-top">
-          <BrandLogo
-            big
-            tagline
-            onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          />
+          <BrandLogo big tagline onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
           <div className="hero-top-controls">
             {meta?.demo_mode ? <Badge tone="warn">демо-режим</Badge> : <Badge tone="ok">telegram</Badge>}
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </div>
-
         <h1>
           {userName ? `${userName}, ` : ''}соберём образ, <em>который вам идёт</em>
         </h1>
-
         <p className="hero-sub">Пять коротких шагов — и гардероб под вашу фигуру, цвета и бюджет готов.</p>
-
         {meta ? (
           <div className="wrap" style={{ gap: 8 }}>
             <Badge>{meta.styles.length} стилей</Badge>
@@ -61,47 +51,15 @@ export function Home({
       </header>
 
       <section className="stack" style={{ gap: 16 }}>
-        <button
-          type="button"
-          className="btn btn-primary btn-block btn-xl"
-          onClick={() => {
-            playClick()
-            onStart()
-          }}
-        >
+        <button type="button" className="btn btn-primary btn-block btn-xl" onClick={() => { playClick(); onStart() }}>
           Собрать образ
         </button>
-
         <div className="home-actions-grid">
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => {
-              playClick()
-              onOpenHistory()
-            }}
-          >
+          <button type="button" className="btn btn-outline" onClick={() => { playClick(); onOpenHistory() }}>
             Архив образов
           </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => {
-              playClick()
-              onOpenSearch()
-            }}
-          >
+          <button type="button" className="btn btn-outline" onClick={() => { playClick(); onOpenSearch() }}>
             Поиск вещей
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              playClick()
-              onOpenVerification()
-            }}
-          >
-            Верификация
           </button>
         </div>
       </section>
@@ -116,10 +74,7 @@ export function Home({
                 type="button"
                 className="style-pill-btn chip"
                 data-active={activeStylePreview === style.id}
-                onClick={() => {
-                  playTick()
-                  setActiveStylePreview(style.id)
-                }}
+                onClick={() => { playTick(); setActiveStylePreview(style.id) }}
               >
                 {style.label}
               </button>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
@@ -49,10 +49,28 @@ if settings.database_url.startswith("sqlite"):
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
 
 
+def _migrate_user_signature_color() -> None:
+    """Add users.signature_color on existing SQLite DBs (create_all skips ALTERs)."""
+    if not settings.database_url.startswith("sqlite"):
+        # Best-effort for Postgres etc.
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_color VARCHAR(7)"))
+        except Exception:
+            pass
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(users)")).fetchall()
+        names = {row[1] for row in rows}
+        if "signature_color" not in names:
+            conn.execute(text("ALTER TABLE users ADD COLUMN signature_color VARCHAR(7)"))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    _migrate_user_signature_color()
 
 
 def get_session() -> Iterator[Session]:

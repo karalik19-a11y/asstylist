@@ -20,11 +20,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import User, UserMemory
+from .signature_color import signature_color_for
 
-#: Что помним между визитами. Только рост и вес — по прямому требованию.
 MEMORY_FIELDS: tuple[str, ...] = ("height_cm", "weight_kg")
-
-#: Границы те же, что в мастере: мусор в память не попадает.
 HEIGHT_RANGE = (120.0, 230.0)
 WEIGHT_RANGE = (30.0, 250.0)
 
@@ -41,14 +39,8 @@ def _clamp(value: Any, bounds: tuple[float, float]) -> float | None:
 
 
 def sanitize(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Оставить только рост и вес в допустимых границах.
-
-    Возвращает ``(данные, замечания)``: замечания уходят клиенту текстом, чтобы
-    человек понял, почему значение не приняли.
-    """
     clean: dict[str, Any] = {}
     problems: list[str] = []
-
     for key, bounds, label in (
         ("height_cm", HEIGHT_RANGE, "Рост"),
         ("weight_kg", WEIGHT_RANGE, "Вес"),
@@ -64,7 +56,6 @@ def sanitize(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
 
 
 def profile_complete(data: dict[str, Any]) -> bool:
-    """Есть ли смысл предлагать «собрать по сохранённым данным»."""
     return bool(data.get("height_cm") and data.get("weight_kg"))
 
 
@@ -72,17 +63,41 @@ def get_memory(session: Session, user: User) -> UserMemory | None:
     return session.execute(select(UserMemory).where(UserMemory.user_id == user.id)).scalar_one_or_none()
 
 
+def user_card(user: User) -> dict[str, Any]:
+    color = user.signature_color
+    return {
+        "id": user.id,
+        "telegram_id": user.telegram_id,
+        "username": user.username,
+        "first_name": user.first_name,
+        "is_demo": user.is_demo,
+        "signature_color": color,
+        "registered": bool(color),
+    }
+
+
+def register_signature(session: Session, user: User) -> dict[str, Any]:
+    if user.signature_color:
+        return {"ok": True, "already_registered": True, "user": user_card(user)}
+    user.signature_color = signature_color_for(user.id, user.telegram_id)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return {"ok": True, "already_registered": False, "user": user_card(user)}
+
+
 def get_profile(session: Session, user: User) -> dict[str, Any]:
-    """Профиль пользователя (пустой объект, если ещё ничего не сохранено)."""
+    card = user_card(user)
     memory = get_memory(session, user)
     if memory is None:
-        return {"saved": False, "profile": {}, "updated_at": None, "used_count": 0}
+        return {"saved": False, "profile": {}, "updated_at": None, "used_count": 0, "user": card}
     data = memory.data()
     return {
         "saved": profile_complete(data),
         "profile": {key: data.get(key) for key in MEMORY_FIELDS if key in data},
         "updated_at": memory.updated_at.isoformat() if memory.updated_at else None,
         "used_count": int(memory.used_count or 0),
+        "user": card,
     }
 
 
@@ -91,7 +106,6 @@ def save_profile(
     user: User,
     payload: dict[str, Any],
 ) -> tuple[dict[str, Any], list[str]]:
-    """Сохранить (или обновить) рост и вес. Частичное обновление разрешено."""
     clean, problems = sanitize(payload)
     if not clean:
         return get_profile(session, user), problems or ["Нечего сохранять: нужны рост и вес"]
@@ -102,7 +116,7 @@ def save_profile(
         session.add(memory)
         try:
             session.commit()
-        except IntegrityError:  # параллельный запрос уже создал запись
+        except IntegrityError:
             session.rollback()
             memory = get_memory(session, user)
             if memory is None:
@@ -117,7 +131,6 @@ def save_profile(
 
 
 def remember_body(session: Session, user: User, height_cm: Any, weight_kg: Any) -> None:
-    """Тихо обновить память после удачной генерации образа (без исключений)."""
     payload: dict[str, Any] = {}
     if height_cm is not None:
         payload["height_cm"] = height_cm
@@ -127,12 +140,11 @@ def remember_body(session: Session, user: User, height_cm: Any, weight_kg: Any) 
         return
     try:
         save_profile(session, user, payload)
-    except Exception:  # память не имеет права ронять генерацию
+    except Exception:
         session.rollback()
 
 
 def mark_used(session: Session, user: User) -> None:
-    """Отметить, что сохранённые данные пригодились (счётчик в ответе)."""
     memory = get_memory(session, user)
     if memory is None:
         return
@@ -141,7 +153,6 @@ def mark_used(session: Session, user: User) -> None:
 
 
 def forget_profile(session: Session, user: User) -> dict[str, Any]:
-    """«Забыть мои данные» — память очищается целиком."""
     memory = get_memory(session, user)
     if memory is not None:
         session.delete(memory)
@@ -158,7 +169,9 @@ __all__ = [
     "get_profile",
     "mark_used",
     "profile_complete",
+    "register_signature",
     "remember_body",
     "sanitize",
     "save_profile",
+    "user_card",
 ]

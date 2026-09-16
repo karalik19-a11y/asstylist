@@ -30,6 +30,8 @@ class UserOut(BaseModel):
     username: str | None = None
     first_name: str | None = None
     is_demo: bool = False
+    signature_color: str | None = None
+    registered: bool = False
 
 
 class AuthResponse(BaseModel):
@@ -54,9 +56,7 @@ class LookRequest(BaseModel):
     avoid_colors: list[str] = Field(default_factory=list)
     size: str | None = Field(default=None, max_length=8)
     plan: str | None = None
-    #: Свободный запрос для движка поиска («индустриальный образ с прозрачным верхом»).
     query: str | None = Field(default=None, max_length=240)
-    #: Явный уровень ниши движка 0…100 (иначе выводится из стиля).
     niche_level: int | None = Field(default=None, ge=0, le=100)
     user_id: int | None = None
     telegram_id: str | None = None
@@ -87,7 +87,6 @@ class LookItemOut(BaseModel):
     fit: str = "regular"
     score: float
     breakdown: dict[str, Any] = Field(default_factory=dict)
-    #: Метаданные движка ASSTYLIST: роль, taste-категория, Fashion Score.
     engine: dict[str, Any] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
     verification_status: str = "verified"
