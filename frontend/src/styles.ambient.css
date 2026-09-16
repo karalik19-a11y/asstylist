@@ -1,4 +1,4 @@
-/* Ambient gradient glow — blue / gold / cherry pools */
+/* Ambient — performance-first */
 
 .ambient {
   position: fixed;
@@ -7,7 +7,6 @@
   overflow: hidden;
   pointer-events: none;
   contain: strict;
-  content-visibility: auto;
 }
 
 .ambient::before,
@@ -15,178 +14,127 @@
   content: '';
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  animation: glowDrift 18s ease-in-out infinite alternate;
-  will-change: transform, opacity;
+  filter: blur(64px);
+  opacity: 0.7;
 }
 
 .ambient::before {
-  width: 58vmax;
-  height: 58vmax;
-  right: -22vmax;
-  top: -20vmax;
+  width: 55vmax;
+  height: 55vmax;
+  right: -20vmax;
+  top: -18vmax;
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(255, 200, 80, 0.5),
-    rgba(80, 170, 230, 0.35),
+    rgba(255, 200, 80, 0.42),
+    rgba(80, 170, 230, 0.28),
     transparent 68%
   );
-  opacity: 0.85;
 }
 
 .ambient::after {
-  width: 50vmax;
-  height: 50vmax;
-  right: -12vmax;
-  bottom: 2vh;
+  width: 48vmax;
+  height: 48vmax;
+  right: -10vmax;
+  bottom: 0;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(255, 80, 110, 0.38),
-    rgba(60, 140, 210, 0.28),
+    rgba(255, 80, 110, 0.28),
+    rgba(60, 140, 210, 0.22),
     transparent 70%
   );
-  animation-delay: -7s;
-  opacity: 0.8;
 }
 
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(72px);
-  will-change: transform;
-  opacity: 0.9;
+  filter: blur(56px);
+  opacity: 0.75;
 }
 
 .blob-a {
-  width: 46vmax;
-  height: 46vmax;
-  left: -14vmax;
-  top: -16vmax;
+  width: 42vmax;
+  height: 42vmax;
+  left: -12vmax;
+  top: -14vmax;
   background: radial-gradient(
     circle at 32% 32%,
-    rgba(70, 160, 230, 0.7),
-    rgba(40, 100, 180, 0.3),
+    rgba(70, 160, 230, 0.55),
     transparent 65%
-  ) !important;
-  animation: floatA 22s ease-in-out infinite;
+  );
 }
 
 .blob-b {
-  width: 40vmax;
-  height: 40vmax;
-  right: -10vmax;
-  top: 6vh !important;
+  width: 36vmax;
+  height: 36vmax;
+  right: -8vmax;
+  top: 8vh;
   background: radial-gradient(
     circle at 60% 40%,
-    rgba(255, 200, 90, 0.65),
+    rgba(255, 200, 90, 0.45),
     transparent 65%
-  ) !important;
-  animation: floatB 27s ease-in-out infinite;
+  );
 }
 
 .blob-c {
-  width: 34vmax;
-  height: 34vmax;
-  left: -6vw !important;
-  bottom: 8vh !important;
+  width: 30vmax;
+  height: 30vmax;
+  left: -4vw;
+  bottom: 10vh;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(255, 90, 120, 0.4),
-    rgba(70, 140, 200, 0.22),
+    rgba(255, 90, 120, 0.3),
     transparent 65%
-  ) !important;
-  animation: floatC 31s ease-in-out infinite;
+  );
 }
 
 [data-theme='noir'] .ambient::before {
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(50, 130, 200, 0.45),
-    rgba(200, 80, 120, 0.18),
+    rgba(50, 130, 200, 0.35),
     transparent 68%
   );
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 [data-theme='noir'] .ambient::after {
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(100, 50, 140, 0.35),
-    rgba(40, 100, 180, 0.28),
+    rgba(100, 50, 140, 0.28),
     transparent 70%
   );
-  opacity: 0.65;
+  opacity: 0.5;
 }
 
 [data-theme='noir'] .blob {
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
-[data-theme='noir'] .blob-a {
-  background: radial-gradient(
-    circle at 32% 32%,
-    rgba(40, 120, 190, 0.7),
-    transparent 65%
-  ) !important;
-}
-
-[data-theme='noir'] .blob-b {
-  background: radial-gradient(
-    circle at 60% 40%,
-    rgba(180, 120, 40, 0.4),
-    rgba(120, 50, 80, 0.35),
-    transparent 65%
-  ) !important;
-}
-
-[data-theme='noir'] .blob-c {
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(200, 50, 90, 0.35),
-    rgba(40, 80, 140, 0.3),
-    transparent 65%
-  ) !important;
+/* Motion only on larger screens — phones stay static */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  .ambient::before,
+  .ambient::after {
+    animation: glowDrift 28s ease-in-out infinite alternate;
+  }
+  .blob-a { animation: floatA 32s ease-in-out infinite; }
+  .blob-b { animation: floatB 36s ease-in-out infinite; }
+  .blob-c { animation: floatC 40s ease-in-out infinite; }
 }
 
 @keyframes glowDrift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.65;
-  }
-  to {
-    transform: translate3d(-3vw, 2.5vh, 0) scale(1.08);
-    opacity: 0.95;
-  }
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-2vw, 2vh, 0) scale(1.05); }
 }
-
 @keyframes floatA {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(5vw, -3vh, 0) scale(1.1);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(3vw, -2vh, 0); }
 }
-
 @keyframes floatB {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-4vw, 4vh, 0) scale(1.12);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-2vw, 3vh, 0); }
 }
-
 @keyframes floatC {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-3vw, -5vh, 0) scale(1.15);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-2vw, -3vh, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
