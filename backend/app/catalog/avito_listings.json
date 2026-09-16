@@ -1,0 +1,89 @@
+{
+  "captured_at": "2026-09-16",
+  "source": "avito.ru",
+  "note": "Снимок реальной выдачи Авито: конкретные объявления с фото, ценами и ссылками. Обновляется скриптом backend/scripts/refresh_avito_snapshot.py.",
+  "queries": [
+    {
+      "query": "пальто женское",
+      "url": "https://www.avito.ru/all/odezhda_obuv_aksessuary?q=%D0%BF%D0%B0%D0%BB%D1%8C%D1%82%D0%BE+%D0%B6%D0%B5%D0%BD%D1%81%D0%BA%D0%BE%D0%B5",
+      "captured_at": "2026-09-16"
+    },
+    {
+      "query": "свитер",
+      "url": "https://www.avito.ru/all/odezhda_obuv_aksessuary?q=%D1%81%D0%B2%D0%B8%D1%82%D0%B5%D1%80",
+      "captured_at": "2026-09-16"
+    }
+  ],
+  "listings": [
+    {
+      "id": "7641540971",
+      "title": "Пальто из чернобурки",
+      "price": 15000,
+      "url": "https://www.avito.ru/angarsk/odezhda_obuv_aksessuary/palto_iz_chernoburki_7641540971",
+      "image": "https://90.img.avito.st/image/1/1.6NFBEraARDhXsuY5HVX5yBazRjzzpUA488IlPPMRRZr0sUAiV7LmOfc.Jz_qf_j95XNS-iCBzXZqzATrbKWG829RHZkC3w3T-vc",
+      "params": "Отличное · 44 (S/M)",
+      "description": "Отличное пальто из чернобурки, в отличном состоянии. Покупала в Иркутске в «Шубка». Размер 44/46. Реальному покупателю сделаю скидку.",
+      "brand": "",
+      "city": "Ангарск",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "пальто женское"
+    },
+    {
+      "id": "8235522402",
+      "title": "Кроп пальто LGB archive",
+      "price": 3990,
+      "url": "https://www.avito.ru/moskva/odezhda_obuv_aksessuary/krop_palto_lgb_archive_8235522402",
+      "image": "https://70.img.avito.st/image/1/1.Fh-JebaAuvaf2Rj3qX0mRqTZuPI7zr72O6nb8jt6u1Q82r7sn9kY9z8.yds6UKOwV4h84uHL0FF9Bw5w07CKOFxADjOyWEn53PY",
+      "params": "Новое с биркой · 46 (M) · L.G.B.",
+      "description": "Укороченное пальто LGB archive. В наличии размеры S, M, L. Состояние: новое. Укороченный крой. Плотная шерстяная ткань. Подчеркнутый силуэт.",
+      "brand": "L.G.B.",
+      "city": "Москва",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "пальто женское"
+    },
+    {
+      "id": "7505707847",
+      "title": "Пальто зимнее женское 46",
+      "price": 8500,
+      "url": "https://www.avito.ru/groznyy/odezhda_obuv_aksessuary/palto_zimnee_zhenskoe_46_7505707847",
+      "image": "https://40.img.avito.st/image/1/1.QUWtM7aA7ay7k0-to2IfIsyS76gfhOmsH-OMqB8w7A4YkOm2u5NPrRs.X33IownxCCUIc9H06tCvsU1F-K7ZJDFWGC7t9khlSTs",
+      "params": "Отличное · 44 (S/M)",
+      "description": "Продаю пальто в отличном состоянии, покупала в приданое, не носила, покупала дорого, продам за 10 тысяч окончательно.",
+      "brand": "",
+      "city": "Грозный",
+      "gender": "feminine",
+      "captured_at": "2026-09-16",
+      "query": "пальто женское"
+    },
+    {
+      "id": "7352297856",
+      "title": "Свитер Gummo",
+      "price": 6600,
+      "url": "https://www.avito.ru/sankt-peterburg/odezhda_obuv_aksessuary/sviter_gummo_7352297856",
+      "image": "https://10.img.avito.st/image/1/1.U24jZLaA_4c1xF2GCQFVKTzE_YOR0_uHkbSeg5Fn_iWWx_udNcRdhpU.GsbI97mrp3_JBhOVsDqMJmdBSGIgxmQZxiGuRbwX_sw",
+      "params": "Новое с биркой · One size",
+      "description": "Размер one size. Материал хлопок, акрил. Бренд Das Mädchen und Tod. Свитер Gummo.",
+      "brand": "Das Mädchen und Tod",
+      "city": "Санкт-Петербург",
+      "gender": "unisex",
+      "captured_at": "2026-09-16",
+      "query": "свитер"
+    },
+    {
+      "id": "8395317551",
+      "title": "Свитер мужской без горла Supreme",
+      "price": 2520,
+      "url": "https://www.avito.ru/voronezh/odezhda_obuv_aksessuary/sviter_muzhskoy_bez_gorla_8395317551",
+      "image": "https://90.img.avito.st/image/1/1.UiONkbaA_sqbMVzLpchRNZEx_M4_JvrKP0Gfzj-S_2g4MvrQmzFcyzs.xXhJnmRedq3j9pAeP8JsE8tfQQAWA6KddhEo4SE65M",
+      "params": "Новое с биркой · 50 (L) · Supreme",
+      "description": "Мужской вязаный свитер чёрного цвета. На спине выполнен крупный контрастный принт с надписью и крестом. Передняя часть изделия выполнена в минималистичном стиле. На воротнике сохранены оригинальные бирки бренда.",
+      "brand": "Supreme",
+      "city": "Воронеж",
+      "gender": "masculine",
+      "captured_at": "2026-09-16",
+      "query": "свитер"
+    }
+  ]
+}

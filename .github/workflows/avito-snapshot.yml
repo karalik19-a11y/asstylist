@@ -1,0 +1,74 @@
+name: Avito snapshot
+
+# Снимок реальной выдачи Авито: конкретные объявления (название, цена, ссылка,
+# фото). Приложение подбирает образ по живой выдаче, а этот снимок гарантирует,
+# что вещи остаются настоящими, даже когда Авито закрыт капчей для IP сервера.
+#
+# Раннер GitHub имеет «чистый» IP, поэтому обновление здесь надёжнее, чем с
+# дата-центра приложения. Запуск: вручную (Actions → Avito snapshot → Run
+# workflow), по расписанию и при изменении самого скрипта.
+
+on:
+  workflow_dispatch:
+    inputs:
+      per_query:
+        description: "Сколько объявлений брать на один запрос"
+        default: "5"
+      delay:
+        description: "Пауза между запросами, сек"
+        default: "4"
+  schedule:
+    - cron: "0 4 * * *"   # раз в сутки, ночью
+  push:
+    paths:
+      - "backend/scripts/refresh_avito_snapshot.py"
+      - ".github/workflows/avito-snapshot.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install httpx
+        run: python -m pip install --upgrade pip httpx
+
+      - name: Refresh snapshot
+        run: |
+          python backend/scripts/refresh_avito_snapshot.py \
+            --per-query "${{ github.event.inputs.per_query || '5' }}" \
+            --delay "${{ github.event.inputs.delay || '4' }}"
+
+      - name: Show snapshot size
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          path = pathlib.Path("backend/app/catalog/avito_listings.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          print("listings:", len(data.get("listings", [])), "captured_at:", data.get("captured_at"))
+          PY
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: avito-listings
+          path: backend/app/catalog/avito_listings.json
+
+      - name: Commit refreshed snapshot
+        run: |
+          if [ -z "$(git status --porcelain backend/app/catalog/avito_listings.json)" ]; then
+            echo "Снимок не изменился — коммит не нужен."
+            exit 0
+          fi
+          git config user.name "asstylist-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add backend/app/catalog/avito_listings.json
+          git commit -m "Авито: обновлён снимок выдачи (реальные объявления)"
+          git push

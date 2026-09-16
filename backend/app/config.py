@@ -150,6 +150,21 @@ class Settings(BaseSettings):
     #: TTL кэша выдачи Авито (секунды) и негативных ответов.
     avito_cache_ttl_sec: int = 900
     avito_negative_ttl_sec: int = 180
+    #: Снимок выдачи Авито — реальные объявления (фото, цена, ссылка на
+    #: объявление), сохранённые в поставке. Работает, когда живой поиск
+    #: недоступен (капча, дата-центр IP, нет сети), и вместо поисковой ссылки
+    #: отдаёт конкретную вещь. Обновляется scripts/refresh_avito_snapshot.py.
+    avito_snapshot_enabled: bool = True
+    avito_snapshot_path: str | None = None
+    avito_snapshot_max_age_days: int = 120
+    #: Сколько объявлений из снимка добирать на каждый слот, если живой поиск
+    #: недодал — чтобы у движка всегда был выбор из настоящих вещей.
+    avito_snapshot_per_slot: int = 6
+    #: Анализ внешнего вида объявления по фотографии (Pillow): доминирующие
+    #: оттенки, яркость, насыщенность, фон. Без сети мягко отключается.
+    avito_photo_analysis: bool = True
+    avito_photo_timeout_sec: float = 3.0
+    avito_photo_max_per_look: int = 14
 
     # --- живой поиск вещей (WebSearchProvider) ------------------------
     #: Мастер-переключатель: без ключей провайдер тихо отдаёт пустой список,
