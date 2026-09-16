@@ -1,39 +1,35 @@
 import { useState } from 'react'
-import type { HistoryEntry, Meta } from '../lib/types'
-import { formatRub, itemsWord, relativeTime } from '../lib/format'
+import type { Meta } from '../lib/types'
+import { formatRub } from '../lib/format'
 import { Badge, BrandLogo, SectionTitle, ThemeToggle } from '../components/ui'
 import { playClick, playTick } from '../lib/sound'
 
 export function Home({
   meta,
-  history,
   onStart,
   onOpenHistory,
   onOpenVerification,
   onOpenSearch,
-  onOpenLook,
   userName,
   theme,
   onToggleTheme,
 }: {
   meta: Meta | null
-  history: HistoryEntry[]
   onStart: () => void
   onOpenHistory: () => void
   onOpenVerification: () => void
   onOpenSearch: () => void
-  onOpenLook: (id: number) => void
   userName: string | null
   theme: 'noir' | 'parchment'
   onToggleTheme: () => void
 }) {
   const [activeStylePreview, setActiveStylePreview] = useState<string>('minimal')
 
-  const currentStyle = meta?.styles.find((s) => s.id === activeStylePreview) ?? meta?.styles[0]
+  const currentStyle =
+    meta?.styles.find((s) => s.id === activeStylePreview) ?? meta?.styles[0]
 
   return (
     <div className="stack page-transition" style={{ gap: 30 }}>
-      {/* ---------- Hero: коротко, крупно, по делу ---------- */}
       <header className="hero">
         <div className="hero-top">
           <BrandLogo
@@ -64,7 +60,6 @@ export function Home({
         ) : null}
       </header>
 
-      {/* ---------- Одно главное действие + тихие вторичные ---------- */}
       <section className="stack" style={{ gap: 16 }}>
         <button
           type="button"
@@ -77,17 +72,6 @@ export function Home({
           Собрать образ
         </button>
 
-        <button
-          type="button"
-          className="link-btn cta-link"
-          onClick={() => {
-            playClick()
-            onOpenSearch()
-          }}
-        >
-          Найти вещи словами
-        </button>
-
         <div className="home-actions-grid">
           <button
             type="button"
@@ -97,33 +81,40 @@ export function Home({
               onOpenHistory()
             }}
           >
-            Мои образы
+            Архив образов
           </button>
-
           <button
             type="button"
             className="btn btn-outline"
             onClick={() => {
               playClick()
+              onOpenSearch()
+            }}
+          >
+            Поиск вещей
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              playClick()
               onOpenVerification()
             }}
           >
-            Проверка товаров
+            Верификация
           </button>
         </div>
       </section>
 
-      {/* ---------- Направления стиля: табы + короткая подсказка ---------- */}
       {meta?.styles?.length ? (
-        <section className="style-showcase-container">
-          <SectionTitle hint={`${meta.styles.length}`}>Направления стиля</SectionTitle>
-
+        <section className="card stack" style={{ gap: 14 }}>
+          <SectionTitle hint="листайте">Направления стиля</SectionTitle>
           <div className="style-pills-row">
             {meta.styles.map((style) => (
               <button
                 key={style.id}
                 type="button"
-                className="style-pill-btn"
+                className="style-pill-btn chip"
                 data-active={activeStylePreview === style.id}
                 onClick={() => {
                   playTick()
@@ -134,50 +125,11 @@ export function Home({
               </button>
             ))}
           </div>
-
           {currentStyle ? (
-            <div className="style-preview-card">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <strong style={{ fontSize: 17, fontFamily: 'var(--font-display)' }}>{currentStyle.label}</strong>
-                <div className="small muted" style={{ marginTop: 4 }}>
-                  {currentStyle.description}
-                </div>
-              </div>
-            </div>
+            <p className="muted" style={{ margin: 0, fontSize: 15, lineHeight: 1.5 }}>
+              {currentStyle.description}
+            </p>
           ) : null}
-        </section>
-      ) : null}
-
-      {/* ---------- Последние образы ---------- */}
-      {history.length ? (
-        <section className="stack" style={{ gap: 12 }}>
-          <SectionTitle hint={`${history.length}`}>Последние образы</SectionTitle>
-          <div className="card index-list">
-            {history.slice(0, 3).map((entry, index) => (
-              <button
-                key={entry.id}
-                type="button"
-                className="index-row"
-                onClick={() => {
-                  playClick()
-                  onOpenLook(entry.id)
-                }}
-              >
-                <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
-                <span className="stack" style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                  <span className="row-between" style={{ gap: 10 }}>
-                    <strong style={{ fontSize: 16 }}>{entry.style}</strong>
-                    <span className="muted small" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {formatRub(entry.total_rub)}
-                    </span>
-                  </span>
-                  <span className="muted small">
-                    {itemsWord(entry.items_count)} · индекс {Math.round(entry.score)} · {relativeTime(entry.created_at)}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
         </section>
       ) : null}
 

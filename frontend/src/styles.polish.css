@@ -1,0 +1,171 @@
+/* Scale up UI, softer header, smoother motion, ASS logo white */
+
+:root {
+  --type-scale: 1.08;
+  --space-scale: 1.06;
+}
+
+html {
+  font-size: 17px;
+}
+
+body {
+  letter-spacing: 0.01em;
+}
+
+.app {
+  gap: 24px;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 6.5vw, 2.15rem) !important;
+  line-height: 1.2 !important;
+}
+
+h2 {
+  font-size: clamp(1.35rem, 5vw, 1.65rem) !important;
+}
+
+.step-heading h2 {
+  font-size: clamp(1.5rem, 6vw, 1.9rem) !important;
+}
+
+.btn {
+  min-height: 50px;
+  font-size: 15.5px;
+  border-radius: 16px;
+}
+
+.btn-xl {
+  min-height: 58px;
+  font-size: 17px;
+  border-radius: 18px;
+}
+
+.chip {
+  min-height: 48px;
+  padding: 11px 18px;
+  font-size: 14.5px;
+}
+
+.card,
+.stamp-card {
+  border-radius: 22px;
+  padding: 18px;
+}
+
+/* Soft header edges — fade into content, no hard cut */
+.app-header {
+  border-bottom: none !important;
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 88%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 45%, transparent) 70%,
+    transparent 100%
+  ) !important;
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  padding-bottom: 18px !important;
+}
+
+[data-theme='noir'] .app-header {
+  background: linear-gradient(
+    180deg,
+    rgba(12, 24, 36, 0.92) 0%,
+    rgba(12, 24, 36, 0.5) 70%,
+    transparent 100%
+  ) !important;
+}
+
+/* Logo: ASS white, tylist accent */
+.brand-logo-ass {
+  color: #ffffff;
+  font-style: normal;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme='parchment'] .brand-logo-ass {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(23, 68, 99, 0.25);
+}
+
+.brand-logo-word em {
+  font-style: italic;
+}
+
+/* Smoother page transitions */
+.page-transition {
+  animation: pageSoft 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pageSoft {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.tab-bar,
+.action-bar {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+
+.chip,
+.stamp-tile,
+.btn,
+.index-row {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    color 0.2s ease;
+}
+
+.stamp-tile {
+  min-height: 120px;
+  padding: 16px;
+}
+
+.stamp-tile-title {
+  font-size: 16px;
+}
+
+.stamp-tile-desc {
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.score-ring {
+  width: 76px;
+  height: 76px;
+  font-size: 24px;
+}
+
+.tab-bar-btn {
+  min-height: 56px;
+  font-size: 12px;
+}
+
+.hero-sub {
+  font-size: 16.5px !important;
+  line-height: 1.5;
+}
+
+.build-stamp {
+  margin-top: 12px;
+  padding-bottom: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
