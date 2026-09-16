@@ -16,8 +16,8 @@ const savedBody: BodyMemory = {
   usedCount: 2,
 }
 
-function renderWizard(overrides: Parameters<typeof Wizard>[0] | Record<string, unknown> = {}) {
-  const props = {
+function renderWizard(overrides: Partial<Parameters<typeof Wizard>[0]> = {}) {
+  const props: Parameters<typeof Wizard>[0] = {
     model: initialModel,
     meta: null,
     onPatch: vi.fn(),
@@ -30,9 +30,8 @@ function renderWizard(overrides: Parameters<typeof Wizard>[0] | Record<string, u
     onExit: vi.fn(),
     generating: false,
     error: null,
-    ...overrides,
-  } as Parameters<typeof Wizard>[0]
-  return render(<Wizard {...props} />)
+  }
+  return render(<Wizard {...props} {...overrides} />)
 }
 
 describe('память о пользователе', () => {
