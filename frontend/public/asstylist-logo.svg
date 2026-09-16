@@ -1,16 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1273 434" role="img" aria-labelledby="title desc">
   <title id="title">ASStylist</title>
-  <desc id="desc">ASStylist serif wordmark with devil horns and tail attached to the first A</desc>
-
+  <desc id="desc">ASStylist serif wordmark with devil details belonging only to the first A</desc>
   <g font-family="Georgia, 'Times New Roman', serif" font-size="285" font-weight="700" letter-spacing="-17">
-    <text x="70" y="322" fill="#FFFFFF">AS</text>
-    <text x="425" y="322" fill="#8F1D3F">tylist</text>
+    <text x="58" y="322" fill="#FFFFFF">ASS</text>
+    <text x="454" y="322" fill="#8F1D3F">tylist</text>
   </g>
 
-  <!-- Both horns are centered over the first A only. -->
-  <path fill="#FFFFFF" d="M94 126C79 98 81 62 104 25C106 57 119 79 141 94C130 108 114 119 94 126Z"/>
-  <path fill="#FFFFFF" d="M194 94C216 79 229 57 231 25C254 62 256 98 241 126C221 119 205 108 194 94Z"/>
-
-  <!-- Tail starts at the lower-right of the first A and never reaches the S. -->
-  <path fill="#FFFFFF" d="M181 313C211 320 238 336 247 355C258 379 244 402 221 407C237 393 236 380 226 369C216 357 199 350 178 345Z"/>
+  <!-- Devil details belong only to the first A. -->
+  <path fill="#FFFFFF" d="M91 119C77 91 80 58 102 25C104 54 118 76 140 91C128 104 112 113 91 119Z"/>
+  <path fill="#FFFFFF" d="M177 91C199 76 213 54 215 25C237 58 240 91 226 119C205 113 189 104 177 91Z"/>
+  <path fill="#FFFFFF" d="M177 307C198 313 215 326 222 341C230 358 226 376 211 389C223 370 214 357 201 351C192 347 182 345 172 343Z"/>
 </svg>
