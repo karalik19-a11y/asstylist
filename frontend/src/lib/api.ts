@@ -11,10 +11,18 @@ import { getWebApp, telegramUserId, telegramUserName } from './telegram'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
+/**
+ * Ссылка на фото объявления через наш сервер.
+ *
+ * CDN Авито отдаёт картинки браузеру не всегда (hotlink-защита, регион,
+ * Referer) — тогда в карточке вещи был чёрный прямоугольник. Сервер ходит за
+ * фото сам и отдаёт его со своего домена: /api/media/photo.
+ */
 export function photoProxyUrl(url: string): string {
   return `${BASE}/api/media/photo?u=${encodeURIComponent(url)}`
 }
 
+/** Фотография объявления Авито: домены avito.ru и CDN *.avito.st. */
 export function isAvitoPhotoUrl(url?: string | null): boolean {
   if (!url) return false
   try {
@@ -45,7 +53,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const body = await response.json()
       if (body && typeof body.detail === 'string') detail = body.detail
     } catch {
-      /* keep */
+      /* keep the generic message */
     }
     throw new ApiError(detail, response.status)
   }
@@ -63,7 +71,9 @@ function identityParams(): URLSearchParams {
 
 export const api = {
   health: () => request<Record<string, unknown>>('/api/health'),
+
   meta: () => request<Meta>('/api/meta'),
+
   auth: () =>
     request<{ user: { id: number; telegram_id: string; first_name: string | null }; demo: boolean; mode: string }>(
       '/api/telegram/auth',
@@ -78,7 +88,10 @@ export const api = {
         }),
       },
     ),
+
   telegramStatus: () => request<TelegramStatus>('/api/telegram/status'),
+
+  /** Connects a real bot: validates the token and sets the Mini App menu button. */
   connectBot: (botToken: string, webAppUrl: string, keepDemoAccess = true) =>
     request<SetupResponse>('/api/telegram/setup', {
       method: 'POST',
@@ -90,6 +103,8 @@ export const api = {
         persist: true,
       }),
     }),
+
+  /** Multipart so the photo travels with the parameters in a single call. */
   generateLook: (state: WizardState) => {
     const form = new FormData()
     const fields: Record<string, string | number | null> = {
@@ -106,15 +121,46 @@ export const api = {
       size: state.size,
       query: state.query,
       niche_level: state.niche_level,
-      init_data: getWebApp()?.initData ?? null,
-      demo_user_id: telegramUserId(),
     }
     for (const [key, value] of Object.entries(fields)) {
-      if (value !== null && value !== undefined) form.append(key, String(value))
+      if (value !== null && value !== undefined && value !== '') form.set(key, String(value))
     }
-    if (state.photoFile) form.append('photo', state.photoFile)
+    const initData = getWebApp()?.initData
+    if (initData) form.set('init_data', initData)
+    const userId = telegramUserId()
+    if (userId) form.set('demo_user_id', userId)
+    if (state.photoFile) form.set('photo', state.photoFile, state.photoFile.name || 'photo.jpg')
+
     return request<Look>('/api/looks/generate', { method: 'POST', body: form })
   },
+
+  /**
+   * Свободный поиск вещей движком ASSTYLIST Fashion Engine:
+   * расширение запроса, Fashion Intelligence, Taste и архитектура образа.
+   */
+  engineSearch: (params: {
+    query: string
+    style?: string
+    mood?: string
+    occasion?: string
+    season?: string
+    presentation?: string
+    height_cm?: number
+    weight_kg?: number
+    budget_rub?: number
+    preferred_colors?: string[]
+    avoid_colors?: string[]
+    size?: string | null
+    niche_level?: number | null
+    limit?: number
+  }) =>
+    request<EngineSearchResult>('/api/engine/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit: 8, ...params }),
+    }),
+
+  /** Память о человеке: рост и вес, сохранённые между визитами. */
   profile: () =>
     request<{
       saved: boolean
@@ -131,19 +177,24 @@ export const api = {
         registered: boolean
       }
     }>(`/api/profile?${identityParams().toString()}`),
+
   saveProfile: (payload: { height_cm?: number; weight_kg?: number }) =>
     request<{
       saved: boolean
       profile: { height_cm?: number; weight_kg?: number }
       updated_at: string | null
       used_count: number
+      problems?: string[]
     }>(`/api/profile?${identityParams().toString()}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),
+
   useProfile: () => request<{ used_count: number }>(`/api/profile/used?${identityParams().toString()}`, { method: 'POST' }),
+
   forgetProfile: () => request<{ saved: boolean }>(`/api/profile/reset?${identityParams().toString()}`, { method: 'POST' }),
+
   registerProfile: () =>
     request<{
       ok: boolean
@@ -162,19 +213,24 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     }),
+
   history: (limit = 20) =>
     request<{ items: HistoryEntry[] }>(`/api/looks?${identityParams().toString()}&limit=${limit}`),
+
   look: (id: number) => request<Look>(`/api/looks/${id}?${identityParams().toString()}`),
+
   swapItem: (id: number, slot: string, excludeSkus: string[] = []) =>
     request<Look>(`/api/looks/${id}/swap?${identityParams().toString()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slot, exclude_skus: excludeSkus }),
     }),
+
   toggleFavorite: (id: number) =>
     request<{ id: number; is_favorite: boolean }>(`/api/looks/${id}/favorite?${identityParams().toString()}`, {
       method: 'POST',
     }),
+
   verification: () =>
     request<{
       total: number
@@ -187,10 +243,4 @@ export const api = {
       min_score: number
       items: { sku: string; name: string; source: string; status: string; score: number; issues: string[] }[]
     }>('/api/catalog/verification'),
-  engineSearch: (query: string) =>
-    request<EngineSearchResult>('/api/engine/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    }),
 }
