@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1273 434" role="img" aria-labelledby="title desc">
   <title id="title">ASStylist</title>
-  <desc id="desc">ASStylist serif wordmark with balanced devil horns and a smooth tail</desc>
+  <desc id="desc">ASStylist serif wordmark with devil horns and tail attached to the first A</desc>
 
   <g font-family="Georgia, 'Times New Roman', serif" font-size="285" font-weight="700" letter-spacing="-17">
     <text x="70" y="322" fill="#FFFFFF">AS</text>
     <text x="425" y="322" fill="#8F1D3F">tylist</text>
   </g>
 
-  <!-- symmetric horns, kept entirely over the first A -->
-  <path fill="#FFFFFF" d="M105 121C91 94 93 61 113 28C116 56 130 78 151 91C140 104 125 114 105 121Z"/>
-  <path fill="#FFFFFF" d="M205 91C226 78 240 56 243 28C263 61 265 94 251 121C231 114 216 104 205 91Z"/>
+  <!-- Both horns are centered over the first A only. -->
+  <path fill="#FFFFFF" d="M94 126C79 98 81 62 104 25C106 57 119 79 141 94C130 108 114 119 94 126Z"/>
+  <path fill="#FFFFFF" d="M194 94C216 79 229 57 231 25C254 62 256 98 241 126C221 119 205 108 194 94Z"/>
 
-  <!-- smooth tail flowing from the lower right of the S -->
-  <path fill="#8F1D3F" d="M334 310C374 319 401 339 408 361C415 382 404 402 385 407C400 394 398 382 390 373C379 360 357 351 331 345Z"/>
+  <!-- Tail starts at the lower-right of the first A and never reaches the S. -->
+  <path fill="#FFFFFF" d="M181 313C211 320 238 336 247 355C258 379 244 402 221 407C237 393 236 380 226 369C216 357 199 350 178 345Z"/>
 </svg>
