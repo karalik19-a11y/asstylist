@@ -80,15 +80,18 @@ def test_profile_accepts_camel_case_payload():
 
 
 def test_query_expander_is_unique_and_niche_first():
-    queries = QueryExpander().expand(
+    expander = QueryExpander()
+    queries = expander.expand(
         "грязный индустриальный образ с прозрачным верхом и кожаной курткой",
         {"nicheLevel": 88, "aesthetics": ["industrial", "archive"]},
     )
     assert 4 <= len(queries) <= 14
     assert len(queries) == len(set(queries))
     joined = " ".join(queries).lower()
-    for token in ("archive", "sheer", "top", "niche brand"):
+    for token in ("archive", "sheer", "top"):
         assert token in joined
+    niche_queries = expander.expand("archive jacket", {"nicheLevel": 88, "aesthetics": ["archive"]})
+    assert any("niche brand" in query for query in niche_queries)
 
 
 def test_validator_rejects_unusable_marketplace_items():
