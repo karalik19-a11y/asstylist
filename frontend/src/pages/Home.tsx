@@ -7,7 +7,6 @@ import { playClick, playTick } from '../lib/sound'
 export function Home({
   meta,
   onStart,
-  onOpenHistory,
   onOpenSearch,
   userName,
   theme,
@@ -15,7 +14,6 @@ export function Home({
 }: {
   meta: Meta | null
   onStart: () => void
-  onOpenHistory?: () => void
   onOpenSearch?: () => void
   userName: string | null
   theme: 'noir' | 'parchment'
@@ -63,24 +61,15 @@ export function Home({
           className="btn btn-primary btn-block btn-xl home-main-cta"
           onClick={() => { playClick(); onStart() }}
         >
-          <span>Собрать образ</span><span aria-hidden="true">↗</span>
+          <span>Собрать мой образ</span><span aria-hidden="true">↗</span>
         </button>
         <button
           type="button"
           className="btn btn-outline btn-block home-secondary-cta"
           onClick={() => { playClick(); onOpenSearch?.() }}
         >
-          Поиск конкретных вещей <span aria-hidden="true">→</span>
+          Найти конкретную вещь <span aria-hidden="true">→</span>
         </button>
-        {onOpenHistory ? (
-          <button
-            type="button"
-            className="btn btn-outline btn-block home-secondary-cta"
-            onClick={() => { playClick(); onOpenHistory() }}
-          >
-            Архив образов <span aria-hidden="true">↗</span>
-          </button>
-        ) : null}
       </section>
 
       {meta?.styles?.length ? (
