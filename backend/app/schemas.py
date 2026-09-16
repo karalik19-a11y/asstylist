@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .config import BUDGET_CEILING_RUB
 from .engine.colors import COLORS
@@ -15,6 +15,27 @@ def _clean_color_list(value: list[str] | None) -> list[str]:
     if not value:
         return []
     return [v.strip().lower() for v in value if isinstance(v, str) and v.strip().lower() in COLORS]
+
+
+# The public taxonomy is intentionally richer than the legacy service profile.
+# Keep the selected v2 style in the request/DB, but inject a precise search thesis
+# so the live Avito discovery layer cannot silently fall back to generic "minimal".
+STYLE_INTENT_V21: dict[str, dict[str, Any]] = {
+    "modern_craftsman": {"niche": 78, "seed": "modern craftsman worn workwear chore coat washed denim suede utility texture barn jacket"},
+    "leather_weather": {"niche": 84, "seed": "worn leather moto biker jacket distressed suede burgundy soft knit long line"},
+    "broken_down_prep": {"niche": 80, "seed": "broken down ivy prep surf tailoring relaxed oxford washed rugby cardigan loafers"},
+    "romantic_menswear": {"niche": 88, "seed": "romantic menswear draped tailoring sheer mesh lace fluid shirt elongated trousers"},
+    "military_romance": {"niche": 90, "seed": "military romance field jacket utility victorian floral brooch velvet structured"},
+    "archive_reconstruction": {"niche": 94, "seed": "archive reworked reconstructed deconstructed asymmetry deadstock raw seam rare vintage"},
+    "technical_romantic": {"niche": 87, "seed": "technical romantic nylon utility mesh drape modular pocket asymmetric layer"},
+    "americana_90s": {"niche": 79, "seed": "90s americana vintage sportswear plaid straight denim frontier knit worn leather"},
+    "accessory_first": {"niche": 86, "seed": "statement chain cuff charm belt silver hardware sculptural accessory"},
+    "pink_accent": {"niche": 76, "seed": "dusty pink accent washed pink burgundy brown leather precise tailoring"},
+    "sport_couture": {"niche": 82, "seed": "sport couture retro football rugby track jacket tailoring wide trousers technical sneaker"},
+    "neo_gothic_editorial": {"niche": 92, "seed": "neo gothic editorial black leather velvet elongated silhouette silver hardware"},
+    "post_punk_archive": {"niche": 93, "seed": "post punk archive distressed black leather raw denim asymmetry vintage hardware"},
+    "minimal_precision": {"niche": 72, "seed": "minimal precision architectural cut unusual proportion premium fabric monochrome"},
+}
 
 
 class AuthRequest(BaseModel):
@@ -54,9 +75,7 @@ class LookRequest(BaseModel):
     avoid_colors: list[str] = Field(default_factory=list)
     size: str | None = Field(default=None, max_length=8)
     plan: str | None = None
-    #: Свободный запрос для движка поиска («индустриальный образ с прозрачным верхом»).
     query: str | None = Field(default=None, max_length=240)
-    #: Явный уровень ниши движка 0…100 (иначе выводится из стиля).
     niche_level: int | None = Field(default=None, ge=0, le=100)
     user_id: int | None = None
     telegram_id: str | None = None
@@ -64,6 +83,21 @@ class LookRequest(BaseModel):
 
     _v_pref = field_validator("preferred_colors", mode="before")(lambda cls, v: _clean_color_list(v))
     _v_avoid = field_validator("avoid_colors", mode="before")(lambda cls, v: _clean_color_list(v))
+
+    @model_validator(mode="after")
+    def inject_v21_style_intent(self) -> "LookRequest":
+        intent = STYLE_INTENT_V21.get(self.style)
+        if intent:
+            if self.niche_level is None:
+                self.niche_level = int(intent["niche"])
+            seed = str(intent["seed"])
+            if self.query:
+                # User wording stays first; the style thesis is an explicit second
+                # signal instead of replacing what the user actually asked for.
+                self.query = f"{self.query.strip()} · {seed}"[:240]
+            else:
+                self.query = seed[:240]
+        return self
 
 
 class SwapRequest(BaseModel):
@@ -87,7 +121,6 @@ class LookItemOut(BaseModel):
     fit: str = "regular"
     score: float
     breakdown: dict[str, Any] = Field(default_factory=dict)
-    #: Метаданные движка ASSTYLIST: роль, taste-категория, Fashion Score.
     engine: dict[str, Any] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
     verification_status: str = "verified"
