@@ -1,0 +1,9 @@
+# Default — repo owner reviews everything until a larger team exists
+* @karalik19-a11y
+
+# High-risk paths (still owned by default; listed for agent visibility)
+/backend/app/main.py @karalik19-a11y
+/backend/app/api/ @karalik19-a11y
+/Dockerfile @karalik19-a11y
+/docker-compose.yml @karalik19-a11y
+/render.yaml @karalik19-a11y
